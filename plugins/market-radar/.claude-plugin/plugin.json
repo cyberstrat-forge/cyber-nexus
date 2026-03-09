@@ -1,0 +1,16 @@
+{
+  "name": "market-radar",
+  "version": "0.1.0",
+  "description": "Strategic market intelligence for cybersecurity strategic planning",
+  "author": {
+    "name": "luoweirong",
+    "email": "weirong.luo@qq.com"
+  },
+  "keywords": [
+    "cybersecurity",
+    "intelligence",
+    "market-analysis",
+    "strategic-planning"
+  ],
+  "license": "MIT"
+}

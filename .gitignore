@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Intelligence output
+.intel/
+
+# Test files
+test-docs/
