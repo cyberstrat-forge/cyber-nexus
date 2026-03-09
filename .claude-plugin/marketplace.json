@@ -1,0 +1,18 @@
+{
+  "name": "cyber-nexus",
+  "owner": {
+    "name": "luoweirong",
+    "email": "weirong.luo@qq.com"
+  },
+  "metadata": {
+    "description": "网络安全战略规划的 Claude Code 插件工具集"
+  },
+  "plugins": [
+    {
+      "name": "market-radar",
+      "source": "./plugins/market-radar",
+      "description": "从文档提取战略情报，支持七大情报领域",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -6,3 +6,7 @@
 
 # Test files
 test-docs/
+
+# Plugins test files
+plugins/*/test-docs/
+plugins/*/.intel/
