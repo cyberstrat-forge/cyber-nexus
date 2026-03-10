@@ -109,32 +109,35 @@ cd plugins/market-radar/scripts && npm install
 ```
 cyber-nexus/
 ├── .claude-plugin/
-│   └── marketplace.json
+│   └── marketplace.json              # 市场配置：插件仓库注册信息
 └── plugins/
-    └── market-radar/
+    └── market-radar/                 # 市场情报提取插件
         ├── .claude-plugin/
-        │   └── plugin.json
-        ├── commands/
-        │   ├── intel-distill.md
+        │   └── plugin.json           # 插件元数据：名称、版本、作者
+        ├── commands/                 # 命令定义
+        │   ├── intel-distill.md      # intel-distill 命令主逻辑
         │   └── references/
-        │       └── intel-distill-guide.md
-        ├── agents/
-        │   ├── intelligence-analyzer.md
+        │       └── intel-distill-guide.md  # 用户帮助文档
+        ├── agents/                   # 智能代理
+        │   ├── intelligence-analyzer.md    # 情报分析 Agent
         │   └── references/
-        │       └── json-format.md
-        ├── skills/
-        │   ├── domain-knowledge/SKILL.md
-        │   ├── analysis-methodology/SKILL.md
+        │       └── json-format.md    # Agent 返回格式规范
+        ├── skills/                   # 技能模块（预加载知识）
+        │   ├── domain-knowledge/
+        │   │   └── SKILL.md          # 七大情报领域定义
+        │   ├── analysis-methodology/
+        │   │   └── SKILL.md          # 战略价值判断标准
         │   └── output-templates/
-        │       ├── SKILL.md
-        │       └── references/templates.md
-        ├── schemas/
-        │   ├── agent-result.schema.json
-        │   ├── state.schema.json
-        │   └── intelligence-output.schema.json
-        ├── scripts/
-        │   └── validate-json.ts
-        └── README.md
+        │       ├── SKILL.md          # 输出模板入口
+        │       └── references/
+        │           └── templates.md  # 七大领域卡片模板
+        ├── schemas/                  # JSON Schema 定义
+        │   ├── agent-result.schema.json    # Agent 返回结果校验
+        │   ├── state.schema.json           # 状态文件校验
+        │   └── intelligence-output.schema.json  # 情报卡片校验
+        ├── scripts/                  # 工具脚本
+        │   └── validate-json.ts      # JSON Schema 校验脚本
+        └── README.md                 # 插件文档
 ```
 
 ## 更新日志
@@ -145,6 +148,14 @@ cyber-nexus/
 - 添加 JSON Schema 校验支持
 - 精简文档内容，消除冗余
 - 补充临时文件清理逻辑
+
+### v1.0.0 (2026-03-10)
+
+- 首个正式版本发布
+- 实现 intel-distill 命令核心功能
+- 支持七大情报领域的自动分类
+- 支持 Markdown、PDF、Word 文档处理
+- 实现增量处理机制
 
 ## 许可证
 
