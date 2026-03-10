@@ -113,7 +113,7 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
       "source_mtime": 1709987400,
       "processed_at": "2026-03-09T10:30:00Z",
       "intelligence_count": 3,
-      "output_files": ["Emerging-Tech/20260309-ai-security.md"]
+      "output_files": ["Emerging-Tech/20260309-ai-agent-vulnerability.md"]
     }
   },
   "stats": {
