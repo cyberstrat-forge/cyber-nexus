@@ -165,50 +165,6 @@ elif 退出码 == 2:
 glob pattern: **/*.{md,txt,pdf,docx}
 ```
 
-### 步骤 3.5：提取源文件发布日期
-
-对每个扫描到的文件，尝试提取发布日期：
-
-**发布日期提取优先级**：
-
-```
-1. Markdown frontmatter: date / published 字段
-2. PDF 元数据: CreationDate / ModDate
-3. 文件名匹配: YYYY-MM-DD 或 YYYYMMDD 模式
-4. 文件系统日期: 文件创建时间（ctime）
-```
-
-**具体实现**：
-
-```bash
-# 对于 Markdown 文件，检查 frontmatter
-# 使用 Grep 查找 date: 或 published: 字段
-
-# 对于 PDF 文件，使用 pdfinfo 或 mdls (macOS) 提取元数据
-pdfinfo file.pdf | grep -E "CreationDate|ModDate"
-mdls -name kMDItemContentCreationDate file.pdf  # macOS
-
-# 对于文件名，匹配日期模式
-# 例如: 2026-03-01-report.md 或 20260301_report.pdf
-
-# 兜底：使用文件系统创建时间
-stat -f %B file.md      # macOS (birth time)
-stat -c %W file.md      # Linux (birth time)
-```
-
-**日期提取结果存储**：
-
-```json
-{
-  "path": "docs/report.md",
-  "mtime": 1709987400,
-  "source_published_date": "2026-03-01",  // 提取到的发布日期，或 null
-  "source_file_added_date": "2026-03-05"   // 文件添加日期（ctime）
-}
-```
-
-将提取的日期信息附加到队列项中，传递给 agent。
-
 ### 步骤 4：构建处理队列
 
 对每个扫描到的文件，检查其状态：
@@ -226,7 +182,7 @@ for file in scanned_files:
             # 有变更，需要重新处理
             state.queue.pending.append({"path": file, "mtime": mtime})
     elif file in state.queue.failed:
-        # 之前失败过，加入重试
+        # 之前失败过，检查重试次数
         if state.queue.failed[file].retries < 1:
             state.queue.pending.append({"path": file, "mtime": mtime})
     else:
@@ -259,45 +215,50 @@ for file in scanned_files:
 
 立即写入 `state.json`（确保状态持久化）。
 
-#### 5.2 处理文件格式
+#### 5.2 生成会话 ID
 
-| 格式 | 操作 |
-|--------|--------|
-| `.md`, `.txt` | 直接读取 |
-| `.pdf` | 智能分页读取（先检查页数） |
-| `.docx` | 使用 pandoc 转换为 markdown 后读取 |
-
-**对于 docx 文件：**
-```bash
-pandoc source.docx -t markdown -o temp.md
 ```
-
-如果 pandoc 不可用，记录错误并标记为失败。
+session_id = YYYYMMDD-HHMMSS 格式
+例如: 20260310-103000
+```
 
 #### 5.3 调用情报分析 Agent
 
-启动 `intelligence-analyzer` agent，传入：
-- 文件路径（如需转换则先转换）
-- 会话 ID
-- **发布日期信息**（source_published_date, source_file_added_date）
+启动 `intelligence-analyzer` agent，传入源文件路径、输出目录和会话 ID：
 
 ```
 使用 Agent 工具，subagent_type="intelligence-analyzer"
 提示词：
-"分析文件: {file_path}
-会话 ID: {session_id}
-源文件发布日期: {source_published_date}
-源文件添加日期: {source_file_added_date}
+"分析文件并生成情报卡片:
 
-日期使用规则：
-- intelligence_date 应使用源文件发布日期
-- 若发布日期未知，使用源文件添加日期
-- created_date 为当前处理日期"
+source: {file_path}
+output: {output_dir}
+session_id: {session_id}
+
+请按照以下流程执行:
+1. 读取源文件
+2. 提取发布日期（从 frontmatter / PDF元数据 / 文件名 / 文件系统）
+3. 分析战略价值
+4. 生成情报卡片（按领域模板）
+5. 写入输出目录
+6. 返回轻量状态 JSON"
 ```
 
-#### 5.4 Schema 校验
+**Agent 完整职责**：
 
-Agent 返回结果后，保存为临时文件并调用校验脚本：
+| 步骤 | 说明 |
+|------|------|
+| 读取文件 | 支持 .md, .txt, .pdf, .docx |
+| 提取日期 | 从 frontmatter / PDF元数据 / 文件名 / 文件系统 |
+| 分析内容 | 评估战略价值、领域分类 |
+| 生成卡片 | 按 output-templates skill 中的模板 |
+| 检测冲突 | 使用 Glob 检查现有文件，必要时追加序号 |
+| 写入文件 | 使用 Write 工具写入情报卡片 |
+| 返回状态 | 轻量 JSON（不含情报内容） |
+
+#### 5.4 校验 Agent 返回结果
+
+Agent 返回轻量 JSON 后，进行校验：
 
 **步骤 1：保存 Agent 输出到临时文件**
 
@@ -310,18 +271,18 @@ Agent 返回结果后，保存为临时文件并调用校验脚本：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx validate-json.ts intelligence-output {output_dir}/.intel/temp/{session_id}.json
+npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
 ```
 
 **步骤 3：处理校验结果**
 
 | 退出码 | 含义 | 处理方式 |
 |--------|------|----------|
-| 0 | 校验通过 | 继续处理情报项 |
+| 0 | 校验通过 | 继续处理状态更新 |
 | 1 | 校验失败 | 记录错误，触发重试 |
 | 2 | 工具不可用 | 尝试安装依赖后重试，仍失败则跳过校验 |
 
-**校验失败处理流程**：
+**校验失败处理**：
 
 ```
 if 校验失败:
@@ -329,10 +290,10 @@ if 校验失败:
     记录到 state.queue.failed:
     {
       "file.pdf": {
-        "error": "Schema validation failed",
+        "error": "Agent result validation failed",
         "validation_errors": [
-          "intelligence_items[0].domain: value 'Invalid-Domain' not in enum",
-          "intelligence_items[0].filename: does not match pattern"
+          "status: required field missing",
+          "source_file: required field missing"
         ],
         "failed_at": "2026-03-10T10:40:00Z",
         "retries": 0,
@@ -350,68 +311,108 @@ if 校验失败:
         不再处理
 ```
 
-**校验通过后**：
+#### 5.5 处理 Agent 返回结果
 
-```
-校验通过 → 解析 JSON → 处理 intelligence_items
-```
-
-**错误记录格式**：
+**成功且有情报**（status=success, has_strategic_value=true）：
 
 ```json
+// Agent 返回
 {
-  "validation_errors": [
-    "intelligence_items[0].domain: value 'Invalid-Domain' not in enum",
-    "intelligence_items[0].frontmatter.intelligence_date: does not match pattern YYYY-MM-DD"
-  ]
+  "status": "success",
+  "source_file": "docs/report.md",
+  "has_strategic_value": true,
+  "intelligence_count": 2,
+  "output_files": [
+    "Industry-Analysis/20260301-ai-security-market-growth.md",
+    "Emerging-Tech/20260301-ai-agent-architecture-flaw.md"
+  ],
+  "source_meta": { "title": "...", "published": "2026-03-01" },
+  "processing_notes": "成功提取 2 条情报"
 }
-```
 
-#### 5.5 处理有效输出
-
-解析 agent 返回的 JSON：
-
-**如果 `has_strategic_value: false`：**
-- 记录为已完成，0 个情报项
-- 不生成情报卡片
-
-**如果 `has_strategic_value: true`：**
-- 对 `intelligence_items` 中的每个项：
-  1. 生成带 frontmatter + content 的 markdown 文件
-  2. 写入 `{output_dir}/{domain}/{filename}`（用户可见）
-  3. 处理文件名冲突（追加序号）
-
-#### 5.6 更新状态（成功）
-
-```json
+// 更新状态
 {
   "processed": {
-    "docs/report1.md": {
+    "docs/report.md": {
       "source_mtime": 1709987400,
-      "processed_at": "2026-03-09T10:35:00Z",
-      "intelligence_count": 3,
+      "processed_at": "2026-03-10T10:35:00Z",
+      "intelligence_count": 2,
       "output_files": [
-        "Emerging-Tech/20260309-ai-agent-vulnerability.md"
+        "Industry-Analysis/20260301-ai-security-market-growth.md",
+        "Emerging-Tech/20260301-ai-agent-architecture-flaw.md"
       ],
-      "session": "20260309-103000"
+      "session": "20260310-103000"
     }
   },
-  "queue": {
-    "processing": {}  // 移除该文件
-  },
   "stats": {
-    "total_files": 1,
-    "total_intelligence": 3,
-    "last_run": "2026-03-09T10:35:00Z"
+    "total_files": +1,
+    "total_intelligence": +2,
+    "last_run": "2026-03-10T10:35:00Z"
   }
 }
 ```
 
-立即写入 `state.json`。
+**成功但无情报**（status=success, has_strategic_value=false）：
+
+```json
+// Agent 返回
+{
+  "status": "success",
+  "source_file": "docs/general-notes.md",
+  "has_strategic_value": false,
+  "source_meta": { "title": "...", "published": "2026-03-05" },
+  "processing_notes": "未发现战略价值信息"
+}
+
+// 更新状态
+{
+  "processed": {
+    "docs/general-notes.md": {
+      "source_mtime": 1709987400,
+      "processed_at": "2026-03-10T10:35:00Z",
+      "intelligence_count": 0,
+      "output_files": [],
+      "session": "20260310-103000"
+    }
+  }
+}
+```
+
+**失败**（status=error）：
+
+```json
+// Agent 返回
+{
+  "status": "error",
+  "source_file": "docs/report.docx",
+  "has_strategic_value": false,
+  "source_meta": { "title": null, "published": null },
+  "error_code": "CONVERSION_FAILED",
+  "error_message": "pandoc not available for docx conversion",
+  "processing_notes": "无法转换 docx 文件"
+}
+
+// 更新状态
+{
+  "queue": {
+    "processing": {},
+    "failed": {
+      "docs/report.docx": {
+        "error": "CONVERSION_FAILED: pandoc not available for docx conversion",
+        "failed_at": "2026-03-10T10:40:00Z",
+        "retries": 0,
+        "mtime": 1709987500
+      }
+    }
+  }
+}
+```
+
+#### 5.6 更新状态并写入
+
+每次状态变更后，立即写入 `state.json`。
 
 **写入前校验**：
-
-每次写入 state.json 前，先保存到临时文件并校验：
 
 ```bash
 # 1. 保存新状态到临时文件
@@ -430,26 +431,6 @@ else:
     记录错误: "状态数据异常，中止写入"
     抛出异常，停止处理
 ```
-
-#### 5.7 更新状态（失败）
-
-```json
-{
-  "queue": {
-    "processing": {},  // 移除该文件
-    "failed": {
-      "docs/encrypted.pdf": {
-        "error": "Agent timeout",
-        "failed_at": "2026-03-09T10:40:00Z",
-        "retries": 0,
-        "mtime": 1709987500
-      }
-    }
-  }
-}
-```
-
-立即写入 `state.json`（写入前同样进行 schema 校验）。
 
 ### 步骤 6：重试失败文件
 
@@ -505,7 +486,7 @@ else:
 - Vendor-Intelligence: 2 张卡片
 
 ### 失败文件
-- docs/encrypted.pdf: Agent timeout（已重试一次）
+- docs/report.docx: CONVERSION_FAILED（已重试一次）
 
 ### 后续步骤
 - 在输出目录查看待审核的情报卡片
@@ -521,19 +502,12 @@ else:
 
   "queue": {
     "pending": [
-      {"path": "docs/report1.md", "mtime": 1709987400},
-      {"path": "docs/report2.pdf", "mtime": 1709987500}
+      {"path": "docs/report1.md", "mtime": 1709987400}
     ],
-    "processing": {
-      "docs/report3.md": {
-        "started_at": "2026-03-09T20:25:00Z",
-        "session": "20260309-202500",
-        "mtime": 1709987600
-      }
-    },
+    "processing": {},
     "failed": {
-      "docs/encrypted.pdf": {
-        "error": "Agent timeout",
+      "docs/report2.docx": {
+        "error": "CONVERSION_FAILED: pandoc not available",
         "failed_at": "2026-03-09T20:20:00Z",
         "retries": 1,
         "mtime": 1709987300
@@ -548,8 +522,7 @@ else:
       "intelligence_count": 3,
       "output_files": [
         "Industry-Analysis/20260309-ai-security-market-growth.md",
-        "Emerging-Tech/20260309-ai-agent-vulnerability-detection.md",
-        "Policy-Regulation/20260309-china-ai-security-compliance.md"
+        "Emerging-Tech/20260309-ai-agent-vulnerability-detection.md"
       ],
       "session": "20260309-201500"
     }
@@ -577,21 +550,13 @@ stat -c %Y file.md      # Linux
 - 如果存储的 mtime < 当前 mtime → 文件已变更，重新处理
 - 如果存储的 mtime == 当前 mtime → 跳过
 
-## 文件名冲突处理
-
-如果情报卡片文件已存在：
-
-1. 检查内容是否相同（相同的 primary_entity、timeframe、key_facts）
-2. 如果相同 → 跳过（重复）
-3. 如果不同 → 追加序号：`20260309-ai-security-market-growth-2.md`
-
 ## 错误处理
 
 | 错误 | 操作 |
 |-------|--------|
 | 文件未找到 | 记录警告，跳过文件 |
 | 权限被拒绝 | 记录错误，标记为失败 |
-| Pandoc 不可用（docx） | 记录错误，跳过文件 |
+| Agent 返回 error | 记录错误信息，标记为失败 |
 | Agent 超时 | 重试一次，然后标记为失败 |
 | JSON 解析失败 | 重试一次，然后标记为失败 |
 | Schema 校验失败 | 记录校验错误详情，重试一次，然后标记为失败 |
@@ -601,6 +566,7 @@ stat -c %Y file.md      # Linux
 `intelligence-analyzer` agent 预加载以下 skills：
 - **domain-knowledge** - 七大情报领域定义和关键词
 - **analysis-methodology** - 战略价值判断标准和提取原则
+- **output-templates** - 七大领域的前台模板和正文模板
 
 详细的 markdown 模板和领域特定字段，参见 `skills/output-templates/references/templates.md`。
 
@@ -618,8 +584,8 @@ stat -c %Y file.md      # Linux
 # 安装依赖（首次使用）
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
 
-# 校验 agent 输出
-npx tsx validate-json.ts intelligence-output ./output/data.json
+# 校验 agent 返回结果
+npx tsx validate-json.ts agent-result ./temp/result.json
 
 # 校验 state.json
 npx tsx validate-json.ts state ./.intel/state.json
@@ -629,18 +595,17 @@ npx tsx validate-json.ts state ./.intel/state.json
 
 | 时机 | Schema | 说明 |
 |------|--------|------|
-| Agent 返回后 | `intelligence-output.schema.json` | 校验输出结构，失败则重试 |
+| Agent 返回后 | `agent-result.schema.json` | 校验轻量返回格式，失败则重试 |
 | 启动时 | `state.schema.json` | 校验现有状态，损坏则备份重建 |
 | 写入前 | `state.schema.json` | 校验新状态，异常则中止 |
 
 ### 校验内容
 
-**intelligence-output.schema.json**：
-- 必需字段完整性
-- 字段类型正确性
-- 枚举值有效性（domain、security_relevance、review_status）
-- 日期格式验证（YYYY-MM-DD）
-- 文件名格式验证（YYYYMMDD-*.md）
+**agent-result.schema.json**：
+- status 字段（success/error）
+- 必需字段完整性（source_file, has_strategic_value, source_meta, processing_notes）
+- 成功时必需字段（intelligence_count, output_files）
+- 错误时必需字段（error_code, error_message）
 
 **state.schema.json**：
 - 版本号格式（X.Y）
@@ -653,13 +618,11 @@ npx tsx validate-json.ts state ./.intel/state.json
 
 | 场景 | 处理方式 |
 |------|----------|
-| Agent 输出校验失败 | 记录错误详情，自动重试 1 次 |
+| Agent 返回校验失败 | 记录错误详情，自动重试 1 次 |
 | state.json 启动校验失败 | 备份为 `.broken`，创建新文件 |
 | state.json 写入前校验失败 | 中止写入，保留原文件 |
 
 ### 调用链流程图
-
-**整体流程**：
 
 ```
 /intel-distill
@@ -692,18 +655,27 @@ npx tsx validate-json.ts state ./.intel/state.json
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │ 5.3 调用 intelligence-analyzer agent                    │ │
 │  │     │                                                   │ │
+│  │     │  参数: source, output, session_id                 │ │
+│  │     │                                                   │ │
+│  │     │  Agent 内部执行:                                   │ │
+│  │     │  - 读取文件                                        │ │
+│  │     │  - 提取日期                                        │ │
+│  │     │  - 分析内容                                        │ │
+│  │     │  - 生成卡片（按模板）                               │ │
+│  │     │  - 检测冲突                                        │ │
+│  │     │  - 写入文件                                        │ │
 │  │     ▼                                                   │ │
-│  │  返回 JSON ──► 保存到 temp/{session}.json               │ │
+│  │  返回轻量 JSON                                          │ │
 │  └────────────────────────────────────────────────────────┘ │
 │                      │                                       │
 │                      ▼                                       │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │ 5.4 Schema 校验                                         │ │
+│  │ 5.4 校验 Agent 返回                                      │ │
 │  │                                                         │ │
-│  │  npx tsx validate-json.ts intelligence-output \         │ │
+│  │  npx tsx validate-json.ts agent-result \                │
 │  │      temp/{session}.json                                │ │
 │  │     │                                                   │ │
-│  │     ├─ ✓ 通过 ──► 继续处理情报项                         │ │
+│  │     ├─ ✓ 通过 ──► 更新状态                              │ │
 │  │     │                                                   │ │
 │  │     └─ ✗ 失败 ──► retries < 1?                          │ │
 │  │                      │                                  │ │
@@ -714,7 +686,7 @@ npx tsx validate-json.ts state ./.intel/state.json
 │                      │                                       │
 │                      ▼                                       │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │ 5.5-5.6 生成情报卡片、更新状态                           │ │
+│  │ 5.5-5.6 更新状态、写入 state.json                        │ │
 │  │                                                         │ │
 │  │  更新 state 对象                                        │ │
 │  │     │                                                   │ │
@@ -741,7 +713,7 @@ npx tsx validate-json.ts state ./.intel/state.json
 | 步骤 | 调用命令 | 成功处理 | 失败处理 |
 |------|----------|----------|----------|
 | 2. 启动校验 | `npx tsx validate-json.ts state state.json` | 加载状态 | 备份重建 |
-| 5.4 输出校验 | `npx tsx validate-json.ts intelligence-output temp/{session}.json` | 处理情报 | 重试/记录失败 |
+| 5.4 返回校验 | `npx tsx validate-json.ts agent-result temp/{session}.json` | 更新状态 | 重试/记录失败 |
 | 5.6 写入前校验 | `npx tsx validate-json.ts state temp/state-new.json` | 替换文件 | 中止处理 |
 
 ## 使用示例
@@ -762,7 +734,7 @@ npx tsx validate-json.ts state ./.intel/state.json
 ## 注意事项
 
 - 处理是**顺序执行**的，而非并行（避免上下文问题）
-- 大型 PDF 采用智能分页处理
+- Agent 负责完整的文件处理流程（读取、分析、生成、写入）
 - 状态维护在单个 `state.json` 文件中，每次状态变更立即写入
 - 历史数据按月归档到 `history/` 目录
 - **情报卡片**输出到用户可见目录（便于发现和访问）

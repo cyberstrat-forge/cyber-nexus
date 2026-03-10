@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "agent-result.schema.json",
+  "title": "Agent Result Schema",
+  "description": "JSON Schema for intelligence-analyzer agent lightweight result validation",
+  "type": "object",
+  "required": [
+    "status",
+    "source_file",
+    "has_strategic_value",
+    "source_meta",
+    "processing_notes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["success", "error"],
+      "description": "Processing status"
+    },
+    "source_file": {
+      "type": "string",
+      "description": "Relative path to the source file"
+    },
+    "has_strategic_value": {
+      "type": "boolean",
+      "description": "Whether strategic value intelligence was found"
+    },
+    "intelligence_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of intelligence items extracted (required when status=success and has_strategic_value=true)"
+    },
+    "output_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of generated output file paths (required when status=success and has_strategic_value=true)"
+    },
+    "source_meta": {
+      "type": "object",
+      "required": ["title", "published"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": ["string", "null"],
+          "description": "Original document title"
+        },
+        "published": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Source document published date (YYYY-MM-DD format or null)"
+        }
+      }
+    },
+    "processing_notes": {
+      "type": "string",
+      "description": "Processing notes and explanations"
+    },
+    "error_code": {
+      "type": "string",
+      "description": "Error code (required when status=error)",
+      "enum": [
+        "READ_FAILED",
+        "CONVERSION_FAILED",
+        "WRITE_FAILED",
+        "ANALYSIS_FAILED",
+        "TOOL_UNAVAILABLE"
+      ]
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Detailed error message (required when status=error)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "success" },
+          "has_strategic_value": { "const": true }
+        },
+        "required": ["status", "has_strategic_value"]
+      },
+      "then": {
+        "required": ["intelligence_count", "output_files"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "error" }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["error_code", "error_message"]
+      }
+    }
+  ]
+}

@@ -196,7 +196,8 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 ### Schemas
 
-- **`intelligence-output.schema.json`**：Agent 输出 JSON 校验规则
+- **`agent-result.schema.json`**：Agent 轻量返回格式校验规则
+- **`intelligence-output.schema.json`**：Agent 完整输出校验规则（历史保留）
 - **`state.schema.json`**：状态文件校验规则
 
 ### Scripts
@@ -227,8 +228,9 @@ market-radar/
 │       └── references/
 │           └── templates.md
 ├── schemas/
-│   ├── intelligence-output.schema.json  # Agent 输出校验
-│   └── state.schema.json                # 状态文件校验
+│   ├── agent-result.schema.json        # Agent 返回结果校验
+│   ├── intelligence-output.schema.json # Agent 完整输出校验（历史）
+│   └── state.schema.json               # 状态文件校验
 ├── scripts/
 │   ├── validate-json.ts                 # 校验脚本
 │   └── package.json

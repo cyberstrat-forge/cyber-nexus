@@ -5,7 +5,7 @@
  * Usage: npx tsx validate-json.ts <schema-name> <json-file>
  *
  * Examples:
- *   npx tsx validate-json.ts intelligence-output ./output/data.json
+ *   npx tsx validate-json.ts agent-result ./temp/result.json
  *   npx tsx validate-json.ts state ./.intel/state.json
  */
 
@@ -20,6 +20,7 @@ const SCHEMAS_DIR = resolve(__dirname, '../schemas');
 
 // Schema name mapping
 const SCHEMA_FILES: Record<string, string> = {
+  'agent-result': 'agent-result.schema.json',
   'intelligence-output': 'intelligence-output.schema.json',
   'state': 'state.schema.json',
 };
@@ -82,7 +83,7 @@ if (args.length < 2) {
   Object.keys(SCHEMA_FILES).forEach(name => console.log(`  ${name}`));
   console.log('');
   console.log('Examples:');
-  console.log('  npx tsx validate-json.ts intelligence-output ./output/data.json');
+  console.log('  npx tsx validate-json.ts agent-result ./temp/result.json');
   console.log('  npx tsx validate-json.ts state ./.intel/state.json');
   process.exit(1);
 }
