@@ -71,7 +71,9 @@ cyber-nexus/
 │       ├── .claude-plugin/
 │       │   └── plugin.json    # 插件配置
 │       ├── commands/          # 命令定义
-│       │   └── intel-distill.md
+│       │   ├── intel-distill.md
+│       │   └── references/
+│       │       └── usage-guide.md
 │       ├── agents/            # 智能代理
 │       │   ├── intelligence-analyzer.md
 │       │   └── references/

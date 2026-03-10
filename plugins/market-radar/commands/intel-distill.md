@@ -15,6 +15,18 @@ allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent"]
 |-----------|----------|-------------|
 | `--source <dir>` | 否 | 包含文档的源目录（默认：当前目录） |
 | `--output <dir>` | 否 | 情报卡片输出目录（默认：当前目录） |
+| `--help` | 否 | 显示使用帮助 |
+
+## 帮助信息
+
+如果用户输入 `--help` 参数，读取并显示 `references/usage-guide.md` 的内容：
+
+```
+使用 Read 工具读取：
+${CLAUDE_PLUGIN_ROOT}/commands/references/usage-guide.md
+
+将内容展示给用户，无需执行后续流程。
+```
 
 ## 目录结构
 

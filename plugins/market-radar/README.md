@@ -189,7 +189,9 @@ market-radar/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── commands/
-│   └── intel-distill.md
+│   ├── intel-distill.md
+│   └── references/
+│       └── usage-guide.md
 ├── agents/
 │   ├── intelligence-analyzer.md
 │   └── references/
