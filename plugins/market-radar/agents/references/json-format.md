@@ -12,7 +12,7 @@
     {
       "domain": "Domain-Identifier",
       "title": "简洁的情报标题",
-      "filename": "YYYYMMDD-short-identifier.md",
+      "filename": "YYYYMMDD-subject-feature.md",
       "keywords": ["关键词1", "关键词2", "关键词3"],
       "dedup_check": {
         "primary_entity": "主要实体名称",
@@ -68,7 +68,7 @@
 |------|------|------|------|
 | `domain` | string | ✅ | 领域标识符 |
 | `title` | string | ✅ | 情报标题 |
-| `filename` | string | ✅ | 建议文件名 |
+| `filename` | string | ✅ | 建议文件名（格式：`YYYYMMDD-subject-feature.md`） |
 | `keywords` | array | ✅ | 关键词列表（3-5个） |
 | `dedup_check` | object | ✅ | 去重检查信息 |
 | `frontmatter` | object | ✅ | Markdown frontmatter |

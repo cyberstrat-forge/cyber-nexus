@@ -480,14 +480,48 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ## File Naming Rules
 
-Format: `{YYYYMMDD}-{short-identifier}.md`
+Format: `{YYYYMMDD}-{subject}-{feature}.md`
 
-Examples:
-- `20260306-ai-agent-architecture.md`
-- `20260306-claude-code-security.md`
+| 组成部分 | 说明 |
+|----------|------|
+| `{YYYYMMDD}` | 情报日期（非创建日期） |
+| `{subject}` | 主体/对象（简短英文） |
+| `{feature}` | 核心特征/动作（体现情报核心内容） |
 
-Naming principles:
-- Date is intelligence date (not creation date)
-- English identifier: concise, readable, reflects core content
-- Use kebab-case format
-- Maximum 50 characters
+### Naming Principles
+
+- **体现核心特征**：文件名应反映情报的独特性，而非仅是领域词
+- **结构清晰**：日期 + 主体 + 特征，易于识别和检索
+- **kebab-case 格式**：全部小写，用连字符分隔
+- **最大长度**：60 字符
+
+### Examples
+
+| 标题 | 文件名 | 说明 |
+|------|--------|------|
+| AI安全市场高速增长 | `20260310-ai-security-market-growth.md` | growth 体现增长趋势 |
+| CrowdStrike完成B轮融资 | `20260310-crowdstrike-series-b.md` | 具体厂商 + 融资轮次 |
+| LockBit勒索软件攻击激增 | `20260310-lockbit-ransomware-surge.md` | 具体威胁组织 + 动作 |
+| 数据安全法正式生效 | `20260310-china-data-security-law.md` | 具体法规名称 |
+| AI Agent架构安全漏洞 | `20260310-ai-agent-architecture-flaw.md` | 技术领域 + 具体问题 |
+
+### Before vs After
+
+| 标题 | 改进前 | 改进后 |
+|------|--------|--------|
+| AI安全市场高速增长 | `ai-security-market.md` | `ai-security-market-growth.md` |
+| 某厂商完成B轮融资 | `vendor-funding.md` | `crowdstrike-series-b.md` |
+| 新型勒索软件攻击 | `ransomware.md` | `lockbit-ransomware-surge.md` |
+| 数据安全法正式生效 | `data-law.md` | `china-data-security-law.md` |
+
+### Feature Keywords by Domain
+
+| 领域 | 常用特征词 |
+|------|-----------|
+| Threat-Landscape | `attack`, `surge`, `breach`, `vulnerability`, `exploit` |
+| Industry-Analysis | `growth`, `decline`, `trend`, `forecast`, `cagr` |
+| Vendor-Intelligence | `funding`, `acquisition`, `ipo`, `partnership`, `launch` |
+| Emerging-Tech | `breakthrough`, `release`, `adoption`, `prototype` |
+| Customer-Market | `shift`, `demand`, `budget`, `preference` |
+| Policy-Regulation | `enact`, `compliance`, `deadline`, `amendment` |
+| Capital-Investment | `series-a/b/c`, `valuation`, `merger`, `ipo` |

@@ -231,7 +231,7 @@ pandoc source.docx -t markdown -o temp.md
       "processed_at": "2026-03-09T10:35:00Z",
       "intelligence_count": 3,
       "output_files": [
-        "Emerging-Tech/20260309-ai-security.md"
+        "Emerging-Tech/20260309-ai-agent-vulnerability.md"
       ],
       "session": "20260309-103000"
     }
@@ -401,7 +401,7 @@ stat -c %Y file.md      # Linux
 
 1. 检查内容是否相同（相同的 primary_entity、timeframe、key_facts）
 2. 如果相同 → 跳过（重复）
-3. 如果不同 → 追加序号：`20260309-ai-security-2.md`
+3. 如果不同 → 追加序号：`20260309-ai-security-market-growth-2.md`
 
 ## 错误处理
 

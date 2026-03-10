@@ -96,7 +96,7 @@ skills:
     {
       "domain": "Industry-Analysis",
       "title": "AI安全市场高速增长",
-      "filename": "20260310-ai-security-market.md",
+      "filename": "20260310-ai-security-market-growth.md",
       "keywords": ["AI安全", "市场增长", "投资"],
       "dedup_check": {
         "primary_entity": "AI安全市场",
