@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intelligence-output.schema.json",
+  "title": "Intelligence Output Schema",
+  "description": "JSON Schema for intelligence-analyzer agent output validation",
+  "type": "object",
+  "required": [
+    "source_file",
+    "has_strategic_value",
+    "intelligence_items",
+    "source_meta",
+    "processing_notes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "source_file": {
+      "type": "string",
+      "description": "Relative path to the source file"
+    },
+    "has_strategic_value": {
+      "type": "boolean",
+      "description": "Whether strategic value intelligence was found"
+    },
+    "intelligence_items": {
+      "type": "array",
+      "description": "Array of intelligence items (can be empty)",
+      "items": {
+        "$ref": "#/definitions/intelligence_item"
+      }
+    },
+    "source_meta": {
+      "$ref": "#/definitions/source_meta"
+    },
+    "processing_notes": {
+      "type": "string",
+      "description": "Processing notes and explanations"
+    }
+  },
+  "definitions": {
+    "intelligence_item": {
+      "type": "object",
+      "required": [
+        "domain",
+        "title",
+        "filename",
+        "keywords",
+        "dedup_check",
+        "frontmatter",
+        "content",
+        "review_needed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "Threat-Landscape",
+            "Industry-Analysis",
+            "Vendor-Intelligence",
+            "Emerging-Tech",
+            "Customer-Market",
+            "Policy-Regulation",
+            "Capital-Investment"
+          ],
+          "description": "Intelligence domain identifier"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Concise intelligence title"
+        },
+        "filename": {
+          "type": "string",
+          "pattern": "^\\d{8}-[a-z0-9-]+\\.md$",
+          "description": "Suggested filename (format: YYYYMMDD-subject-feature.md)"
+        },
+        "keywords": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          },
+          "description": "Keyword list (3-5 items)"
+        },
+        "dedup_check": {
+          "$ref": "#/definitions/dedup_check"
+        },
+        "frontmatter": {
+          "$ref": "#/definitions/frontmatter"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 50,
+          "description": "Markdown content body"
+        },
+        "review_needed": {
+          "type": "boolean",
+          "description": "Whether manual review is needed"
+        },
+        "review_notes": {
+          "type": ["string", "null"],
+          "description": "Review notes (optional)"
+        }
+      }
+    },
+    "dedup_check": {
+      "type": "object",
+      "required": ["primary_entity", "timeframe", "key_facts"],
+      "additionalProperties": false,
+      "properties": {
+        "primary_entity": {
+          "type": "string",
+          "description": "Primary entity name (company, technology, organization, etc.)"
+        },
+        "timeframe": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}$",
+          "description": "Time range (YYYY-MM format)"
+        },
+        "key_facts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          },
+          "description": "Key facts list (2-3 items)"
+        }
+      }
+    },
+    "frontmatter": {
+      "type": "object",
+      "required": [
+        "title",
+        "source_file",
+        "intelligence_date",
+        "created_date",
+        "primary_domain",
+        "secondary_domains",
+        "security_relevance",
+        "review_status",
+        "generated_by",
+        "generated_session"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Intelligence title"
+        },
+        "source_file": {
+          "type": "string",
+          "description": "Source file link (WikiLink format)"
+        },
+        "intelligence_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Intelligence date (source published date, YYYY-MM-DD format)"
+        },
+        "created_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Creation date (YYYY-MM-DD format)"
+        },
+        "primary_domain": {
+          "type": "string",
+          "enum": [
+            "Threat-Landscape",
+            "Industry-Analysis",
+            "Vendor-Intelligence",
+            "Emerging-Tech",
+            "Customer-Market",
+            "Policy-Regulation",
+            "Capital-Investment"
+          ],
+          "description": "Primary domain"
+        },
+        "secondary_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Threat-Landscape",
+              "Industry-Analysis",
+              "Vendor-Intelligence",
+              "Emerging-Tech",
+              "Customer-Market",
+              "Policy-Regulation",
+              "Capital-Investment"
+            ]
+          },
+          "description": "Secondary domains"
+        },
+        "security_relevance": {
+          "type": "string",
+          "enum": ["high", "medium"],
+          "description": "Security relevance level"
+        },
+        "review_status": {
+          "type": "string",
+          "enum": ["pending", "approved", "revised"],
+          "description": "Review status"
+        },
+        "generated_by": {
+          "type": "string",
+          "const": "intelligence-analyzer",
+          "description": "Generator identifier (fixed value)"
+        },
+        "generated_session": {
+          "type": "string",
+          "pattern": "^\\d{8}-\\d{6}$",
+          "description": "Session ID (YYYYMMDD-HHMMSS format)"
+        }
+      }
+    },
+    "source_meta": {
+      "type": "object",
+      "required": ["title", "published"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": ["string", "null"],
+          "description": "Original document title"
+        },
+        "published": {
+          "type": ["string", "null"],
+          "description": "Source document published date (YYYY-MM-DD format or null)"
+        }
+      }
+    }
+  }
+}

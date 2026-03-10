@@ -12,6 +12,8 @@ Market Radar 是一个 Claude Code 插件，用于从文档中提取战略情报
 - **七大情报领域**：威胁态势、行业分析、厂商情报、新兴技术、客户与市场、政策法规、资本动态
 - **多格式支持**：支持 Markdown、文本、PDF 和 DOCX 文件
 - **增量处理**：跟踪已处理文件，检测变更，避免重复处理
+- **JSON Schema 校验**：自动校验输出结构，确保数据质量
+- **日期来源追踪**：文件名使用源文件发布日期，便于追溯
 - **质量优先**：每份文档 0-3 条情报是正常的
 
 ## 安装
@@ -148,7 +150,17 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 ## 前置要求
 
-- **pandoc**（可选）：处理 DOCX 文件时需要
+### 必需依赖
+
+- **Node.js 18+** 和 **npm**：用于 JSON Schema 校验
+  ```bash
+  # 首次使用前安装校验依赖
+  cd plugins/market-radar/scripts && npm install
+  ```
+
+### 可选依赖
+
+- **pandoc**：处理 DOCX 文件时需要
   ```bash
   # macOS
   brew install pandoc
@@ -182,6 +194,15 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 - **`analysis-methodology`**：战略情报提取方法论
 - **`output-templates`**：情报卡片格式化模板
 
+### Schemas
+
+- **`intelligence-output.schema.json`**：Agent 输出 JSON 校验规则
+- **`state.schema.json`**：状态文件校验规则
+
+### Scripts
+
+- **`validate-json.ts`**：TypeScript + Ajv 校验脚本
+
 ## 项目结构
 
 ```
@@ -205,6 +226,12 @@ market-radar/
 │       ├── SKILL.md
 │       └── references/
 │           └── templates.md
+├── schemas/
+│   ├── intelligence-output.schema.json  # Agent 输出校验
+│   └── state.schema.json                # 状态文件校验
+├── scripts/
+│   ├── validate-json.ts                 # 校验脚本
+│   └── package.json
 └── README.md
 ```
 

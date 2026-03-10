@@ -484,9 +484,24 @@ Format: `{YYYYMMDD}-{subject}-{feature}.md`
 
 | 组成部分 | 说明 |
 |----------|------|
-| `{YYYYMMDD}` | 情报日期（非创建日期） |
+| `{YYYYMMDD}` | 情报日期（源文件发布日期，非处理日期） |
 | `{subject}` | 主体/对象（简短英文） |
 | `{feature}` | 核心特征/动作（体现情报核心内容） |
+
+### 日期来源说明
+
+文件名中的日期应为**源文件发布日期**，获取优先级：
+
+1. **Markdown frontmatter**：`date` 或 `published` 字段
+2. **PDF 元数据**：`CreationDate` 或 `ModDate`
+3. **文件名模式**：匹配 `YYYY-MM-DD` 或 `YYYYMMDD` 格式
+4. **文件系统日期**：文件添加时间（ctime），作为兜底
+
+**示例**：
+- 源文件 `2026-03-01-ai-security-report.pdf` 于 `2026-03-05` 添加，处理日期为 `2026-03-10`
+- 情报卡片命名：`20260301-ai-security-market-growth.md`（使用发布日期 03-01）
+- `intelligence_date`：`2026-03-01`
+- `created_date`：`2026-03-10`
 
 ### Naming Principles
 

@@ -44,6 +44,26 @@ skills:
 
 分析提供的文档，按照预加载的 skills 中定义的标准提取战略情报。
 
+## 输入参数
+
+任务上下文将提供以下日期参数：
+
+| 参数 | 说明 |
+|------|------|
+| `source_published_date` | 源文件发布日期（从文件内容/元数据/文件名提取） |
+| `source_file_added_date` | 源文件添加到文件夹的日期（文件系统 ctime） |
+| `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
+
+**日期使用规则**：
+
+1. **intelligence_date**：优先使用 `source_published_date`
+   - 若发布日期未知，使用 `source_file_added_date`
+   - 用于情报卡片文件命名和 frontmatter
+
+2. **created_date**：使用当前处理日期（今日）
+
+3. **filename 日期前缀**：使用 `intelligence_date` 转换为 YYYYMMDD 格式
+
 ## 预加载知识
 
 以下 skills 已加载到上下文中，提供详细的参考知识：
@@ -88,6 +108,11 @@ skills:
 
 ### 输出示例
 
+假设收到参数：
+- `source_published_date`: "2026-03-01"
+- `source_file_added_date`: "2026-03-05"
+- `session_id`: "20260310-120000"
+
 ```json
 {
   "source_file": "docs/report.md",
@@ -96,7 +121,7 @@ skills:
     {
       "domain": "Industry-Analysis",
       "title": "AI安全市场高速增长",
-      "filename": "20260310-ai-security-market-growth.md",
+      "filename": "20260301-ai-security-market-growth.md",
       "keywords": ["AI安全", "市场增长", "投资"],
       "dedup_check": {
         "primary_entity": "AI安全市场",
@@ -106,7 +131,7 @@ skills:
       "frontmatter": {
         "title": "AI安全市场高速增长",
         "source_file": "[[docs/report.md]]",
-        "intelligence_date": "2026-03-10",
+        "intelligence_date": "2026-03-01",
         "created_date": "2026-03-10",
         "primary_domain": "Industry-Analysis",
         "secondary_domains": [],
@@ -126,6 +151,12 @@ skills:
   },
   "processing_notes": "成功提取1条情报"
 }
+```
+
+**注意**：
+- `filename` 使用发布日期 `20260301` 作为前缀
+- `intelligence_date` 使用发布日期 `2026-03-01`
+- `created_date` 使用处理日期 `2026-03-10`
 ```
 
 ## 特殊情况处理
@@ -165,3 +196,6 @@ skills:
 - [ ] 关键数据已保留
 - [ ] 战略影响已说明
 - [ ] 来源归属已包含
+- [ ] intelligence_date 使用了传入的发布日期（或添加日期作为备选）
+- [ ] filename 日期前缀与 intelligence_date 一致
+- [ ] created_date 使用当前处理日期

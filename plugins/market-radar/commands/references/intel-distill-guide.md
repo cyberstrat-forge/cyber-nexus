@@ -163,6 +163,16 @@ ls ./intelligence/
 
 ## 前置要求
 
+### 必需依赖
+
+- **Node.js 18+** 和 **npm**：用于 JSON Schema 校验
+  ```bash
+  # 首次使用前安装校验依赖
+  cd plugins/market-radar/scripts && npm install
+  ```
+
+### 可选依赖
+
 处理 `.docx` 文件需要安装 pandoc：
 
 ```bash
@@ -188,6 +198,15 @@ A: 删除 `{output_dir}/.intel/` 目录后重新运行命令。
 ### Q: 处理失败怎么办？
 
 A: 查看状态文件 `state.json` 中的 `failed` 字段，了解失败原因。命令会自动重试一次。
+
+### Q: 校验失败是什么意思？
+
+A: JSON Schema 校验失败表示 Agent 输出的数据结构不符合预期。常见原因：
+- 缺少必需字段
+- 字段类型错误
+- 枚举值无效
+
+命令会自动重试一次，如仍失败则记录详细错误信息到 `state.json`。
 
 ---
 

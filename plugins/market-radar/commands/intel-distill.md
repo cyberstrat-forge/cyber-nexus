@@ -84,7 +84,41 @@ state_file = intel_dir/state.json
 
 ### 步骤 2：加载或创建状态文件
 
-读取 `state.json`，如不存在则创建默认结构：
+读取 `state.json`，如不存在则创建默认结构。
+
+**校验现有 state.json**：
+
+如果 `state.json` 存在，使用校验脚本验证其结构：
+
+```bash
+# 调用校验脚本
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+npx tsx validate-json.ts state {output_dir}/.intel/state.json
+```
+
+**处理校验结果**：
+
+```
+if 退出码 == 0:
+    # 校验通过，继续加载 state.json
+    加载现有状态
+
+elif 退出码 == 1:
+    # 校验失败，数据格式错误
+    记录警告: "state.json 格式异常，将重新初始化"
+    备份损坏文件:
+        mv state.json state.json.broken
+    创建新的默认 state.json
+
+elif 退出码 == 2:
+    # 校验工具不可用（依赖未安装）
+    尝试安装依赖:
+        cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+    重新执行校验
+    如仍失败，跳过校验，直接加载 state.json（降级处理）
+```
+
+**默认结构**：
 
 ```json
 {
@@ -130,6 +164,50 @@ state_file = intel_dir/state.json
 ```
 glob pattern: **/*.{md,txt,pdf,docx}
 ```
+
+### 步骤 3.5：提取源文件发布日期
+
+对每个扫描到的文件，尝试提取发布日期：
+
+**发布日期提取优先级**：
+
+```
+1. Markdown frontmatter: date / published 字段
+2. PDF 元数据: CreationDate / ModDate
+3. 文件名匹配: YYYY-MM-DD 或 YYYYMMDD 模式
+4. 文件系统日期: 文件创建时间（ctime）
+```
+
+**具体实现**：
+
+```bash
+# 对于 Markdown 文件，检查 frontmatter
+# 使用 Grep 查找 date: 或 published: 字段
+
+# 对于 PDF 文件，使用 pdfinfo 或 mdls (macOS) 提取元数据
+pdfinfo file.pdf | grep -E "CreationDate|ModDate"
+mdls -name kMDItemContentCreationDate file.pdf  # macOS
+
+# 对于文件名，匹配日期模式
+# 例如: 2026-03-01-report.md 或 20260301_report.pdf
+
+# 兜底：使用文件系统创建时间
+stat -f %B file.md      # macOS (birth time)
+stat -c %W file.md      # Linux (birth time)
+```
+
+**日期提取结果存储**：
+
+```json
+{
+  "path": "docs/report.md",
+  "mtime": 1709987400,
+  "source_published_date": "2026-03-01",  // 提取到的发布日期，或 null
+  "source_file_added_date": "2026-03-05"   // 文件添加日期（ctime）
+}
+```
+
+将提取的日期信息附加到队列项中，传递给 agent。
 
 ### 步骤 4：构建处理队列
 
@@ -201,13 +279,95 @@ pandoc source.docx -t markdown -o temp.md
 启动 `intelligence-analyzer` agent，传入：
 - 文件路径（如需转换则先转换）
 - 会话 ID
+- **发布日期信息**（source_published_date, source_file_added_date）
 
 ```
 使用 Agent 工具，subagent_type="intelligence-analyzer"
-提示词："分析文件: {file_path}。会话 ID: {session_id}"
+提示词：
+"分析文件: {file_path}
+会话 ID: {session_id}
+源文件发布日期: {source_published_date}
+源文件添加日期: {source_file_added_date}
+
+日期使用规则：
+- intelligence_date 应使用源文件发布日期
+- 若发布日期未知，使用源文件添加日期
+- created_date 为当前处理日期"
 ```
 
-#### 5.4 处理 Agent 输出
+#### 5.4 Schema 校验
+
+Agent 返回结果后，保存为临时文件并调用校验脚本：
+
+**步骤 1：保存 Agent 输出到临时文件**
+
+```
+将 agent 返回的 JSON 保存到临时文件：
+{output_dir}/.intel/temp/{session_id}.json
+```
+
+**步骤 2：调用校验脚本**
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+npx tsx validate-json.ts intelligence-output {output_dir}/.intel/temp/{session_id}.json
+```
+
+**步骤 3：处理校验结果**
+
+| 退出码 | 含义 | 处理方式 |
+|--------|------|----------|
+| 0 | 校验通过 | 继续处理情报项 |
+| 1 | 校验失败 | 记录错误，触发重试 |
+| 2 | 工具不可用 | 尝试安装依赖后重试，仍失败则跳过校验 |
+
+**校验失败处理流程**：
+
+```
+if 校验失败:
+    解析校验错误输出
+    记录到 state.queue.failed:
+    {
+      "file.pdf": {
+        "error": "Schema validation failed",
+        "validation_errors": [
+          "intelligence_items[0].domain: value 'Invalid-Domain' not in enum",
+          "intelligence_items[0].filename: does not match pattern"
+        ],
+        "failed_at": "2026-03-10T10:40:00Z",
+        "retries": 0,
+        "mtime": 1709987500
+      }
+    }
+
+    if retries < 1:
+        # 自动重试一次
+        retries += 1
+        移回 queue.pending
+        重新处理
+    else:
+        # 已重试过，保留在 failed
+        不再处理
+```
+
+**校验通过后**：
+
+```
+校验通过 → 解析 JSON → 处理 intelligence_items
+```
+
+**错误记录格式**：
+
+```json
+{
+  "validation_errors": [
+    "intelligence_items[0].domain: value 'Invalid-Domain' not in enum",
+    "intelligence_items[0].frontmatter.intelligence_date: does not match pattern YYYY-MM-DD"
+  ]
+}
+```
+
+#### 5.5 处理有效输出
 
 解析 agent 返回的 JSON：
 
@@ -221,7 +381,7 @@ pandoc source.docx -t markdown -o temp.md
   2. 写入 `{output_dir}/{domain}/{filename}`（用户可见）
   3. 处理文件名冲突（追加序号）
 
-#### 5.5 更新状态（成功）
+#### 5.6 更新状态（成功）
 
 ```json
 {
@@ -249,7 +409,29 @@ pandoc source.docx -t markdown -o temp.md
 
 立即写入 `state.json`。
 
-#### 5.6 更新状态（失败）
+**写入前校验**：
+
+每次写入 state.json 前，先保存到临时文件并校验：
+
+```bash
+# 1. 保存新状态到临时文件
+# {output_dir}/.intel/temp/state-new.json
+
+# 2. 调用校验脚本
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+npx tsx validate-json.ts state {output_dir}/.intel/temp/state-new.json
+
+# 3. 根据校验结果处理
+if 退出码 == 0:
+    # 校验通过，替换原文件
+    mv temp/state-new.json state.json
+else:
+    # 校验失败，保留原文件
+    记录错误: "状态数据异常，中止写入"
+    抛出异常，停止处理
+```
+
+#### 5.7 更新状态（失败）
 
 ```json
 {
@@ -267,7 +449,7 @@ pandoc source.docx -t markdown -o temp.md
 }
 ```
 
-立即写入 `state.json`。
+立即写入 `state.json`（写入前同样进行 schema 校验）。
 
 ### 步骤 6：重试失败文件
 
@@ -411,7 +593,8 @@ stat -c %Y file.md      # Linux
 | 权限被拒绝 | 记录错误，标记为失败 |
 | Pandoc 不可用（docx） | 记录错误，跳过文件 |
 | Agent 超时 | 重试一次，然后标记为失败 |
-| Agent 输出无效 | 记录错误，标记为失败 |
+| JSON 解析失败 | 重试一次，然后标记为失败 |
+| Schema 校验失败 | 记录校验错误详情，重试一次，然后标记为失败 |
 
 ## 关联 Skills
 
@@ -420,6 +603,146 @@ stat -c %Y file.md      # Linux
 - **analysis-methodology** - 战略价值判断标准和提取原则
 
 详细的 markdown 模板和领域特定字段，参见 `skills/output-templates/references/templates.md`。
+
+## Schema 校验
+
+项目使用 TypeScript + Ajv 进行 JSON Schema 校验。
+
+### 校验脚本
+
+位置：`scripts/validate-json.ts`
+
+**使用方式**：
+
+```bash
+# 安装依赖（首次使用）
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+
+# 校验 agent 输出
+npx tsx validate-json.ts intelligence-output ./output/data.json
+
+# 校验 state.json
+npx tsx validate-json.ts state ./.intel/state.json
+```
+
+### 校验时机
+
+| 时机 | Schema | 说明 |
+|------|--------|------|
+| Agent 返回后 | `intelligence-output.schema.json` | 校验输出结构，失败则重试 |
+| 启动时 | `state.schema.json` | 校验现有状态，损坏则备份重建 |
+| 写入前 | `state.schema.json` | 校验新状态，异常则中止 |
+
+### 校验内容
+
+**intelligence-output.schema.json**：
+- 必需字段完整性
+- 字段类型正确性
+- 枚举值有效性（domain、security_relevance、review_status）
+- 日期格式验证（YYYY-MM-DD）
+- 文件名格式验证（YYYYMMDD-*.md）
+
+**state.schema.json**：
+- 版本号格式（X.Y）
+- 时间戳格式（ISO 8601）
+- 队列结构（pending、processing、failed）
+- 处理记录结构
+- 统计信息结构
+
+### 校验失败处理
+
+| 场景 | 处理方式 |
+|------|----------|
+| Agent 输出校验失败 | 记录错误详情，自动重试 1 次 |
+| state.json 启动校验失败 | 备份为 `.broken`，创建新文件 |
+| state.json 写入前校验失败 | 中止写入，保留原文件 |
+
+### 调用链流程图
+
+**整体流程**：
+
+```
+/intel-distill
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 步骤 2: 加载 state.json                                       │
+│                                                              │
+│  state.json 存在?                                            │
+│     │                                                        │
+│     ├─ 是 ──► npx tsx validate-json.ts state state.json      │
+│     │              │                                         │
+│     │              ├─ ✓ 通过 ──► 加载现有状态                  │
+│     │              │                                         │
+│     │              └─ ✗ 失败 ──► 备份为 .broken               │
+│     │                              创建默认 state.json        │
+│     │                                                        │
+│     └─ 否 ──► 创建默认 state.json                             │
+└─────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 步骤 3-4: 扫描文件、构建队列                                   │
+└─────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 步骤 5: 处理每个文件                                          │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ 5.3 调用 intelligence-analyzer agent                    │ │
+│  │     │                                                   │ │
+│  │     ▼                                                   │ │
+│  │  返回 JSON ──► 保存到 temp/{session}.json               │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                      │                                       │
+│                      ▼                                       │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ 5.4 Schema 校验                                         │ │
+│  │                                                         │ │
+│  │  npx tsx validate-json.ts intelligence-output \         │ │
+│  │      temp/{session}.json                                │ │
+│  │     │                                                   │ │
+│  │     ├─ ✓ 通过 ──► 继续处理情报项                         │ │
+│  │     │                                                   │ │
+│  │     └─ ✗ 失败 ──► retries < 1?                          │ │
+│  │                      │                                  │ │
+│  │                      ├─ 是 ──► 重试                     │ │
+│  │                      │                                  │ │
+│  │                      └─ 否 ──► 记录到 failed            │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                      │                                       │
+│                      ▼                                       │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ 5.5-5.6 生成情报卡片、更新状态                           │ │
+│  │                                                         │ │
+│  │  更新 state 对象                                        │ │
+│  │     │                                                   │ │
+│  │     ▼                                                   │ │
+│  │  保存到 temp/state-new.json                            │ │
+│  │     │                                                   │ │
+│  │     ▼                                                   │ │
+│  │  npx tsx validate-json.ts state temp/state-new.json    │ │
+│  │     │                                                   │ │
+│  │     ├─ ✓ 通过 ──► 替换 state.json                       │ │
+│  │     │                                                   │ │
+│  │     └─ ✗ 失败 ──► 中止写入，保留原文件                   │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 步骤 6-8: 重试、归档、生成报告                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**校验脚本调用总结**：
+
+| 步骤 | 调用命令 | 成功处理 | 失败处理 |
+|------|----------|----------|----------|
+| 2. 启动校验 | `npx tsx validate-json.ts state state.json` | 加载状态 | 备份重建 |
+| 5.4 输出校验 | `npx tsx validate-json.ts intelligence-output temp/{session}.json` | 处理情报 | 重试/记录失败 |
+| 5.6 写入前校验 | `npx tsx validate-json.ts state temp/state-new.json` | 替换文件 | 中止处理 |
 
 ## 使用示例
 

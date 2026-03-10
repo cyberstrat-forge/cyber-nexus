@@ -1,0 +1,18 @@
+{
+  "name": "@cyber-nexus/market-radar-schemas",
+  "version": "1.0.0",
+  "description": "JSON Schema validation for market-radar plugin",
+  "type": "module",
+  "scripts": {
+    "validate": "tsx validate-json.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

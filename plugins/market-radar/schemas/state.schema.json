@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "state.schema.json",
+  "title": "Intelligence Processing State Schema",
+  "description": "JSON Schema for state.json validation in intel-distill workflow",
+  "type": "object",
+  "required": ["version", "updated_at", "queue", "processed", "stats"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "State file format version (e.g., 1.0)"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp (ISO 8601 format)"
+    },
+    "queue": {
+      "$ref": "#/definitions/queue"
+    },
+    "processed": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/processed_entry"
+      },
+      "description": "Map of processed file paths to their metadata"
+    },
+    "stats": {
+      "$ref": "#/definitions/stats"
+    }
+  },
+  "definitions": {
+    "queue": {
+      "type": "object",
+      "required": ["pending", "processing", "failed"],
+      "additionalProperties": false,
+      "properties": {
+        "pending": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pending_item"
+          },
+          "description": "Files waiting to be processed"
+        },
+        "processing": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/processing_entry"
+          },
+          "description": "Files currently being processed"
+        },
+        "failed": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/failed_entry"
+          },
+          "description": "Files that failed processing"
+        }
+      }
+    },
+    "pending_item": {
+      "type": "object",
+      "required": ["path", "mtime"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Relative file path"
+        },
+        "mtime": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File modification time (Unix timestamp)"
+        },
+        "source_published_date": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Extracted source published date (YYYY-MM-DD or null)"
+        },
+        "source_file_added_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "File added date from filesystem (YYYY-MM-DD)"
+        }
+      }
+    },
+    "processing_entry": {
+      "type": "object",
+      "required": ["started_at", "session", "mtime"],
+      "additionalProperties": false,
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Processing start timestamp (ISO 8601)"
+        },
+        "session": {
+          "type": "string",
+          "pattern": "^\\d{8}-\\d{6}$",
+          "description": "Session ID (YYYYMMDD-HHMMSS)"
+        },
+        "mtime": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File modification time (Unix timestamp)"
+        }
+      }
+    },
+    "failed_entry": {
+      "type": "object",
+      "required": ["error", "failed_at", "retries", "mtime"],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "string",
+          "description": "Error message"
+        },
+        "failed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Failure timestamp (ISO 8601)"
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Number of retry attempts (max 1)"
+        },
+        "mtime": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File modification time (Unix timestamp)"
+        },
+        "validation_errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Schema validation errors (if applicable)"
+        }
+      }
+    },
+    "processed_entry": {
+      "type": "object",
+      "required": ["source_mtime", "processed_at", "intelligence_count", "session"],
+      "additionalProperties": false,
+      "properties": {
+        "source_mtime": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Source file modification time (Unix timestamp)"
+        },
+        "processed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Processing completion timestamp (ISO 8601)"
+        },
+        "intelligence_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of intelligence items extracted"
+        },
+        "output_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of generated output file paths"
+        },
+        "session": {
+          "type": "string",
+          "pattern": "^\\d{8}-\\d{6}$",
+          "description": "Session ID (YYYYMMDD-HHMMSS)"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "required": ["total_files", "total_intelligence", "last_run"],
+      "additionalProperties": false,
+      "properties": {
+        "total_files": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of files processed"
+        },
+        "total_intelligence": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of intelligence items extracted"
+        },
+        "last_run": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Last processing run timestamp (ISO 8601 or null)"
+        }
+      }
+    }
+  }
+}
