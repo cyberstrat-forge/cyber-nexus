@@ -1,7 +1,7 @@
 ---
 name: Intelligence Analysis Methodology
 description: This skill should be used when extracting strategic intelligence from documents, determining what information has strategic value, and applying quality standards for intelligence extraction. Triggers on "extract intelligence", "analyze document", "strategic value", or when evaluating information significance.
-version: 0.1.0
+version: 1.0.0
 ---
 
 ## 战略情报判断标准

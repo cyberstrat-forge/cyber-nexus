@@ -18,13 +18,9 @@ allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent"]
 
 ## 目录结构
 
+### 输出目录（用户可见）
 ```
-.intel/
-├── state.json              # 统一状态管理
-├── history/                # 历史元数据（按月归档）
-│   ├── 2026-03.json
-│   ├── 2026-02.json
-│   └── ...
+{output_dir}/
 ├── Threat-Landscape/
 ├── Industry-Analysis/
 ├── Vendor-Intelligence/
@@ -34,16 +30,45 @@ allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent"]
 └── Capital-Investment/
 ```
 
+### 管理目录（隐藏，存放状态）
+```
+.intel/
+├── state.json              # 统一状态管理
+└── history/                # 历史元数据（按月归档）
+    ├── 2026-03.json
+    ├── 2026-02.json
+    └── ...
+```
+
 ## 执行流程
 
 ### 步骤 1：初始化路径
 
 ```
+# 源目录：优先使用 --source，否则为当前目录
 source_dir = --source 参数或当前目录
-output_dir = --output 参数或当前目录
+
+# 输出目录：优先使用 --output，否则使用 source_dir，最终兜底为当前目录
+if --output 参数存在:
+    output_dir = --output 参数值
+elif --source 参数存在:
+    output_dir = --source 参数值
+else:
+    output_dir = 当前目录
+
+# 管理目录：始终在输出目录下
 intel_dir = output_dir/.intel/
 state_file = intel_dir/state.json
 ```
+
+**输出规则说明**：
+
+| 参数情况 | 情报卡片输出位置 | 状态文件位置 |
+|---------|-----------------|-------------|
+| 无参数 | `./` | `./.intel/state.json` |
+| `--source ./docs` | `./docs/` | `./docs/.intel/state.json` |
+| `--output ./intel` | `./intel/` | `./intel/.intel/state.json` |
+| `--source ./docs --output ./intel` | `./intel/` | `./intel/.intel/state.json` |
 
 ### 步骤 2：加载或创建状态文件
 
@@ -181,7 +206,7 @@ pandoc source.docx -t markdown -o temp.md
 **如果 `has_strategic_value: true`：**
 - 对 `intelligence_items` 中的每个项：
   1. 生成带 frontmatter + content 的 markdown 文件
-  2. 写入 `.intel/{domain}/{filename}`
+  2. 写入 `{output_dir}/{domain}/{filename}`（用户可见）
   3. 处理文件名冲突（追加序号）
 
 #### 5.5 更新状态（成功）
@@ -194,7 +219,7 @@ pandoc source.docx -t markdown -o temp.md
       "processed_at": "2026-03-09T10:35:00Z",
       "intelligence_count": 3,
       "output_files": [
-        ".intel/Emerging-Tech/20260309-ai-security.md"
+        "Emerging-Tech/20260309-ai-security.md"
       ],
       "session": "20260309-103000"
     }
@@ -289,7 +314,7 @@ pandoc source.docx -t markdown -o temp.md
 - docs/encrypted.pdf: Agent timeout（已重试一次）
 
 ### 后续步骤
-- 在 .intel/ 目录查看待审核的情报卡片
+- 在输出目录查看待审核的情报卡片
 - 添加新源文件后可再次运行 /intel-distill
 ```
 
@@ -328,9 +353,9 @@ pandoc source.docx -t markdown -o temp.md
       "processed_at": "2026-03-09T20:15:00Z",
       "intelligence_count": 3,
       "output_files": [
-        ".intel/Industry-Analysis/20260309-ai-security-market-growth.md",
-        ".intel/Emerging-Tech/20260309-ai-agent-vulnerability-detection.md",
-        ".intel/Policy-Regulation/20260309-china-ai-security-compliance.md"
+        "Industry-Analysis/20260309-ai-security-market-growth.md",
+        "Emerging-Tech/20260309-ai-agent-vulnerability-detection.md",
+        "Policy-Regulation/20260309-china-ai-security-compliance.md"
       ],
       "session": "20260309-201500"
     }
@@ -376,56 +401,24 @@ stat -c %Y file.md      # Linux
 | Agent 超时 | 重试一次，然后标记为失败 |
 | Agent 输出无效 | 记录错误，标记为失败 |
 
-## 情报卡片输出格式
-
-写入具有以下结构的 markdown 文件：
-
-```markdown
----
-title: "情报标题"
-source_file: "[[path/to/source.md]]"
-intelligence_date: 2026-03-09
-created_date: 2026-03-09
-primary_domain: Emerging-Tech
-secondary_domains: []
-security_relevance: high
-[领域特定字段...]
-review_status: pending
-generated_by: intelligence-analyzer
-generated_session: "20260309-103000"
----
-
-## 核心事实
-[从 agent 输出的内容]
-
-## 数据支撑
-[数据点]
-
-## 原文关键引用
-[引用]
-
-## 相关情报
-- [[]]
-```
-
 ## 关联 Skills
 
-分析文档时，intelligence-analyzer agent 使用：
+`intelligence-analyzer` agent 预加载以下 skills：
+- **domain-knowledge** - 七大情报领域定义和关键词
+- **analysis-methodology** - 战略价值判断标准和提取原则
 
-- **domain-knowledge** - 领域定义和关键词
-- **analysis-methodology** - 战略价值判断标准
-- **output-templates** - 格式化模板
+详细的 markdown 模板和领域特定字段，参见 `skills/output-templates/references/templates.md`。
 
 ## 使用示例
 
 ```bash
-# 处理当前目录下的所有文档
+# 处理当前目录下的所有文档，情报卡片输出到当前目录
 /intel-distill
 
-# 处理指定目录下的文档
+# 处理指定目录下的文档，情报卡片输出到源目录
 /intel-distill --source ./docs
 
-# 指定输出位置
+# 指定输出位置，情报卡片输出到 ./intelligence 目录
 /intel-distill --source ./docs --output ./intelligence
 
 # 重新处理所有文件（删除 .intel/state.json 或清空 processed 字段）
@@ -437,4 +430,6 @@ generated_session: "20260309-103000"
 - 大型 PDF 采用智能分页处理
 - 状态维护在单个 `state.json` 文件中，每次状态变更立即写入
 - 历史数据按月归档到 `history/` 目录
+- **情报卡片**输出到用户可见目录（便于发现和访问）
+- **管理文件**存放在 `.intel/` 隐藏目录（state.json、history/）
 - 如果源文件在 git 仓库中，建议将 `.intel/` 添加到 `.gitignore`

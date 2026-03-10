@@ -66,12 +66,10 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 ## 输出结构
 
+### 情报卡片（用户可见）
+
 ```
-.intel/
-├── state.json              # 统一状态管理（队列 + 元数据）
-├── history/                # 历史元数据（按月归档）
-│   ├── 2026-03.json
-│   └── ...
+{output_dir}/
 ├── Threat-Landscape/       # 威胁态势情报卡片
 ├── Industry-Analysis/      # 行业分析情报卡片
 ├── Vendor-Intelligence/    # 厂商情报卡片
@@ -80,6 +78,25 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 ├── Policy-Regulation/      # 政策法规情报卡片
 └── Capital-Investment/     # 资本动态情报卡片
 ```
+
+### 管理目录（隐藏）
+
+```
+.intel/
+├── state.json              # 统一状态管理（队列 + 元数据）
+└── history/                # 历史元数据（按月归档）
+    ├── 2026-03.json
+    └── ...
+```
+
+### 输出规则
+
+| 参数情况 | 情报卡片输出位置 |
+|---------|-----------------|
+| 无参数 | `./` |
+| `--source ./docs` | `./docs/` |
+| `--output ./intel` | `./intel/` |
+| `--source ./docs --output ./intel` | `./intel/` |
 
 ### 状态文件（state.json）
 
@@ -96,7 +113,7 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
       "source_mtime": 1709987400,
       "processed_at": "2026-03-09T10:30:00Z",
       "intelligence_count": 3,
-      "output_files": [".intel/Emerging-Tech/20260309-ai-security.md"]
+      "output_files": ["Emerging-Tech/20260309-ai-security.md"]
     }
   },
   "stats": {
