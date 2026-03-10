@@ -505,15 +505,6 @@ Format: `{YYYYMMDD}-{subject}-{feature}.md`
 | 数据安全法正式生效 | `20260310-china-data-security-law.md` | 具体法规名称 |
 | AI Agent架构安全漏洞 | `20260310-ai-agent-architecture-flaw.md` | 技术领域 + 具体问题 |
 
-### Before vs After
-
-| 标题 | 改进前 | 改进后 |
-|------|--------|--------|
-| AI安全市场高速增长 | `ai-security-market.md` | `ai-security-market-growth.md` |
-| 某厂商完成B轮融资 | `vendor-funding.md` | `crowdstrike-series-b.md` |
-| 新型勒索软件攻击 | `ransomware.md` | `lockbit-ransomware-surge.md` |
-| 数据安全法正式生效 | `data-law.md` | `china-data-security-law.md` |
-
 ### Feature Keywords by Domain
 
 | 领域 | 常用特征词 |
