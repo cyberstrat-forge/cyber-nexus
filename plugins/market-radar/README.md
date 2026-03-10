@@ -82,7 +82,7 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 ### 管理目录（隐藏）
 
 ```
-.intel/
+{output_dir}/.intel/
 ├── state.json              # 统一状态管理（队列 + 元数据）
 └── history/                # 历史元数据（按月归档）
     ├── 2026-03.json
@@ -91,12 +91,12 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 ### 输出规则
 
-| 参数情况 | 情报卡片输出位置 |
-|---------|-----------------|
-| 无参数 | `./` |
-| `--source ./docs` | `./docs/` |
-| `--output ./intel` | `./intel/` |
-| `--source ./docs --output ./intel` | `./intel/` |
+| 参数情况 | 情报卡片输出位置 | 状态文件位置 |
+|---------|-----------------|-------------|
+| 无参数 | `./` | `./.intel/state.json` |
+| `--source ./docs` | `./docs/` | `./docs/.intel/state.json` |
+| `--output ./intel` | `./intel/` | `./intel/.intel/state.json` |
+| `--source ./docs --output ./intel` | `./intel/` | `./intel/.intel/state.json` |
 
 ### 状态文件（state.json）
 
