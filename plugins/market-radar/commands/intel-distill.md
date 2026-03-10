@@ -163,9 +163,9 @@ npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
 
 #### 5.5 处理返回结果
 
-**成功**：更新 `processed` 和 `stats`
+**成功**：更新 `processed` 和 `stats`，删除临时文件 `.intel/temp/{session_id}.json`
 
-**失败**：更新 `queue.failed`
+**失败**：更新 `queue.failed`，保留临时文件供排查
 
 返回格式参见 `agents/references/json-format.md`。
 
