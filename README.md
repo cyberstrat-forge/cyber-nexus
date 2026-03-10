@@ -73,7 +73,7 @@ cyber-nexus/
 │       ├── commands/          # 命令定义
 │       │   ├── intel-distill.md
 │       │   └── references/
-│       │       └── usage-guide.md
+│       │       └── intel-distill-guide.md
 │       ├── agents/            # 智能代理
 │       │   ├── intelligence-analyzer.md
 │       │   └── references/

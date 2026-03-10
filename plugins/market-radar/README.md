@@ -191,7 +191,7 @@ market-radar/
 ├── commands/
 │   ├── intel-distill.md
 │   └── references/
-│       └── usage-guide.md
+│       └── intel-distill-guide.md
 ├── agents/
 │   ├── intelligence-analyzer.md
 │   └── references/

@@ -19,11 +19,11 @@ allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent"]
 
 ## 帮助信息
 
-如果用户输入 `--help` 参数，读取并显示 `references/usage-guide.md` 的内容：
+如果用户输入 `--help` 参数，读取并显示 `references/intel-distill-guide.md` 的内容：
 
 ```
 使用 Read 工具读取：
-${CLAUDE_PLUGIN_ROOT}/commands/references/usage-guide.md
+${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 将内容展示给用户，无需执行后续流程。
 ```
