@@ -177,27 +177,7 @@ market-radar/
 
 ## 更新日志
 
-### v1.0.2 (2026-03-10)
-
-- **变更检测优化**：使用 content hash (MD5) 替代 mtime，解决 git 操作导致的误判问题 (#3)
-- **去重规则明确**：定义三要素匹配规则（日期 + 领域 + 标题相似度 > 80%）(#7)
-- **归档规则明确**：processed 条目超过 30 天自动归档到 history/ 目录 (#9)
-- **Schema 更新**：添加 content_hash 字段，保留 source_mtime 作为备用
-
-### v1.0.1 (2026-03-10)
-
-- 优化 intel-distill 上下文架构，Agent 直接写入情报卡片
-- 添加 JSON Schema 校验支持
-- 精简文档内容，消除冗余
-- 补充临时文件清理逻辑
-
-### v1.0.0 (2026-03-10)
-
-- 首个正式版本发布
-- 实现 intel-distill 命令核心功能
-- 支持七大情报领域的自动分类
-- 支持 Markdown、PDF、Word 文档处理
-- 实现增量处理机制
+详见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 许可证
 
