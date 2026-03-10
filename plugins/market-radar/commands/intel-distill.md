@@ -32,7 +32,7 @@ allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent"]
 
 ### 管理目录（隐藏，存放状态）
 ```
-.intel/
+{output_dir}/.intel/
 ├── state.json              # 统一状态管理
 └── history/                # 历史元数据（按月归档）
     ├── 2026-03.json
