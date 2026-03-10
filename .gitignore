@@ -1,12 +1,3 @@
 # macOS
 .DS_Store
 
-# Intelligence output
-.intel/
-
-# Test files
-test-docs/
-
-# Plugins test files
-plugins/*/test-docs/
-plugins/*/.intel/

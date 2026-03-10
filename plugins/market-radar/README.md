@@ -191,7 +191,9 @@ market-radar/
 ├── commands/
 │   └── intel-distill.md
 ├── agents/
-│   └── intelligence-analyzer.md
+│   ├── intelligence-analyzer.md
+│   └── references/
+│       └── json-format.md
 ├── skills/
 │   ├── domain-knowledge/
 │   │   └── SKILL.md
