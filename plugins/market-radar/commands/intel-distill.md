@@ -122,17 +122,35 @@ glob pattern: **/*.{md,txt,pdf,docx}
 
 ### 步骤 4：构建处理队列
 
-对每个扫描到的文件：
-- 已处理且无变更 → 跳过
-- 已处理且有变更 → 加入 pending
-- 之前失败且 retries < 1 → 加入 pending（重试）
-- 新文件 → 加入 pending
+#### 4.1 计算文件内容 Hash
+
+使用 MD5 算法计算文件内容哈希：
+
+```bash
+# macOS / Linux 通用
+md5sum <file_path> 2>/dev/null || md5 -q <file_path>
+```
+
+**Hash 存储位置**：`processed[filepath].content_hash`
+
+#### 4.2 变更检测逻辑
+
+对每个扫描到的文件计算当前 content_hash，与 `state.json` 中记录比对：
+
+| 条件 | 操作 |
+|------|------|
+| content_hash 相同 | 跳过（无变更） |
+| content_hash 不同 | 加入 pending（内容变更） |
+| 新文件（无记录） | 加入 pending |
+| 之前失败且 retries < 1 | 加入 pending（重试） |
+
+**注意**：`source_mtime` 字段保留用于参考，但变更检测以 `content_hash` 为准。
 
 ### 步骤 5：逐个处理文件
 
 #### 5.1 移入 processing 状态
 
-更新 `state.json`，记录 `started_at`、`session`、`mtime`，立即写入。
+更新 `state.json`，记录 `started_at`、`session`、`content_hash`，立即写入。
 
 #### 5.2 生成会话 ID
 
@@ -177,9 +195,36 @@ npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
 
 对 `queue.failed` 中 `retries < 1` 的文件重试一次。
 
-### 步骤 7：归档历史数据（可选）
+### 步骤 7：归档历史数据
 
-每月初归档上月 `processed` 数据到 `history/`。
+#### 7.1 归档触发条件
+
+每次运行时检查 `processed` 条目，自动归档满足以下条件的记录：
+
+```
+processed_at 超过 30 天 → 自动归档
+```
+
+#### 7.2 归档操作
+
+1. 将符合条件的条目追加到 `history/YYYY-MM.json`
+2. 从 `state.json` 的 `processed` 中移除已归档条目
+3. 更新 `stats` 中的 `total_files` 计数
+
+**归档文件结构**：
+
+```
+{output_dir}/.intel/
+├── state.json              # 当前状态（仅保留 30 天内数据）
+└── history/
+    ├── 2026-01.json        # 2026年1月归档
+    ├── 2026-02.json        # 2026年2月归档
+    └── ...
+```
+
+#### 7.3 归档文件格式
+
+归档文件使用与 `state.json` 相同的 Schema，仅包含 `processed` 字段。
 
 ### 步骤 8：生成汇总报告
 

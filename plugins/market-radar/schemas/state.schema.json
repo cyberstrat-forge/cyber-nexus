@@ -62,23 +62,23 @@
     },
     "pending_item": {
       "type": "object",
-      "required": ["path", "mtime"],
+      "required": ["path", "content_hash"],
       "additionalProperties": false,
       "properties": {
         "path": {
           "type": "string",
           "description": "Relative file path"
         },
-        "mtime": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "File modification time (Unix timestamp)"
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "MD5 hash of file content at scan time"
         }
       }
     },
     "processing_entry": {
       "type": "object",
-      "required": ["started_at", "session", "mtime"],
+      "required": ["started_at", "session", "content_hash"],
       "additionalProperties": false,
       "properties": {
         "started_at": {
@@ -91,16 +91,16 @@
           "pattern": "^\\d{8}-\\d{6}$",
           "description": "Session ID (YYYYMMDD-HHMMSS)"
         },
-        "mtime": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "File modification time (Unix timestamp)"
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "MD5 hash of file content being processed"
         }
       }
     },
     "failed_entry": {
       "type": "object",
-      "required": ["error", "failed_at", "retries", "mtime"],
+      "required": ["error", "failed_at", "retries", "content_hash"],
       "additionalProperties": false,
       "properties": {
         "error": {
@@ -118,10 +118,10 @@
           "maximum": 1,
           "description": "Number of retry attempts (max 1)"
         },
-        "mtime": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "File modification time (Unix timestamp)"
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "MD5 hash of file content at failure time"
         },
         "validation_errors": {
           "type": "array",
@@ -134,13 +134,18 @@
     },
     "processed_entry": {
       "type": "object",
-      "required": ["source_mtime", "processed_at", "intelligence_count", "session"],
+      "required": ["content_hash", "processed_at", "intelligence_count", "session"],
       "additionalProperties": false,
       "properties": {
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "MD5 hash of source file content for change detection"
+        },
         "source_mtime": {
           "type": "integer",
           "minimum": 0,
-          "description": "Source file modification time (Unix timestamp)"
+          "description": "Source file modification time (Unix timestamp) - retained for backward compatibility"
         },
         "processed_at": {
           "type": "string",

@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.1)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.2)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
@@ -176,6 +176,13 @@ market-radar/
 ```
 
 ## 更新日志
+
+### v1.0.2 (2026-03-10)
+
+- **变更检测优化**：使用 content hash (MD5) 替代 mtime，解决 git 操作导致的误判问题 (#3)
+- **去重规则明确**：定义三要素匹配规则（日期 + 领域 + 标题相似度 > 80%）(#7)
+- **归档规则明确**：processed 条目超过 30 天自动归档到 history/ 目录 (#9)
+- **Schema 更新**：添加 content_hash 字段，保留 source_mtime 作为备用
 
 ### v1.0.1 (2026-03-10)
 

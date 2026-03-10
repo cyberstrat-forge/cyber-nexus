@@ -1,6 +1,6 @@
 # Cyber Nexus
 
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.1)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.2)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 利用 AI 赋能网络安全战略规划与产品规划
@@ -15,7 +15,7 @@ Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 
 
 | 插件 | 版本 | 状态 | 功能 |
 |------|------|------|------|
-| [market-radar](./plugins/market-radar) | 1.0.1 | ✅ 可用 | 市场情报提取 |
+| [market-radar](./plugins/market-radar) | 1.0.2 | ✅ 可用 | 市场情报提取 |
 | competitive-analysis | - | 📋 规划中 | 竞争对手分析 |
 | product-management | - | 📋 规划中 | 产品管理 |
 
@@ -141,6 +141,13 @@ cyber-nexus/
 ```
 
 ## 更新日志
+
+### v1.0.2 (2026-03-10)
+
+- **变更检测优化**：使用 content hash (MD5) 替代 mtime，解决 git 操作导致的误判问题
+- **去重规则明确**：定义三要素匹配规则（日期 + 领域 + 标题相似度 > 80%）
+- **归档规则明确**：processed 条目超过 30 天自动归档
+- **Schema 更新**：添加 content_hash 字段
 
 ### v1.0.1 (2026-03-10)
 
