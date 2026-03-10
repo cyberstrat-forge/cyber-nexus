@@ -15,10 +15,9 @@ Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 
 
 | 插件 | 版本 | 状态 | 功能 |
 |------|------|------|------|
-| [market-radar](./plugins/market-radar) | 1.0.1 | ✅ 可用 | 市场情报提取（开发中） |
-| threat-intel | - | 📋 规划中 | 威胁情报分析 |
+| [market-radar](./plugins/market-radar) | 1.0.1 | ✅ 可用 | 市场情报提取 |
 | competitive-analysis | - | 📋 规划中 | 竞争对手分析 |
-| product-roadmap | - | 📋 规划中 | 产品路线图生成 |
+| product-management | - | 📋 规划中 | 产品管理 |
 
 ---
 
