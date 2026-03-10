@@ -1,22 +1,6 @@
 # Domain Templates Reference
 
-> Complete frontmatter and body templates for all 7 intelligence domains.
-
----
-
-## Domain Overview
-
-| Domain | Identifier | Description |
-|--------|------------|-------------|
-| 威胁态势 | Threat-Landscape | 新型攻击手法、威胁组织动态、重大安全事件 |
-| 行业分析 | Industry-Analysis | 市场规模、增长趋势、行业格局变化 |
-| 厂商情报 | Vendor-Intelligence | 产品发布、战略调整、并购、财务数据 |
-| 新兴技术 | Emerging-Tech | 新技术原理、应用场景、安全影响、成熟度评估 |
-| 客户与市场 | Customer-Market | 客户需求变化、采购行为、预算趋势 |
-| 政策法规 | Policy-Regulation | 新法规发布、合规要求、监管动态 |
-| 资本动态 | Capital-Investment | 融资、并购、IPO、投资趋势 |
-
----
+> 七大情报领域的 Frontmatter 和 Body 模板
 
 ## 1. Threat-Landscape（威胁态势）
 
@@ -452,78 +436,59 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ## Common Fields Reference
 
-### security_relevance Values
+### security_relevance
 
 | Value | Criteria |
 |-------|----------|
-| high | Direct security implications, immediate relevance |
-| medium | Indirect security connections, contextual relevance |
+| high | 直接安全关联，即时相关性 |
+| medium | 间接安全关联，上下文相关性 |
 
-### maturity Values (Emerging-Tech)
-
-| Value | Description |
-|-------|-------------|
-| 概念 | Concept stage, no commercial products |
-| 早期 | Early stage, limited adoption |
-| 成长 | Growth stage, increasing adoption |
-| 成熟 | Mature stage, widespread adoption |
-
-### review_status Values
+### maturity（Emerging-Tech）
 
 | Value | Description |
 |-------|-------------|
-| pending | Needs human review |
-| approved | Reviewed and approved |
-| revised | Modified after review |
+| 概念 | 概念阶段，无商业产品 |
+| 早期 | 早期阶段，有限采用 |
+| 成长 | 成长阶段，采用增加 |
+| 成熟 | 成熟阶段，广泛采用 |
+
+### review_status
+
+| Value | Description |
+|-------|-------------|
+| pending | 待人工审核 |
+| approved | 已审核通过 |
+| revised | 审核后修改 |
 
 ---
 
 ## File Naming Rules
 
-Format: `{YYYYMMDD}-{subject}-{feature}.md`
+**格式**：`{YYYYMMDD}-{subject}-{feature}.md`
 
 | 组成部分 | 说明 |
 |----------|------|
-| `{YYYYMMDD}` | 情报日期（源文件发布日期，非处理日期） |
-| `{subject}` | 主体/对象（简短英文） |
-| `{feature}` | 核心特征/动作（体现情报核心内容） |
+| `YYYYMMDD` | 情报日期（源文件发布日期） |
+| `subject` | 主体/对象（简短英文） |
+| `feature` | 核心特征/动作 |
 
-### 日期来源说明
-
-文件名中的日期应为**源文件发布日期**，获取优先级：
-
-1. **Markdown frontmatter**：`date` 或 `published` 字段
-2. **PDF 元数据**：`CreationDate` 或 `ModDate`
-3. **文件名模式**：匹配 `YYYY-MM-DD` 或 `YYYYMMDD` 格式
-4. **文件系统日期**：文件添加时间（ctime），作为兜底
+**原则**：
+- kebab-case 格式，全部小写
+- 最大 60 字符
+- 体现情报独特性
 
 **示例**：
-- 源文件 `2026-03-01-ai-security-report.pdf` 于 `2026-03-05` 添加，处理日期为 `2026-03-10`
-- 情报卡片命名：`20260301-ai-security-market-growth.md`（使用发布日期 03-01）
-- `intelligence_date`：`2026-03-01`
-- `created_date`：`2026-03-10`
 
-### Naming Principles
+| 标题 | 文件名 |
+|------|--------|
+| AI安全市场高速增长 | `20260301-ai-security-market-growth.md` |
+| CrowdStrike完成B轮融资 | `20260301-crowdstrike-series-b.md` |
+| LockBit勒索软件攻击激增 | `20260301-lockbit-ransomware-surge.md` |
 
-- **体现核心特征**：文件名应反映情报的独特性，而非仅是领域词
-- **结构清晰**：日期 + 主体 + 特征，易于识别和检索
-- **kebab-case 格式**：全部小写，用连字符分隔
-- **最大长度**：60 字符
+**领域特征词**：
 
-### Examples
-
-| 标题 | 文件名 | 说明 |
-|------|--------|------|
-| AI安全市场高速增长 | `20260310-ai-security-market-growth.md` | growth 体现增长趋势 |
-| CrowdStrike完成B轮融资 | `20260310-crowdstrike-series-b.md` | 具体厂商 + 融资轮次 |
-| LockBit勒索软件攻击激增 | `20260310-lockbit-ransomware-surge.md` | 具体威胁组织 + 动作 |
-| 数据安全法正式生效 | `20260310-china-data-security-law.md` | 具体法规名称 |
-| AI Agent架构安全漏洞 | `20260310-ai-agent-architecture-flaw.md` | 技术领域 + 具体问题 |
-
-### Feature Keywords by Domain
-
-| 领域 | 常用特征词 |
-|------|-----------|
+| 领域 | 特征词 |
+|------|--------|
 | Threat-Landscape | `attack`, `surge`, `breach`, `vulnerability`, `exploit` |
 | Industry-Analysis | `growth`, `decline`, `trend`, `forecast`, `cagr` |
 | Vendor-Intelligence | `funding`, `acquisition`, `ipo`, `partnership`, `launch` |
@@ -531,3 +496,5 @@ Format: `{YYYYMMDD}-{subject}-{feature}.md`
 | Customer-Market | `shift`, `demand`, `budget`, `preference` |
 | Policy-Regulation | `enact`, `compliance`, `deadline`, `amendment` |
 | Capital-Investment | `series-a/b/c`, `valuation`, `merger`, `ipo` |
+
+**日期来源**：参见 `agents/intelligence-analyzer.md` 步骤 2。

@@ -9,12 +9,10 @@ Market Radar 是一个 Claude Code 插件，用于从文档中提取战略情报
 ## 功能特性
 
 - **情报提取**：使用严格标准分析文档的战略价值
-- **七大情报领域**：威胁态势、行业分析、厂商情报、新兴技术、客户与市场、政策法规、资本动态
+- **七大情报领域**：覆盖威胁态势、行业分析、厂商情报、新兴技术、客户与市场、政策法规、资本动态
 - **多格式支持**：支持 Markdown、文本、PDF 和 DOCX 文件
 - **增量处理**：跟踪已处理文件，检测变更，避免重复处理
 - **JSON Schema 校验**：自动校验输出结构，确保数据质量
-- **日期来源追踪**：文件名使用源文件发布日期，便于追溯
-- **质量优先**：每份文档 0-3 条情报是正常的
 
 ## 安装
 
@@ -53,14 +51,14 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 ### 参数说明
 
 | 参数 | 说明 | 默认值 |
-|-----------|-------------|---------|
+|------|------|--------|
 | `--source <dir>` | 包含文档的源目录 | 当前目录 |
 | `--output <dir>` | 情报卡片输出目录 | 当前目录 |
 
 ### 支持的文件格式
 
 | 格式 | 扩展名 | 说明 |
-|--------|-----------|---------|
+|------|--------|------|
 | Markdown | `.md` | 直接处理 |
 | 文本 | `.txt` | 直接处理 |
 | PDF | `.pdf` | 大文件采用智能分页 |
@@ -68,85 +66,26 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 ## 输出结构
 
-### 情报卡片（用户可见）
+### 情报卡片目录
 
 ```
 {output_dir}/
-├── Threat-Landscape/       # 威胁态势情报卡片
-├── Industry-Analysis/      # 行业分析情报卡片
-├── Vendor-Intelligence/    # 厂商情报卡片
-├── Emerging-Tech/          # 新兴技术情报卡片
-├── Customer-Market/        # 客户与市场情报卡片
-├── Policy-Regulation/      # 政策法规情报卡片
-└── Capital-Investment/     # 资本动态情报卡片
+├── Threat-Landscape/       # 威胁态势
+├── Industry-Analysis/      # 行业分析
+├── Vendor-Intelligence/    # 厂商情报
+├── Emerging-Tech/          # 新兴技术
+├── Customer-Market/        # 客户与市场
+├── Policy-Regulation/      # 政策法规
+└── Capital-Investment/     # 资本动态
 ```
 
-### 管理目录（隐藏）
+### 管理目录
 
 ```
 {output_dir}/.intel/
-├── state.json              # 统一状态管理（队列 + 元数据）
-└── history/                # 历史元数据（按月归档）
-    ├── 2026-03.json
-    └── ...
+├── state.json              # 状态管理（队列 + 处理记录）
+└── history/                # 历史归档（按月）
 ```
-
-### 输出规则
-
-| 参数情况 | 情报卡片输出位置 | 状态文件位置 |
-|---------|-----------------|-------------|
-| 无参数 | `./` | `./.intel/state.json` |
-| `--source ./docs` | `./docs/` | `./docs/.intel/state.json` |
-| `--output ./intel` | `./intel/` | `./intel/.intel/state.json` |
-| `--source ./docs --output ./intel` | `./intel/` | `./intel/.intel/state.json` |
-
-### 状态文件（state.json）
-
-```json
-{
-  "version": "1.0",
-  "queue": {
-    "pending": [{"path": "docs/report.md", "mtime": 1709987400}],
-    "processing": {},
-    "failed": {}
-  },
-  "processed": {
-    "report.md": {
-      "source_mtime": 1709987400,
-      "processed_at": "2026-03-09T10:30:00Z",
-      "intelligence_count": 3,
-      "output_files": ["Emerging-Tech/20260309-ai-agent-vulnerability.md"]
-    }
-  },
-  "stats": {
-    "total_files": 15,
-    "total_intelligence": 28,
-    "last_run": "2026-03-09T10:30:00Z"
-  }
-}
-```
-
-## 情报领域
-
-| 领域 | 说明 |
-|--------|-------------|
-| **Threat-Landscape** | 新型攻击手法、威胁组织动态、重大安全事件 |
-| **Industry-Analysis** | 市场规模、增长趋势、行业格局变化 |
-| **Vendor-Intelligence** | 产品发布、战略调整、并购、财务数据 |
-| **Emerging-Tech** | 新技术原理、应用场景、安全影响、成熟度评估 |
-| **Customer-Market** | 客户需求变化、采购行为、预算趋势 |
-| **Policy-Regulation** | 新法规发布、合规要求、监管动态 |
-| **Capital-Investment** | 融资、并购、IPO、投资趋势 |
-
-## 战略情报判断标准
-
-只有满足以下至少一个条件才提取信息：
-
-1. **影响决策** - 可能改变战略方向或资源分配
-2. **揭示趋势** - 反映行业、技术或威胁的重大变化
-3. **发现机会** - 揭示新的市场机会或技术突破
-4. **预警风险** - 提示潜在威胁或竞争风险
-5. **关键数据** - 包含重要的量化数据
 
 ## 前置要求
 
@@ -154,7 +93,6 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 - **Node.js 18+** 和 **npm**：用于 JSON Schema 校验
   ```bash
-  # 首次使用前安装校验依赖
   cd plugins/market-radar/scripts && npm install
   ```
 
@@ -169,6 +107,30 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
   sudo apt-get install pandoc
   ```
 
+## 项目结构
+
+```
+market-radar/
+├── commands/
+│   ├── intel-distill.md              # 情报提取命令
+│   └── references/
+│       └── intel-distill-guide.md    # 命令帮助
+├── agents/
+│   ├── intelligence-analyzer.md      # 情报分析 Agent
+│   └── references/
+│       └── json-format.md            # 输出格式规范
+├── skills/
+│   ├── domain-knowledge/             # 七大领域定义
+│   ├── analysis-methodology/         # 战略价值判断标准
+│   └── output-templates/             # 情报卡片模板
+├── schemas/
+│   ├── agent-result.schema.json      # Agent 返回格式
+│   ├── intelligence-output.schema.json
+│   └── state.schema.json
+└── scripts/
+    └── validate-json.ts              # 校验脚本
+```
+
 ## 配置
 
 添加到项目的 `.gitignore`：
@@ -176,65 +138,6 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 ```gitignore
 # Market Radar 情报输出
 .intel/
-```
-
-## 组件说明
-
-### Commands
-
-- **`intel-distill`**：从文档中提取情报
-
-### Agents
-
-- **`intelligence-analyzer`**：自主分析文档并提取战略情报
-
-### Skills
-
-- **`domain-knowledge`**：网络安全领域定义和关键词
-- **`analysis-methodology`**：战略情报提取方法论
-- **`output-templates`**：情报卡片格式化模板
-
-### Schemas
-
-- **`agent-result.schema.json`**：Agent 轻量返回格式校验规则
-- **`intelligence-output.schema.json`**：Agent 完整输出校验规则（历史保留）
-- **`state.schema.json`**：状态文件校验规则
-
-### Scripts
-
-- **`validate-json.ts`**：TypeScript + Ajv 校验脚本
-
-## 项目结构
-
-```
-market-radar/
-├── .claude-plugin/
-│   └── plugin.json
-├── commands/
-│   ├── intel-distill.md
-│   └── references/
-│       └── intel-distill-guide.md
-├── agents/
-│   ├── intelligence-analyzer.md
-│   └── references/
-│       └── json-format.md
-├── skills/
-│   ├── domain-knowledge/
-│   │   └── SKILL.md
-│   ├── analysis-methodology/
-│   │   └── SKILL.md
-│   └── output-templates/
-│       ├── SKILL.md
-│       └── references/
-│           └── templates.md
-├── schemas/
-│   ├── agent-result.schema.json        # Agent 返回结果校验
-│   ├── intelligence-output.schema.json # Agent 完整输出校验（历史）
-│   └── state.schema.json               # 状态文件校验
-├── scripts/
-│   ├── validate-json.ts                 # 校验脚本
-│   └── package.json
-└── README.md
 ```
 
 ## 许可证

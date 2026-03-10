@@ -4,19 +4,11 @@ description: This skill should be used when analyzing cybersecurity-related docu
 version: 1.0.0
 ---
 
-## 情报领域定义
+## 情报领域
 
-网络安全战略规划的七个情报领域：
+网络安全战略规划的七个情报领域：Threat-Landscape、Industry-Analysis、Vendor-Intelligence、Emerging-Tech、Customer-Market、Policy-Regulation、Capital-Investment。
 
-| 领域 | 标识符 | 说明 |
-|--------|------------|-------------|
-| 威胁态势 | Threat-Landscape | 新型攻击手法、威胁组织动态、重大安全事件 |
-| 行业分析 | Industry-Analysis | 市场规模、增长趋势、行业格局变化 |
-| 厂商情报 | Vendor-Intelligence | 产品发布、战略调整、并购、财务数据 |
-| 新兴技术 | Emerging-Tech | 技术原理、应用场景、安全影响、成熟度评估 |
-| 客户与市场 | Customer-Market | 客户需求变化、采购行为、预算趋势 |
-| 政策法规 | Policy-Regulation | 新法规发布、合规要求、监管动态 |
-| 资本动态 | Capital-Investment | 融资、并购、IPO、投资趋势 |
+详细定义参见 `../output-templates/references/templates.md`。
 
 ## 领域识别关键词
 
@@ -103,20 +95,11 @@ version: 1.0.0
 
 ## 跨领域关联
 
-情报通常跨越多个领域：
-
 ```
-Emerging-Tech ←→ Threat-Landscape
-  （新技术创造新攻击面）
-
-Vendor-Intelligence ←→ Capital-Investment
-  （融资驱动厂商增长）
-
-Policy-Regulation ←→ Customer-Market
-  （法规驱动客户需求）
-
-Industry-Analysis ←→ 所有领域
-  （为所有情报提供市场背景）
+Emerging-Tech ←→ Threat-Landscape（新技术创造新攻击面）
+Vendor-Intelligence ←→ Capital-Investment（融资驱动厂商增长）
+Policy-Regulation ←→ Customer-Market（法规驱动客户需求）
+Industry-Analysis ←→ 所有领域（为所有情报提供市场背景）
 ```
 
 ## AI 安全重点
@@ -129,8 +112,3 @@ Industry-Analysis ←→ 所有领域
 4. **AI 治理**：AI 法规、伦理 AI、负责任 AI
 
 分析任何领域时，主动寻找 AI 关联。
-
-## 相关资源
-
-详细模板和输出格式，参见：
-- **`../output-templates/references/templates.md`** - 领域特定输出模板
