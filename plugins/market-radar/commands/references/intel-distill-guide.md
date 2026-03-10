@@ -197,16 +197,39 @@ A: 删除 `{output_dir}/.intel/` 目录后重新运行命令。
 
 ### Q: 处理失败怎么办？
 
-A: 查看状态文件 `state.json` 中的 `failed` 字段，了解失败原因。命令会自动重试一次。
+A: 查看状态文件 `state.json` 中的 `failed` 字段：
+
+```json
+"failed": {
+  "docs/report.pdf": {
+    "error": "CONVERSION_FAILED: pandoc not available",
+    "failed_at": "2026-03-10T10:30:00Z",
+    "retries": 1,
+    "validation_errors": ["missing required field: title"]
+  }
+}
+```
+
+**错误码说明：**
+
+| 错误码 | 说明 |
+|--------|------|
+| `READ_FAILED` | 无法读取源文件 |
+| `CONVERSION_FAILED` | 文件格式转换失败（如 docx） |
+| `WRITE_FAILED` | 写入情报卡片失败 |
+| `ANALYSIS_FAILED` | 内容分析失败 |
+| `TOOL_UNAVAILABLE` | 必需工具不可用（如 pandoc） |
+
+命令会自动重试一次（`retries` 最大为 1）。
 
 ### Q: 校验失败是什么意思？
 
-A: JSON Schema 校验失败表示 Agent 输出的数据结构不符合预期。常见原因：
+A: JSON Schema 校验失败表示 Agent 返回的数据结构不符合预期。常见原因：
 - 缺少必需字段
 - 字段类型错误
 - 枚举值无效
 
-命令会自动重试一次，如仍失败则记录详细错误信息到 `state.json`。
+校验错误会记录在 `failed` 字段的 `validation_errors` 数组中。命令会自动重试一次，如仍失败则记录详细错误信息。
 
 ---
 
