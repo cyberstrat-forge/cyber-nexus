@@ -166,15 +166,6 @@ cd plugins/market-radar/scripts && npm install
   sudo apt-get install poppler-utils
   ```
 
-- **poppler**：处理 PDF 文件时需要
-  ```bash
-  # macOS
-  brew install poppler
-
-  # Linux
-  sudo apt-get install poppler-utils
-  ```
-
 ## 项目结构
 
 ```
