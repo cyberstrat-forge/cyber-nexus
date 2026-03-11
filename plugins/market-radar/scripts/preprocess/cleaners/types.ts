@@ -77,7 +77,6 @@ export interface DetectionResult {
  */
 interface SourceSignal {
   source: DocumentSource;
-  patterns: RegExp[];
   contentSignals: RegExp[];
   weight: number;
   signalName: string;
@@ -90,8 +89,7 @@ const SOURCE_SIGNALS: SourceSignal[] = [
   // WeChat official accounts
   {
     source: 'wechat',
-    patterns: [/mmbiz\.qpic\.cn/, /mmbiz\.qlogo\.cn/],
-    contentSignals: [/长按识别二维码/, /阅读原文/, /公众号/],
+    contentSignals: [/mmbiz\.qpic\.cn/, /mmbiz\.qlogo\.cn/, /长按识别二维码/, /阅读原文/, /公众号/],
     weight: 0.8,
     signalName: 'wechat-content',
   },
@@ -99,7 +97,6 @@ const SOURCE_SIGNALS: SourceSignal[] = [
   // PDF reports
   {
     source: 'pdf-report',
-    patterns: [],
     contentSignals: [
       /Gartner.*\|.*G\d{8}/,
       /©\s*\d{4}.*Inc\./,
@@ -112,8 +109,7 @@ const SOURCE_SIGNALS: SourceSignal[] = [
   // Social media
   {
     source: 'social',
-    patterns: [/pbs\.twimg\.com/, /twitter\.com/, /x\.com/],
-    contentSignals: [/Post your reply/, /Retweet/, /^@\w+\s*$/m],
+    contentSignals: [/pbs\.twimg\.com/, /twitter\.com/, /x\.com/, /Post your reply/, /Retweet/, /^@\w+\s*$/m],
     weight: 0.6,
     signalName: 'social-ui',
   },
@@ -121,7 +117,6 @@ const SOURCE_SIGNALS: SourceSignal[] = [
   // Web articles
   {
     source: 'web',
-    patterns: [],
     contentSignals: [/分享到/, /ICP备案/, /Copyright ©/],
     weight: 0.5,
     signalName: 'web-common',

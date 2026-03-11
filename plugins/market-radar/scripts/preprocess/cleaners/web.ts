@@ -28,9 +28,7 @@ export const webCleaner: Cleaner = {
     result = result.replace(/^评论\s*$/gm, '');
     result = result.replace(/^发表评论[^\n]*/g, '');
 
-    // W4: Remove author info lines (standalone)
-    result = result.replace(/^作者[：:]\s*[^\n]*$/gm, '');
-    result = result.replace(/^Author[：:]\s*[^\n]*$/gim, '');
+    // Note: Author info is preserved as it may be valuable for attribution
 
     return result;
   },

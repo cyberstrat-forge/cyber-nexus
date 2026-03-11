@@ -49,23 +49,3 @@ export async function cleanMarkdown(
   return orchestrator.clean(content, context);
 }
 
-/**
- * Calculate compression statistics
- */
-export function calculateStats(original: string, cleaned: string): {
-  originalSize: number;
-  cleanedSize: number;
-  compressionRate: number;
-} {
-  const originalSize = Buffer.byteLength(original, 'utf-8');
-  const cleanedSize = Buffer.byteLength(cleanedContent, 'utf-8');
-  const compressionRate = originalSize > 0
-    ? (originalSize - cleanedSize) / originalSize
-    : 0;
-
-  return {
-    originalSize,
-    cleanedSize,
-    compressionRate,
-  };
-}

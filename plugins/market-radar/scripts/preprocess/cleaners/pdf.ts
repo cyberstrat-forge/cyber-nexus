@@ -25,9 +25,11 @@ export const pdfCleaner: Cleaner = {
     // P3: Remove standalone page numbers
     result = result.replace(/^\s*\d{1,4}\s*$/gm, '');
 
-    // P4: Remove figure/table source attribution
-    result = result.replace(/Source:\s*[^\n]+/g, '');
-    result = result.replace(/来源[：:]\s*[^\n]+/g, '');
+    // P4: Remove figure/table source attribution (only known noise patterns)
+    // Keep valuable attributions like "Source: MITRE ATT&CK"
+    result = result.replace(/Source:\s*Gartner[^\n]*/gi, '');
+    result = result.replace(/Source:\s*受访者[^\n]*/g, '');
+    result = result.replace(/来源[：:]\s*受访者[^\n]*/g, '');
 
     // P5: Remove figure number placeholders
     result = result.replace(/^Figure\s+\d+\.\s*$/gm, '');
