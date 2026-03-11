@@ -2,7 +2,7 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [Unreleased]
+## [1.0.4] - 2026-03-11
 
 ### 新增
 
