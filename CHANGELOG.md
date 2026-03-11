@@ -2,6 +2,17 @@
 
 本文件记录项目的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.0.4] - 2026-03-11
+
+### 新增
+
+- **market-radar**: 新增 `geo_scope` 字段，用于标识情报的地域范围
+  - 值域：`global`, `china`, `china-primary`, `overseas`, `overseas-primary`, `unknown`
+  - 适用于所有情报领域
+- **market-radar**: 新增 `business_model_tags` 字段，用于识别网络安全行业业务模式
+  - 仅适用于 Industry-Analysis 领域
+  - 标签体系覆盖 6 大类共 27 个标签值
+
 ## [1.0.2] - 2026-03-10
 
 ### 变更
@@ -32,6 +43,7 @@
   - 支持 Markdown、PDF、Word 文档处理
   - 实现增量处理机制
 
+[1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.4
 [1.0.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.0
