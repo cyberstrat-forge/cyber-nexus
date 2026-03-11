@@ -14,6 +14,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Threat-Landscape
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
 security_relevance: high
 threat_type:                    # 勒索软件/APT/供应链攻击等
 threat_actor:                   # 威胁组织名称
@@ -74,6 +75,8 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Industry-Analysis
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+business_model_tags: []           # 业务模式标签（可选）
 security_relevance: medium
 market_scope:                   # 全球/中国/区域
 segment:                        # 细分领域
@@ -105,6 +108,9 @@ generated_session: "YYYYMMDD-HHMMSS"
 ## 预测观点
 [对未来趋势的判断]
 
+## 业务模式观察
+[如有业务模式创新，在此描述]
+
 ## 数据支撑
 - [具体数字、比例、金额]
 
@@ -135,6 +141,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Vendor-Intelligence
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
 security_relevance: medium
 vendor_name:
 vendor_type:                    # 创业公司/上市企业/大厂安全部门
@@ -196,6 +203,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Emerging-Tech
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
 security_relevance: high
 tech_name:                      # 技术名称
 maturity:                       # 概念/早期/成长/成熟
@@ -259,6 +267,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Customer-Market
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
 security_relevance: medium
 customer_segment:               # 客户细分
 region:                         # 地区
@@ -319,6 +328,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Policy-Regulation
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
 security_relevance: high
 policy_name:                    # 政策名称
 issuing_body:                   # 发布机构
@@ -381,6 +391,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Capital-Investment
 secondary_domains: []
+geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
 security_relevance: medium
 event_type:                    # 融资/并购/IPO
 company:                       # 涉及公司
@@ -436,6 +447,22 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ## Common Fields Reference
 
+### geo_scope（地域范围）
+
+| Value | Description |
+|-------|-------------|
+| global | 全球/无特定地域 |
+| china | 仅中国 |
+| china-primary | 中国为主，涉及海外 |
+| overseas | 仅海外 |
+| overseas-primary | 海外为主，涉及中国 |
+| unknown | 无法判断（默认值） |
+
+**判断规则**：
+- 严格模式：仅依据文档明确提及的地域信息
+- 判断依据：明确提及的国家/地区、涉及的公司总部位置、法规适用范围、攻击目标地理位置
+- 无法判断时设为 `unknown`
+
 ### security_relevance
 
 | Value | Criteria |
@@ -459,6 +486,73 @@ generated_session: "YYYYMMDD-HHMMSS"
 | pending | 待人工审核 |
 | approved | 已审核通过 |
 | revised | 审核后修改 |
+
+### business_model_tags（业务模式标签）
+
+**仅适用于 Industry-Analysis 领域**，用于识别网络安全行业的业务模式创新。
+
+#### 交付模式类
+
+| Tag | Description |
+|-----|-------------|
+| MSSP | 托管安全服务提供商 (Managed Security Service Provider) |
+| SECaaS | 安全即服务 / 云端交付 (Security as a Service) |
+| On-Premise | 本地部署模式 |
+| Hybrid-Delivery | 混合交付（本地+云端） |
+| Embedded-Security | 内嵌安全（安全能力嵌入其他产品） |
+
+#### 收费模式类
+
+| Tag | Description |
+|-----|-------------|
+| Subscription | 订阅制（周期性付费） |
+| Usage-Based | 用量计费 |
+| Outcome-Based | 结果导向（按效果付费） |
+| Freemium | 免费增值模式 |
+| License-Based | 授权制（一次性买断） |
+
+#### 运营模式类
+
+| Tag | Description |
+|-----|-------------|
+| MDR | 托管检测响应服务 (Managed Detection & Response) |
+| MSS | 托管安全服务 (Managed Security Services) |
+| vCISO | 虚拟安全官服务 |
+| Security-Operations-Outsourcing | 安全运营外包 |
+| In-House-Operations | 自建运营 |
+
+#### 合作生态类
+
+| Tag | Description |
+|-----|-------------|
+| Platform-Ecosystem | 平台生态（构建开放平台集成 ISV） |
+| Channel-Partner | 渠道合作（代理商/分销商） |
+| OEM-Partnership | OEM 合作（技术白牌输出） |
+| Technology-Alliance | 技术联盟 |
+| Co-Development | 联合开发 |
+
+#### 创新/新兴模式类
+
+| Tag | Description |
+|-----|-------------|
+| Crowdsourced-Security | 众包安全（众包漏洞挖掘/测试） |
+| Security-Insurance | 安全保险 |
+| Bug-Bounty-Platform | 漏洞赏金平台 |
+| Cyber-Risk-Quantification | 网络风险量化服务 |
+| Security-Financing | 安全金融 |
+| Data-Sharing-Alliance | 威胁情报共享联盟 |
+
+#### 特殊标签
+
+| Tag | Description |
+|-----|-------------|
+| New-Business-Model | 新出现的业务模式（在 content 中描述） |
+| Business-Model-Shift | 业务模式转型 |
+
+**使用规则**：
+- 一条情报可打多个标签（如 `MSSP` + `Subscription`）
+- 发现新模式时使用 `New-Business-Model` 并在内容中描述
+- 转型场景使用 `Business-Model-Shift`
 
 ---
 
