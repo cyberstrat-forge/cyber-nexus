@@ -59,6 +59,25 @@ skills:
 
 **工具不可用时返回错误状态**。
 
+### 步骤 1.5：预处理清洗（Markdown 降噪）
+
+对读取到的文本内容，使用清洗脚本去除噪声 token：
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/tools/clean-markdown.sh "{source_file_path}" > /tmp/intel-cleaned-{session_id}.md
+```
+
+清洗后使用临时文件作为后续步骤的输入源。
+
+**清洗规则：**
+- 删除图片链接（`![Image](url)`、`[![...](url)](url)`），包括引用块内的
+- 删除社交媒体嵌入元数据（头像 URL、`@handle`、`Post your reply` 等平台 UI 残留）
+- 删除独立的社交平台链接行
+- 折叠 3+ 连续空行为 1 行
+- **保留**：引用块文字内容、有语义的图片 alt text
+
+如果脚本不可用或执行失败，跳过此步骤，使用原始文本继续处理。
+
 ### 步骤 2：提取发布日期
 
 按照以下优先级提取：
