@@ -2,6 +2,32 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.0.3] - 2026-03-11
+
+### 新增
+
+- **预处理管道**：在调用 Agent 前统一处理源文件
+  - 格式转换：PDF/DOCX → Markdown
+  - 噪声清洗：删除图片链接、社交媒体元数据、连续空行
+  - 输出目录：`{source_dir}/converted/`（用户可见）
+  - 元数据管理：`.meta/` 目录跟踪处理状态
+
+### 变更
+
+- **架构优化**：预处理移至命令层，Agent 专注推理
+- **Agent 简化**：移除格式转换逻辑，直接读取干净的 Markdown
+- **变更检测**：基于转换后文件的 content hash
+
+### 目录结构
+
+```
+{source_dir}/
+└── converted/
+    ├── .meta/               # 元数据（隐藏）
+    ├── report.md            # 转换后的 Markdown
+    └── ...
+```
+
 ## [1.0.2] - 2026-03-10
 
 ### 变更
@@ -53,6 +79,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.0.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.0

@@ -31,9 +31,11 @@ skills:
 
 | 参数 | 说明 |
 |------|------|
-| `source` | 源文件路径 |
+| `source` | 转换后的 Markdown 文件路径（位于 `{source_dir}/converted/` 目录下） |
 | `output` | 输出目录路径 |
 | `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
+
+**注意**：源文件已由命令层预处理为统一的 Markdown 格式，无需处理格式转换和噪声清洗。
 
 ## 预加载知识
 
@@ -47,17 +49,11 @@ skills:
 
 ### 步骤 1：读取源文件
 
-| 格式 | 操作 |
-|------|------|
-| `.md`, `.txt` | 直接使用 Read 工具读取 |
-| `.pdf` | Read 工具读取（支持分页），或 Bash 调用 poppler/pdftotext |
-| `.docx` | Bash 调用 pandoc 转换后读取 |
+源文件已由命令层预处理为干净的 Markdown 格式，直接使用 Read 工具读取。
 
-**PDF 大文件处理**：
-- ≤ 10 页：完整读取
-- > 10 页：先读前 2 页了解结构，用 Grep 搜索关键词，分段读取
+**输入文件路径**：`{source}`（位于 `{source_dir}/converted/` 目录下）
 
-**工具不可用时返回错误状态**。
+**文件格式**：统一的 Markdown，已清洗噪声 token
 
 ### 步骤 2：提取发布日期
 
@@ -65,9 +61,8 @@ skills:
 
 ```
 1. Markdown frontmatter: date / published 字段
-2. PDF 元数据: CreationDate / ModDate
-3. 文件名模式: YYYY-MM-DD 或 YYYYMMDD
-4. 文件系统日期（兜底）: stat 获取 birth time
+2. 文件名模式: YYYY-MM-DD 或 YYYYMMDD
+3. 文件系统日期（兜底）: stat 获取 birth time
 ```
 
 **日期结果**：
