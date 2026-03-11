@@ -138,6 +138,7 @@
         "created_date",
         "primary_domain",
         "secondary_domains",
+        "geo_scope",
         "security_relevance",
         "review_status",
         "generated_by",
@@ -191,6 +192,26 @@
             ]
           },
           "description": "Secondary domains"
+        },
+        "geo_scope": {
+          "type": "string",
+          "enum": ["global", "china", "china-primary", "overseas", "overseas-primary", "unknown"],
+          "description": "Geographic scope of the intelligence"
+        },
+        "business_model_tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "MSSP", "SECaaS", "On-Premise", "Hybrid-Delivery", "Embedded-Security",
+              "Subscription", "Usage-Based", "Outcome-Based", "Freemium", "License-Based",
+              "MDR", "MSS", "vCISO", "Security-Operations-Outsourcing", "In-House-Operations",
+              "Platform-Ecosystem", "Channel-Partner", "OEM-Partnership", "Technology-Alliance", "Co-Development",
+              "Crowdsourced-Security", "Security-Insurance", "Bug-Bounty-Platform", "Cyber-Risk-Quantification", "Security-Financing", "Data-Sharing-Alliance",
+              "New-Business-Model", "Business-Model-Shift"
+            ]
+          },
+          "description": "Business model tags (Industry-Analysis only)"
         },
         "security_relevance": {
           "type": "string",

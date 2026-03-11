@@ -114,26 +114,87 @@ npx tsx validate-json.ts state {output_dir}/.intel/state.json
 
 详细结构参见 `schemas/state.schema.json`。
 
-### 步骤 3：扫描源目录
+### 步骤 3：预处理（格式转换与内容清洗）
+
+在扫描源目录前，先执行预处理，将所有文档转换为干净的 Markdown。
+
+#### 3.1 调用预处理脚本
 
 ```bash
-glob pattern: **/*.{md,txt,pdf,docx}
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+npx tsx preprocess/index.ts --source {source_dir}
 ```
 
-### 步骤 4：构建处理队列
+**输出位置**：
+- 转换后的 Markdown：`{source_dir}/converted/`
+- 元数据文件：`{source_dir}/converted/.meta/`
 
-#### 4.1 计算文件内容 Hash
+#### 3.2 预处理逻辑
 
-使用 MD5 算法计算文件内容哈希：
+脚本会自动：
+1. 扫描源目录下的所有支持文件（md/txt/pdf/docx）
+2. 检查 `.meta/` 目录中的元数据，跳过已处理的文件
+3. 执行格式转换（PDF/DOCX → Markdown）和噪声清洗
+4. 输出到 `converted/` 目录，保留原文件名
+
+#### 3.3 清洗规则
+
+| 规则 | 操作 |
+|------|------|
+| 图片链接 | 删除，保留有语义的 alt text |
+| 社交媒体元数据 | 删除头像 URL、@handle、平台 UI 残留 |
+| 社交平台链接 | 删除独立的社交平台链接行 |
+| 连续空行 | 折叠 3+ 连续空行为 1 行 |
+
+#### 3.4 预处理失败处理
+
+| 错误码 | 说明 | 处理方式 |
+|--------|------|---------|
+| `READ_FAILED` | 源文件读取失败 | 记录错误，跳过该文件 |
+| `CONVERSION_FAILED` | PDF/DOCX 转换失败 | 记录错误，跳过该文件 |
+| `DEPENDENCY_MISSING` | pandoc 等依赖未安装 | 记录错误，提示用户安装 |
+
+#### 3.5 目录结构
+
+```
+{source_dir}/
+├── report.pdf
+├── article.docx
+├── note.md
+└── converted/                    # 预处理输出（用户可见）
+    ├── .meta/                    # 元数据（隐藏）
+    │   ├── report.json
+    │   ├── article.json
+    │   └── note.json
+    ├── report.md
+    ├── article.md
+    └── note.md
+```
+
+### 步骤 4：扫描转换后的文件
+
+从 `converted/` 目录扫描干净的 Markdown 文件：
+
+```bash
+glob pattern: {source_dir}/converted/*.md
+```
+
+### 步骤 5：构建处理队列
+
+#### 5.1 计算文件内容 Hash
+
+使用 MD5 算法计算**转换后文件**的内容哈希：
 
 ```bash
 # macOS / Linux 通用
-md5sum <file_path> 2>/dev/null || md5 -q <file_path>
+md5sum <converted_file_path> 2>/dev/null || md5 -q <converted_file_path>
 ```
 
 **Hash 存储位置**：`processed[filepath].content_hash`
 
-#### 4.2 变更检测逻辑
+**注意**：此处 filepath 为转换后的 Markdown 文件路径（`converted/` 目录下）。
+
+#### 5.2 变更检测逻辑
 
 对每个扫描到的文件计算当前 content_hash，与 `state.json` 中记录比对：
 
@@ -146,28 +207,28 @@ md5sum <file_path> 2>/dev/null || md5 -q <file_path>
 
 **注意**：`source_mtime` 字段保留用于参考，但变更检测以 `content_hash` 为准。
 
-### 步骤 5：逐个处理文件
+### 步骤 6：逐个处理文件
 
-#### 5.1 移入 processing 状态
+#### 6.1 移入 processing 状态
 
 更新 `state.json`，记录 `started_at`、`session`、`content_hash`，立即写入。
 
-#### 5.2 生成会话 ID
+#### 6.2 生成会话 ID
 
 ```
 session_id = YYYYMMDD-HHMMSS 格式
 ```
 
-#### 5.3 调用情报分析 Agent
+#### 6.3 调用情报分析 Agent
 
 ```
 使用 Agent 工具，subagent_type="intelligence-analyzer"
-参数: source, output, session_id
+参数: source（转换后的 markdown 路径）, output, session_id
 ```
 
-Agent 职责：读取文件 → 提取日期 → 分析内容 → 生成卡片 → 检测冲突 → 写入文件 → 返回状态
+Agent 职责：读取干净的 markdown → 提取日期 → 分析内容 → 生成卡片 → 检测冲突 → 写入文件 → 返回状态
 
-#### 5.4 校验 Agent 返回结果
+#### 6.4 校验 Agent 返回结果
 
 ```bash
 npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
@@ -179,7 +240,7 @@ npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
 | 1 | 记录错误，重试一次 |
 | 2 | 安装依赖后重试 |
 
-#### 5.5 处理返回结果
+#### 6.5 处理返回结果
 
 **成功**：更新 `processed` 和 `stats`，删除临时文件 `.intel/temp/{session_id}.json`
 
@@ -187,17 +248,17 @@ npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
 
 返回格式参见 `agents/references/json-format.md`。
 
-#### 5.6 写入状态
+#### 6.6 写入状态
 
 更新 `state.json` 前校验，失败则中止写入。
 
-### 步骤 6：重试失败文件
+### 步骤 7：重试失败文件
 
 对 `queue.failed` 中 `retries < 1` 的文件重试一次。
 
-### 步骤 7：归档历史数据
+### 步骤 8：归档历史数据
 
-#### 7.1 归档触发条件
+#### 8.1 归档触发条件
 
 每次运行时检查 `processed` 条目，自动归档满足以下条件的记录：
 
@@ -205,7 +266,7 @@ npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
 processed_at 超过 30 天 → 自动归档
 ```
 
-#### 7.2 归档操作
+#### 8.2 归档操作
 
 1. 将符合条件的条目追加到 `history/YYYY-MM.json`
 2. 从 `state.json` 的 `processed` 中移除已归档条目
@@ -222,11 +283,11 @@ processed_at 超过 30 天 → 自动归档
     └── ...
 ```
 
-#### 7.3 归档文件格式
+#### 8.3 归档文件格式
 
 归档文件使用与 `state.json` 相同的 Schema，仅包含 `processed` 字段。
 
-### 步骤 8：生成汇总报告
+### 步骤 9：生成汇总报告
 
 输出处理统计、输出位置、失败文件。
 

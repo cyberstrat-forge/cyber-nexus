@@ -1,10 +1,11 @@
 {
   "name": "@cyber-nexus/market-radar-schemas",
   "version": "1.0.0",
-  "description": "JSON Schema validation for market-radar plugin",
+  "description": "JSON Schema validation and preprocessing for market-radar plugin",
   "type": "module",
   "scripts": {
-    "validate": "tsx validate-json.ts"
+    "validate": "tsx validate-json.ts",
+    "preprocess": "tsx preprocess/index.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",
