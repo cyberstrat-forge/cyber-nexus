@@ -22,15 +22,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Install commitlint
-        run: npm install -g @commitlint/cli @commitlint/config-conventional
+      - name: Install dependencies
+        run: npm ci
 
       - name: Lint commit messages
         run: |
           # 获取 PR 的所有提交
           commits=$(git log --pretty=format:"%s" origin/main..HEAD)
-          echo "$commits" | commitlint --config '{"extends": ["@commitlint/config-conventional"]}'
+          echo "$commits" | npx commitlint
 
   # TypeScript 类型检查
   typecheck:
