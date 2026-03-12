@@ -65,6 +65,46 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 └── history/                # 历史归档（按月）
 ```
 
+## 重要提示：预处理中间产物
+
+### 目录结构
+
+```
+{source_dir}/
+├── report.pdf                    # 原始源文件（可选保留）
+├── converted/                    # ⚠️ 转换后文档（重要！）
+│   ├── .meta/                   # ⚠️ 元数据（重要！）
+│   │   └── report.json
+│   └── report.md
+└── ...
+```
+
+### 重要性说明
+
+- **converted/**: 包含转换后的干净 Markdown，用于变更检测
+- **converted/.meta/**: 包含文件哈希和处理版本，用于增量处理
+
+### 警告
+
+❌ **不要手动删除** `converted/` 或 `converted/.meta/` 目录！
+
+删除这些目录会导致：
+- 变更检测失效
+- 所有文件重新处理
+- 增量处理优势丧失
+
+### 正确的清理方式
+
+如需清理源文件，请等待 inbox 目录功能发布后使用归档命令：
+
+```bash
+/intel-distill --archive
+```
+
+或手动移动源文件到归档目录，**保留 converted/**。
+
+---
+
 ## 执行流程
 
 ### 步骤 1：初始化路径

@@ -278,8 +278,11 @@ market-radar/
 # 主题分析输出
 .themes/
 
-# 预处理元数据
+# 预处理元数据（必加：用于增量处理和变更检测）
 converted/.meta/
+
+# 预处理转换文件（可选：如需版本控制转换后的 Markdown）
+# converted/
 ```
 
 ## 更新日志
