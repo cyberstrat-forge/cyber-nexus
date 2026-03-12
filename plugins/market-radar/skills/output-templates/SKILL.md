@@ -1,7 +1,6 @@
 ---
-name: Intelligence Output Templates
+name: intelligence-output-templates
 description: Markdown templates and output structure for intelligence cards. Use when generating final markdown output from agent JSON results.
-version: 1.0.0
 ---
 
 ## 概述

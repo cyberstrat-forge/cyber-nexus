@@ -1,7 +1,6 @@
 ---
-name: Cybersecurity Domain Knowledge
+name: cybersecurity-domain-knowledge
 description: This skill should be used when analyzing cybersecurity-related documents for strategic intelligence extraction. Triggers when processing documents about threat intelligence, vendor analysis, emerging security technologies, market trends, policy regulations, or capital investment in the security industry.
-version: 1.0.0
 ---
 
 ## 情报领域

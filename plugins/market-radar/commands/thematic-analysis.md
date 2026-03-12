@@ -2,7 +2,7 @@
 name: thematic-analysis
 description: Analyze intelligence cards to identify themes, trends, and patterns across documents
 argument-hint: "[--source <dir>] [--report <reports|panorama|both>] [--theme <id>] [--add-theme] [--list-themes]"
-allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent", "AskUserQuestion"]
+allowed-tools: Read, Write, Grep, Glob, Bash, Agent, AskUserQuestion
 ---
 
 ## 命令概述

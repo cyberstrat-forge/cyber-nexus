@@ -1,7 +1,6 @@
 ---
-name: Thematic Templates
+name: thematic-templates
 description: This skill should be used when generating theme reports and panorama reports from analysis materials. Provides markdown templates and structure guidance.
-version: 1.0.0
 ---
 
 ## 概述
