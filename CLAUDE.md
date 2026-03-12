@@ -392,7 +392,10 @@ Skill(pr-review-toolkit:review-pr)
 ### 开发命令
 
 ```bash
-# 安装依赖
+# 安装根目录依赖（husky + commitlint）
+npm install
+
+# 安装插件依赖
 cd plugins/market-radar/scripts && npm install
 
 # 运行 Schema 校验

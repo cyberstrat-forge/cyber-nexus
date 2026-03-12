@@ -1,0 +1,22 @@
+# Pre-commit checks
+
+echo "Running pre-commit checks..."
+
+# 检查是否有大文件 (>1MB)
+large_files=$(find . -type f -size +1M -not -path "./node_modules/*" -not -path "./.git/*" 2>/dev/null | head -5)
+if [ -n "$large_files" ]; then
+  echo "Warning: Large files detected (>1MB):"
+  echo "$large_files"
+  echo "Consider using Git LFS for large files."
+fi
+
+# 检查是否有敏感文件
+sensitive_files=$(git diff --cached --name-only | grep -E '\.env$|\.key$|\.pem$|credentials|secrets' || true)
+if [ -n "$sensitive_files" ]; then
+  echo "Error: Attempting to commit sensitive files:"
+  echo "$sensitive_files"
+  echo "Please remove these files from the commit."
+  exit 1
+fi
+
+echo "Pre-commit checks passed!"
