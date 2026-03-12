@@ -1,6 +1,7 @@
 # Cyber Nexus
 
 [![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.4)
+[![CI](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 利用 AI 赋能网络安全战略规划与产品规划
@@ -62,7 +63,10 @@ Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 
 ### 首次使用
 
 ```bash
-# 安装校验依赖
+# 安装根目录依赖（Git Hooks: commitlint）
+npm install
+
+# 安装插件脚本依赖
 cd plugins/market-radar/scripts && npm install
 ```
 
@@ -151,6 +155,33 @@ cyber-nexus/
         │   ├── thematic/             # 主题分析脚本
         │   └── validate-json.ts
         └── README.md                 # 插件文档
+```
+
+## 开发环境
+
+### Git Hooks
+
+项目使用 husky + commitlint 实现本地提交校验：
+
+- **commit-msg**: 校验提交信息符合 Conventional Commits 规范
+- **pre-commit**: 阻止提交敏感文件
+
+### CI/CD
+
+GitHub Actions 自动运行：
+- TypeScript 类型检查
+- JSON Schema 校验
+- 提交信息格式校验（PR）
+
+### 提交规范
+
+```
+<type>(<scope>): <description>
+
+# 示例
+feat(market-radar): add new feature
+fix: resolve issue
+docs: update README
 ```
 
 ## 更新日志

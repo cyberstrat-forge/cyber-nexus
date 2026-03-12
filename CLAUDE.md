@@ -385,6 +385,60 @@ plugin-name/
 Skill(pr-review-toolkit:review-pr)
 ```
 
+### Git Hooks
+
+项目使用 **husky + commitlint** 实现本地提交校验。
+
+**自动校验内容**：
+
+| Hook | 功能 |
+|------|------|
+| `commit-msg` | 校验提交信息符合 Conventional Commits 规范 |
+| `pre-commit` | 阻止提交敏感文件（.env, .key, .pem 等） |
+
+**首次使用**：
+
+```bash
+# 安装依赖，自动配置 Git Hooks
+npm install
+```
+
+**提交信息格式示例**：
+
+```bash
+# 正确格式
+git commit -m "feat(market-radar): add new feature"
+git commit -m "fix: resolve issue"
+
+# 错误格式（会被拒绝）
+git commit -m "add feature"        # 缺少 type
+git commit -m "Fix: something"     # type 应小写
+```
+
+### GitHub Actions CI
+
+项目配置了 CI 自动检查：
+
+| Job | 功能 | 触发条件 |
+|-----|------|---------|
+| `commitlint` | PR 提交信息格式校验 | PR 到 main |
+| `typecheck` | TypeScript 类型检查 | PR/Push 到 main |
+| `schema-validate` | JSON Schema 校验 | PR/Push 到 main |
+| `lint` | 文件格式检查 | PR/Push 到 main |
+
+**Release 自动化**：
+
+推送 `v*.*.*` 格式的 tag 时，自动：
+1. 从 CHANGELOG.md 提取版本更新内容
+2. 创建 GitHub Release
+3. 设置 Latest 标记
+
+```bash
+# 创建新版本发布
+git tag v1.1.0
+git push origin v1.1.0
+```
+
 ---
 
 ## 常用命令
