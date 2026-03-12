@@ -9,13 +9,13 @@
 
 Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 能力融入网络安全战略规划和产品规划的核心流程。
 
-当前处于**早期开发阶段**，首个插件 market-radar 已发布，提供市场情报自动提取功能。后续将持续扩展更多能力，覆盖战略分析的完整链路。
+当前处于**早期开发阶段**，首个插件 market-radar 已发布，提供市场情报自动提取和主题分析功能。后续将持续扩展更多能力，覆盖战略分析的完整链路。
 
 ## 插件列表
 
 | 插件 | 版本 | 状态 | 功能 |
 |------|------|------|------|
-| [market-radar](./plugins/market-radar) | 1.0.4 | ✅ 可用 | 市场情报提取 |
+| [market-radar](./plugins/market-radar) | 1.0.4 | ✅ 可用 | 市场情报提取与主题分析 |
 | competitive-analysis | - | 📋 规划中 | 竞争对手分析 |
 | product-management | - | 📋 规划中 | 产品管理 |
 
@@ -30,7 +30,7 @@ Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 
 | 命令 | 状态 | 功能 |
 |------|------|------|
 | `intel-distill` | ✅ 可用 | 情报蒸馏：从文档提取战略情报，生成情报卡片 |
-| `thematic-analysis` | 📋 规划中 | 主题分析：跨文档识别趋势和模式 |
+| `thematic-analysis` | ✅ 可用 | 主题分析：跨文档识别趋势和模式，生成分析报告 |
 | `insight-cards` | 📋 规划中 | 洞察卡片：生成结构化洞察报告 |
 | `strategic-judgment` | 📋 规划中 | 战略判断：基于情报生成决策建议 |
 
@@ -77,6 +77,12 @@ cd plugins/market-radar/scripts && npm install
 
 # 指定源目录和输出目录
 /intel-distill --source ./docs --output ./intelligence
+
+# 主题分析：识别情报卡片中的趋势和模式
+/thematic-analysis --source ./intel
+
+# 生成主题报告和全景报告
+/thematic-analysis --source ./intel --report both
 ```
 
 ## 输出说明
@@ -115,28 +121,35 @@ cyber-nexus/
         ├── .claude-plugin/
         │   └── plugin.json           # 插件元数据：名称、版本、作者
         ├── commands/                 # 命令定义
-        │   ├── intel-distill.md      # intel-distill 命令主逻辑
+        │   ├── intel-distill.md      # intel-distill 命令
+        │   ├── thematic-analysis.md  # thematic-analysis 命令
         │   └── references/
-        │       └── intel-distill-guide.md  # 用户帮助文档
+        │       ├── intel-distill-guide.md
+        │       └── thematic-analysis-guide.md
         ├── agents/                   # 智能代理
-        │   ├── intelligence-analyzer.md    # 情报分析 Agent
+        │   ├── intelligence-analyzer.md
+        │   ├── intelligence-cluster.md
+        │   ├── theme-analyzer.md
+        │   ├── panorama-synthesizer.md
         │   └── references/
-        │       └── json-format.md    # Agent 返回格式规范
+        │       └── json-format.md
         ├── skills/                   # 技能模块（预加载知识）
         │   ├── domain-knowledge/
-        │   │   └── SKILL.md          # 七大情报领域定义
         │   ├── analysis-methodology/
-        │   │   └── SKILL.md          # 战略价值判断标准
-        │   └── output-templates/
-        │       ├── SKILL.md          # 输出模板入口
-        │       └── references/
-        │           └── templates.md  # 七大领域卡片模板
+        │   ├── output-templates/
+        │   ├── clustering-methodology/
+        │   ├── thematic-methodology/
+        │   └── thematic-templates/
         ├── schemas/                  # JSON Schema 定义
-        │   ├── agent-result.schema.json    # Agent 返回结果校验
-        │   ├── state.schema.json           # 状态文件校验
-        │   └── intelligence-output.schema.json  # 情报卡片校验
+        │   ├── agent-result.schema.json
+        │   ├── state.schema.json
+        │   ├── intelligence-output.schema.json
+        │   ├── themes-config.schema.json
+        │   └── theme-state.schema.json
         ├── scripts/                  # 工具脚本
-        │   └── validate-json.ts      # JSON Schema 校验脚本
+        │   ├── preprocess/           # 预处理模块
+        │   ├── thematic/             # 主题分析脚本
+        │   └── validate-json.ts
         └── README.md                 # 插件文档
 ```
 
