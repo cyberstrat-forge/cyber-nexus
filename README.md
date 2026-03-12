@@ -4,7 +4,7 @@
 [![CI](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> 利用 AI 赋能网络安全战略规划与产品规划
+> 利用 AI 赋能网络安全战略规划与产品管理
 
 ## 概述
 
