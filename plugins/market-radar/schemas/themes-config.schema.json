@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "themes-config.schema.json",
+  "title": "Themes Configuration",
+  "description": "主题配置文件结构定义，用于 thematic-analysis 命令",
+  "type": "object",
+  "required": ["version", "themes"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "配置文件版本号"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date",
+      "description": "最后更新日期"
+    },
+    "themes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/theme"
+      },
+      "description": "主题定义映射"
+    }
+  },
+  "definitions": {
+    "theme": {
+      "type": "object",
+      "required": ["name", "description", "keywords", "domains", "track_dimensions", "min_cards"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "主题显示名称"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 500,
+          "description": "主题描述"
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "description": "匹配关键词列表"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Threat-Landscape",
+              "Industry-Analysis",
+              "Vendor-Intelligence",
+              "Emerging-Tech",
+              "Customer-Market",
+              "Policy-Regulation",
+              "Capital-Investment"
+            ]
+          },
+          "minItems": 1,
+          "description": "涉及情报领域"
+        },
+        "track_dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "threat_actor",
+              "attack_method",
+              "target_sector",
+              "target_region",
+              "impact_scale",
+              "market_size",
+              "growth_rate",
+              "market_share",
+              "region_analysis",
+              "vendor_name",
+              "product_launch",
+              "strategic_move",
+              "financial_data",
+              "tech_name",
+              "maturity",
+              "customer_segment",
+              "policy_name",
+              "issuing_body",
+              "jurisdiction",
+              "effective_date",
+              "event_type",
+              "investors",
+              "valuation"
+            ]
+          },
+          "minItems": 1,
+          "description": "跟踪分析维度"
+        },
+        "min_cards": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 5,
+          "description": "形成主题的最小情报卡片数"
+        },
+        "created": {
+          "type": "string",
+          "format": "date",
+          "description": "主题创建日期"
+        },
+        "match_rules": {
+          "type": "object",
+          "properties": {
+            "domains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "领域匹配规则"
+            },
+            "keywords": {
+              "type": "object",
+              "properties": {
+                "must_have": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "必须包含的关键词（AND）"
+                },
+                "any_of": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "任一匹配的关键词（OR）"
+                }
+              }
+            },
+            "entity_patterns": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["vendor", "threat_actor", "technology", "region"]
+                  },
+                  "names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "description": "实体模式匹配规则"
+            }
+          },
+          "description": "高级匹配规则"
+        }
+      }
+    }
+  }
+}

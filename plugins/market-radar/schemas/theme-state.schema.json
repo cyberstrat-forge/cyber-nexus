@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "theme-state.schema.json",
+  "title": "Theme Analysis State",
+  "description": "主题分析状态文件结构定义，用于追踪情报卡片聚类和分析进度",
+  "type": "object",
+  "required": ["version", "cards", "themes", "stats"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "状态文件版本号"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "最后更新时间"
+    },
+    "cards": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/card_record"
+      },
+      "description": "情报卡片记录，key 为卡片相对路径"
+    },
+    "themes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/theme_state"
+      },
+      "description": "主题状态，key 为主题 ID"
+    },
+    "stats": {
+      "$ref": "#/definitions/stats",
+      "description": "统计信息"
+    }
+  },
+  "definitions": {
+    "card_record": {
+      "type": "object",
+      "required": ["content_hash", "clustered_at", "themes"],
+      "properties": {
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "卡片内容 MD5 哈希"
+        },
+        "clustered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "聚类时间"
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "所属主题 ID 列表"
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "description": "各主题聚类置信度"
+        },
+        "source_mtime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "源文件修改时间"
+        }
+      }
+    },
+    "theme_state": {
+      "type": "object",
+      "required": ["cards", "last_analysis"],
+      "properties": {
+        "cards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "属于该主题的卡片路径列表"
+        },
+        "last_analysis": {
+          "type": "string",
+          "format": "date-time",
+          "description": "最后分析时间"
+        },
+        "analysis_file": {
+          "type": "string",
+          "description": "分析材料文件路径"
+        },
+        "report_file": {
+          "type": "string",
+          "description": "报告文件路径"
+        },
+        "changes_pending": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否有待处理的变更"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "required": ["total_cards", "clustered_cards", "total_themes", "analyzed_themes"],
+      "properties": {
+        "total_cards": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "扫描到的情报卡片总数"
+        },
+        "clustered_cards": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "已聚类的情报卡片数"
+        },
+        "unclustered_cards": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "未聚类的情报卡片数"
+        },
+        "total_themes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "主题总数"
+        },
+        "analyzed_themes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "已分析的主题数"
+        },
+        "last_run": {
+          "type": "string",
+          "format": "date-time",
+          "description": "最后运行时间"
+        }
+      }
+    }
+  }
+}
