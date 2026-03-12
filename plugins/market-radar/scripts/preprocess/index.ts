@@ -10,7 +10,6 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as crypto from 'crypto';
 import {
   PreprocessResult,
   PreprocessMeta,
@@ -22,17 +21,10 @@ import {
 import { convertToMarkdown, isSupportedFormat, isPandocAvailable, isPdfToTextAvailable } from './convert';
 import { cleanMarkdown } from './clean';
 import { calculateStats } from './cleaners/types';
+import { calculateHash } from '../utils/hash';
 
 // Current preprocessor version - increment when cleaning rules change
 const PREPROCESSOR_VERSION = '1.0.0';
-
-/**
- * Calculate MD5 hash of file content
- */
-function calculateHash(filePath: string): string {
-  const content = fs.readFileSync(filePath);
-  return crypto.createHash('md5').update(content).digest('hex');
-}
 
 /**
  * Get metadata file path for a source file

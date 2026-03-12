@@ -9,20 +9,12 @@
  */
 
 import { glob } from 'glob';
-import { readFileSync, existsSync, writeFileSync, statSync } from 'fs';
-import { createHash } from 'crypto';
+import { existsSync, readFileSync, writeFileSync, statSync } from 'fs';
 import { resolve, relative } from 'path';
 import type { ThemeState, CardRecord, ScanResult } from './types';
+import { calculateHash } from '../utils/hash';
 
 const STATE_VERSION = '1.0';
-
-/**
- * 计算文件内容 MD5 哈希
- */
-function calculateHash(filePath: string): string {
-  const content = readFileSync(filePath, 'utf-8');
-  return createHash('md5').update(content).digest('hex');
-}
 
 /**
  * 获取文件修改时间
@@ -78,14 +70,10 @@ async function scanCards(sourceDir: string, statePath: string, incremental: bool
     'Capital-Investment'
   ];
 
-  // 扫描所有情报卡片
+  // 扫描所有情报卡片（并行扫描提高效率）
   const patterns = domains.map(d => `${absoluteSourceDir}/${d}/*.md`);
-  const cardFiles: string[] = [];
-
-  for (const pattern of patterns) {
-    const files = await glob(pattern);
-    cardFiles.push(...files);
-  }
+  const results = await Promise.all(patterns.map(p => glob(p)));
+  const cardFiles = results.flat();
 
   const newCards: string[] = [];
   const updatedCards: string[] = [];
@@ -93,7 +81,7 @@ async function scanCards(sourceDir: string, statePath: string, incremental: bool
 
   for (const cardFile of cardFiles) {
     const relativePath = relative(absoluteSourceDir, cardFile);
-    const currentHash = calculateHash(cardFile);
+    const currentHash = calculateHash(cardFile, 'utf-8');
     const currentMtime = getMtime(cardFile);
 
     const existingRecord = state.cards[relativePath];
