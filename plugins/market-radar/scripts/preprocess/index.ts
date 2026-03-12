@@ -80,14 +80,43 @@ async function processFile(
   currentVersion: string,
   sourceDir: string
 ): Promise<PreprocessResult> {
+  let rawContent: string;
+
+  // Phase 1: Conversion
   try {
-    // Read and convert
-    const rawContent = await convertToMarkdown(sourcePath);
+    rawContent = await convertToMarkdown(sourcePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    let code: PreprocessErrorCode = 'CONVERSION_FAILED';
 
-    // Clean with source-aware rules
-    const cleanResult = await cleanMarkdown(rawContent, sourcePath);
-    const cleanedContent = cleanResult.content;
+    if (message.includes('not found') || message.includes('not installed')) {
+      code = 'DEPENDENCY_MISSING';
+    } else if (message.includes('Cannot read') || message.includes('ENOENT')) {
+      code = 'READ_FAILED';
+    }
 
+    return {
+      success: false,
+      error: { code, message },
+    };
+  }
+
+  // Phase 2: Cleaning
+  let cleanResult: { content: string; source: string; appliedRules: string[]; stats: { originalSize: number; cleanedSize: number; compressionRate: number } };
+  try {
+    cleanResult = await cleanMarkdown(rawContent, sourcePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: { code: 'CLEAN_FAILED', message },
+    };
+  }
+
+  const cleanedContent = cleanResult.content;
+
+  // Phase 3: Write output
+  try {
     // Ensure output directory exists
     const outputDir = path.dirname(convertedPath);
     if (!fs.existsSync(outputDir)) {
@@ -109,27 +138,19 @@ async function processFile(
       stats: cleanResult.stats,
     };
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
-
-    return {
-      success: true,
-      markdown: cleanedContent,
-      stats: cleanResult.stats,
-    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    let code: PreprocessErrorCode = 'CONVERSION_FAILED';
-
-    if (message.includes('not found') || message.includes('not installed')) {
-      code = 'DEPENDENCY_MISSING';
-    } else if (message.includes('Cannot read') || message.includes('ENOENT')) {
-      code = 'READ_FAILED';
-    }
-
     return {
       success: false,
-      error: { code, message },
+      error: { code: 'READ_FAILED', message: `Failed to write output: ${message}` },
     };
   }
+
+  return {
+    success: true,
+    markdown: cleanedContent,
+    stats: cleanResult.stats,
+  };
 }
 
 /**

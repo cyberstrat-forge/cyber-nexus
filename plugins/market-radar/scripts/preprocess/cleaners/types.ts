@@ -130,11 +130,11 @@ export function detectSource(
   content: string,
   filePath: string
 ): DetectionResult {
-  const scores: Map<DocumentSource, { score: number; signals: string[] }> = new Map();
+  const scores: Map<DocumentSource, { score: number; signals: Set<string> }> = new Map();
 
-  // Initialize
+  // Initialize with Set to avoid duplicate signals
   for (const signal of SOURCE_SIGNALS) {
-    scores.set(signal.source, { score: 0, signals: [] });
+    scores.set(signal.source, { score: 0, signals: new Set() });
   }
 
   // Check file extension
@@ -142,17 +142,22 @@ export function detectSource(
   if (ext === '.pdf') {
     const current = scores.get('pdf-report')!;
     current.score += 0.3;
-    current.signals.push('file-extension:pdf');
+    current.signals.add('file-extension:pdf');
   }
 
-  // Check content signals
+  // Check content signals - add signal name only once per signal group
   for (const signal of SOURCE_SIGNALS) {
+    let matched = false;
     for (const pattern of signal.contentSignals) {
       if (pattern.test(content)) {
-        const current = scores.get(signal.source)!;
-        current.score += signal.weight;
-        current.signals.push(signal.signalName);
+        matched = true;
+        break; // No need to check other patterns in same group
       }
+    }
+    if (matched) {
+      const current = scores.get(signal.source)!;
+      current.score += signal.weight;
+      current.signals.add(signal.signalName);
     }
   }
 
@@ -165,7 +170,7 @@ export function detectSource(
     if (data.score > maxScore) {
       maxScore = data.score;
       maxSource = source;
-      matchedSignals = data.signals;
+      matchedSignals = Array.from(data.signals);
     }
   });
 
