@@ -17,9 +17,11 @@ import {
   PreprocessOptions,
   BatchResult,
   SupportedFormat,
+  PreprocessErrorCode,
 } from './types';
 import { convertToMarkdown, isSupportedFormat, isPandocAvailable, isPdfToTextAvailable } from './convert';
-import { cleanMarkdown, calculateStats } from './clean';
+import { cleanMarkdown } from './clean';
+import { calculateStats } from './cleaners/types';
 
 // Current preprocessor version - increment when cleaning rules change
 const PREPROCESSOR_VERSION = '1.0.0';
@@ -34,16 +36,23 @@ function calculateHash(filePath: string): string {
 
 /**
  * Get metadata file path for a source file
+ * Uses relative path to preserve directory structure and avoid name collisions
  */
-function getMetaPath(metaDir: string, sourceFileName: string): string {
-  return path.join(metaDir, `${sourceFileName}.json`);
+function getMetaPath(metaDir: string, sourceRelPath: string): string {
+  // Convert path separators to underscores for flat storage
+  const safePath = sourceRelPath.replace(/\//g, '_').replace(/\\/g, '_');
+  return path.join(metaDir, `${safePath}.json`);
 }
 
 /**
  * Get converted file path for a source file
+ * Preserves directory structure to avoid name collisions
  */
-function getConvertedPath(convertedDir: string, sourceFileName: string): string {
-  return path.join(convertedDir, `${sourceFileName}.md`);
+function getConvertedPath(convertedDir: string, sourceRelPath: string): string {
+  // Remove extension and add .md
+  const ext = path.extname(sourceRelPath);
+  const baseName = sourceRelPath.slice(0, -ext.length);
+  return path.join(convertedDir, `${baseName}.md`);
 }
 
 /**
@@ -96,8 +105,9 @@ async function processFile(
     fs.writeFileSync(convertedPath, cleanedContent, 'utf-8');
 
     // Write metadata
+    const sourceRelPath = path.relative(sourceDir, sourcePath);
     const meta: PreprocessMeta = {
-      sourcePath: path.basename(sourcePath),
+      sourcePath: sourceRelPath,
       sourceHash: calculateHash(sourcePath),
       preprocessorVersion: currentVersion,
       processedAt: new Date().toISOString(),
@@ -114,7 +124,7 @@ async function processFile(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    let code: PreprocessResult['error']['code'] = 'CONVERSION_FAILED';
+    let code: PreprocessErrorCode = 'CONVERSION_FAILED';
 
     if (message.includes('not found') || message.includes('not installed')) {
       code = 'DEPENDENCY_MISSING';
@@ -185,9 +195,10 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
   let failed = 0;
 
   for (const sourcePath of files) {
-    const sourceFileName = path.basename(sourcePath, path.extname(sourcePath));
-    const convertedPath = getConvertedPath(convertedDir, sourceFileName);
-    const metaPath = getMetaPath(metaDir, sourceFileName);
+    // Calculate relative path from sourceDir for unique identification
+    const sourceRelPath = path.relative(sourceDir, sourcePath);
+    const convertedPath = getConvertedPath(convertedDir, sourceRelPath);
+    const metaPath = getMetaPath(metaDir, sourceRelPath);
 
     // Check if processing needed
     if (!force && !needsPreprocessing(sourcePath, metaPath, preprocessorVersion)) {
@@ -327,8 +338,8 @@ Options:
   process.exit(result.failed > 0 ? 1 : 0);
 }
 
-// Run if called directly
-if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.includes('preprocess')) {
+// Run if called directly as main module
+if (process.argv[1]?.endsWith('preprocess/index.ts') || process.argv[1]?.endsWith('preprocess/index.js')) {
   main().catch(console.error);
 }
 

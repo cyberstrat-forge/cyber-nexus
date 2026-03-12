@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { SupportedFormat, ConverterFn } from './types';
 
 /**
@@ -14,8 +14,11 @@ import { SupportedFormat, ConverterFn } from './types';
  */
 export function isDependencyAvailable(name: string): boolean {
   try {
-    execSync(`which ${name}`, { stdio: 'ignore' });
-    return true;
+    const result = spawnSync(name, ['--version'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return result.status === 0;
   } catch {
     return false;
   }
@@ -43,8 +46,9 @@ async function convertPdf(filePath: string): Promise<string> {
     throw new Error('pdftotext is not installed. Install it to process PDF files:\n  macOS: brew install poppler\n  Linux: sudo apt-get install poppler-utils');
   }
 
-  const result = execSync(
-    `pdftotext "${filePath}" - -layout`,
+  const result = execFileSync(
+    'pdftotext',
+    [filePath, '-', '-layout'],
     { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
   );
   return result;
@@ -58,8 +62,9 @@ async function convertDocx(filePath: string): Promise<string> {
     throw new Error('pandoc is not installed. Install it to process DOCX files:\n  macOS: brew install pandoc\n  Linux: sudo apt-get install pandoc');
   }
 
-  const result = execSync(
-    `pandoc "${filePath}" -t markdown --wrap=none`,
+  const result = execFileSync(
+    'pandoc',
+    [filePath, '-t', 'markdown', '--wrap=none'],
     { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
   );
   return result;
@@ -129,6 +134,7 @@ export function getConverterInfo(format: SupportedFormat): {
     case '.docx':
       return { requiresDependency: true, dependencyName: 'pandoc' };
     case '.pdf':
+      return { requiresDependency: true, dependencyName: 'pdftotext (poppler)' };
     case '.md':
     case '.txt':
     default:
