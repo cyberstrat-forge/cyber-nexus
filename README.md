@@ -4,11 +4,11 @@
 [![CI](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> 利用 AI 赋能网络安全战略规划与产品规划
+> 利用 AI 赋能网络安全战略规划与产品管理
 
 ## 概述
 
-Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 能力融入网络安全战略规划和产品规划的核心流程。
+Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 能力融入网络安全战略规划和产品管理的核心流程。
 
 当前处于**早期开发阶段**，首个插件 market-radar 已发布，提供市场情报自动提取和主题分析功能。后续将持续扩展更多能力，覆盖战略分析的完整链路。
 

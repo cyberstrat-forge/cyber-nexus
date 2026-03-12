@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-**Cyber Nexus** 是一个 Claude Code 插件集合，致力于将 AI 能力融入网络安全战略规划和产品规划的核心流程。
+**Cyber Nexus** 是一个 Claude Code 插件集合，致力于将 AI 能力融入网络安全战略规划和产品管理的核心流程。
 
 当前状态：早期开发阶段，插件 `market-radar` 已发布两个核心命令。
 
