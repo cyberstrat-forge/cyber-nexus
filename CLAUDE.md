@@ -35,8 +35,10 @@ cyber-nexus/
 │       ├── skills/               # 技能模块 (SKILL.md)
 │       ├── schemas/              # JSON Schema 定义
 │       └── scripts/              # TypeScript 工具脚本
+│           ├── preprocess/       # 文件预处理模块
+│           ├── thematic/         # 主题分析模块
+│           └── utils/            # 共享工具模块
 ├── README.md
-└── CHANGELOG.md
 ```
 
 ---
@@ -351,6 +353,11 @@ plugin-name/
 ```
 创建分支 → 开发 → 自测 → 提交 PR → Code Review → 合并
 ```
+
+**提交前建议**（可选）：
+
+- 代码变更较多时，运行 `/simplify` 进行自检
+- 创建 PR 前，确认 `npx tsc --noEmit` 通过
 
 ### Code Review 检查项
 
