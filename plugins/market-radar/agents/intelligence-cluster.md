@@ -23,10 +23,10 @@ description: |
 
 model: inherit
 color: cyan
-tools: ["Read", "Grep", "Glob", "Write", "Bash"]
+tools: Read, Grep, Glob, Write, Bash
 skills:
   - clustering-methodology
-  - domain-knowledge
+  - cybersecurity-domain-knowledge
 ---
 
 你是一名专注于网络安全情报聚类的分析代理。你的角色是阅读情报卡片内容，将其分配到合适的主题，并识别潜在的新主题。

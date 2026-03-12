@@ -1,7 +1,6 @@
 ---
-name: Clustering Methodology
+name: clustering-methodology
 description: This skill should be used when the intelligence-cluster agent needs guidance on clustering intelligence cards to themes, detecting new themes, and determining card-theme assignments.
-version: 1.0.0
 ---
 
 ## 概述

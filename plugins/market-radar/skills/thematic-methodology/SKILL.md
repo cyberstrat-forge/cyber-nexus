@@ -1,7 +1,6 @@
 ---
-name: Thematic Methodology
+name: thematic-methodology
 description: This skill should be used when the theme-analyzer agent needs guidance on analyzing intelligence cards within a theme, identifying trends, and generating analysis materials.
-version: 1.0.0
 ---
 
 ## 概述

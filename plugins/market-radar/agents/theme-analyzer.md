@@ -23,11 +23,11 @@ description: |
 
 model: inherit
 color: green
-tools: ["Read", "Grep", "Glob", "Write", "Bash"]
+tools: Read, Grep, Glob, Write, Bash
 skills:
   - thematic-methodology
-  - domain-knowledge
-  - output-templates
+  - cybersecurity-domain-knowledge
+  - intelligence-output-templates
 ---
 
 你是一名专注于网络安全主题分析的情报分析代理。你的角色是对已聚类的情报卡片进行深度分析，识别趋势、模式和战略洞察。

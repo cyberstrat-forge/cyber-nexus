@@ -2,7 +2,7 @@
 name: intel-distill
 description: Extract strategic intelligence from source documents and generate intelligence cards
 argument-hint: "[--source <目录>] [--output <目录>]"
-allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Agent"]
+allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
 ## 命令概述
