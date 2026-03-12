@@ -13,6 +13,16 @@
   - 仅适用于 Industry-Analysis 领域
   - 标签体系覆盖 6 大类共 27 个标签值
 
+## [1.0.3] - 2026-03-11
+
+### 新增
+
+- **market-radar**: 预处理管道，在调用 Agent 前统一处理源文件
+  - 格式转换：PDF/DOCX → Markdown（依赖 pandoc/pdftotext）
+  - 噪声清洗：删除图片链接、社交媒体元数据、连续空行
+  - 支持多种来源：PDF 报告、微信公众号、Twitter/X 线程、网页文章
+  - 增量处理：自动跳过已转换文件
+
 ## [1.0.2] - 2026-03-10
 
 ### 变更
@@ -43,7 +53,8 @@
   - 支持 Markdown、PDF、Word 文档处理
   - 实现增量处理机制
 
-[1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.4
+[1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.0
