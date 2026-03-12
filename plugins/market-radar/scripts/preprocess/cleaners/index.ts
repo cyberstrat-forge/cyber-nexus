@@ -27,8 +27,10 @@ export class CleanerOrchestrator {
         return true;
 
       case 'basic':
-        // Basic rules: apply to unknown + all specific sources
-        return true;
+        // Basic rules: apply to unknown + web sources only
+        // These rules target web-specific noise (ICP, share buttons, copyright)
+        // that should not be applied to PDF reports, WeChat articles, etc.
+        return source === 'unknown' || source === 'web';
 
       case 'specific':
         // Specific rules: only apply to matching sources
