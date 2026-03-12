@@ -85,7 +85,8 @@ async function processFile(
   sourcePath: string,
   convertedPath: string,
   metaPath: string,
-  currentVersion: string
+  currentVersion: string,
+  sourceDir: string
 ): Promise<PreprocessResult> {
   try {
     // Read and convert
@@ -212,7 +213,8 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
       sourcePath,
       convertedPath,
       metaPath,
-      preprocessorVersion
+      preprocessorVersion,
+      sourceDir
     );
     results.set(sourcePath, result);
 

@@ -23,6 +23,8 @@ const SCHEMA_FILES: Record<string, string> = {
   'agent-result': 'agent-result.schema.json',
   'intelligence-output': 'intelligence-output.schema.json',
   'state': 'state.schema.json',
+  'themes-config': 'themes-config.schema.json',
+  'theme-state': 'theme-state.schema.json',
 };
 
 interface ValidationResult {
