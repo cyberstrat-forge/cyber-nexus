@@ -77,7 +77,8 @@ function loadArchiveMeta(metaPath: string): ArchiveMeta | null {
   }
   try {
     return JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-  } catch {
+  } catch (error) {
+    console.warn(`Failed to parse meta file: ${metaPath}`, error);
     return null;
   }
 }

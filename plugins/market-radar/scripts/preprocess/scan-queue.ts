@@ -59,16 +59,23 @@ export interface ScanQueueResult {
 }
 
 /**
+ * Processed entry in state file (object value format)
+ */
+interface ProcessedEntry {
+  intelligence_count?: number;
+  intelligence_ids?: string[];
+  review_status?: string | null;
+  content_hash?: string;
+  source_hash?: string;
+}
+
+/**
  * State file structure (simplified for reading)
+ * Supports both v2.0 (object) and legacy (array) formats
  */
 interface StateFile {
   version: string;
-  processed?: Array<{
-    source_file: string;
-    intelligence_count?: number;
-    intelligence_ids?: string[];
-    review_status?: string | null;
-  }>;
+  processed?: Record<string, ProcessedEntry> | ProcessedEntry[];
   review?: {
     pending?: Array<{
       pending_id: string;
@@ -156,13 +163,25 @@ function scanAndBuildQueue(
     review_status?: string | null;
   }>();
 
-  if (state && Array.isArray(state.processed)) {
-    for (const item of state.processed) {
-      processedMap.set(item.source_file, {
-        intelligence_count: item.intelligence_count,
-        intelligence_ids: item.intelligence_ids,
-        review_status: item.review_status,
-      });
+  if (state && state.processed) {
+    if (Array.isArray(state.processed)) {
+      // Legacy array format
+      for (const item of state.processed) {
+        processedMap.set((item as ProcessedEntry & { source_file: string }).source_file, {
+          intelligence_count: item.intelligence_count,
+          intelligence_ids: item.intelligence_ids,
+          review_status: item.review_status,
+        });
+      }
+    } else {
+      // v2.0 object format
+      for (const [filePath, entry] of Object.entries(state.processed)) {
+        processedMap.set(filePath, {
+          intelligence_count: entry.intelligence_count,
+          intelligence_ids: entry.intelligence_ids,
+          review_status: entry.review_status,
+        });
+      }
     }
   }
 

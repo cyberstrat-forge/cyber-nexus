@@ -70,7 +70,7 @@
       "properties": {
         "pending_id": {
           "type": "string",
-          "pattern": "^pending-[a-z]+-\\d{8}-\\d{3}$",
+          "pattern": "^pending-[a-z][a-z-]*-\\d{8}-\\d{3}$",
           "description": "Temporary ID for pending review (format: pending-{domain}-{YYYYMMDD}-{seq})"
         },
         "converted_file": {
@@ -123,7 +123,7 @@
           "type": ["array", "null"],
           "items": {
             "type": "string",
-            "pattern": "^[a-z]+-\\d{8}-\\d{3}$"
+            "pattern": "^[a-z][a-z-]*-\\d{8}-\\d{3}$"
           },
           "description": "List of formal intelligence card IDs, or null if none generated"
         },

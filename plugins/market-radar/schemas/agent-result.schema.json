@@ -40,7 +40,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^[a-z]+-\\d{8}-\\d{3}$"
+        "pattern": "^[a-z][a-z-]*-\\d{8}-\\d{3}$"
       },
       "description": "List of generated intelligence card IDs (format: {domain}-{YYYYMMDD}-{seq})"
     },
@@ -102,7 +102,7 @@
       "properties": {
         "intelligence_id": {
           "type": "string",
-          "pattern": "^[a-z]+-\\d{8}-\\d{3}$",
+          "pattern": "^[a-z][a-z-]*-\\d{8}-\\d{3}$",
           "description": "Intelligence card ID (format: {domain}-{YYYYMMDD}-{seq})"
         },
         "primary_domain": {

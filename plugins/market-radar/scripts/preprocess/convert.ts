@@ -19,7 +19,8 @@ export function isDependencyAvailable(name: string, versionFlag: string = '--ver
       stdio: ['ignore', 'ignore', 'ignore'],
     });
     return result.status === 0;
-  } catch {
+  } catch (error) {
+    console.warn(`Dependency check failed for ${name}:`, error);
     return false;
   }
 }
@@ -37,7 +38,8 @@ export function isPdfToTextAvailable(): boolean {
     // pdftotext returns 1 for -v (it shows version but also an error about missing file)
     // So we check if the command runs at all, not the exit code
     return result.error === undefined;
-  } catch {
+  } catch (error) {
+    console.warn('pdftotext check failed:', error);
     return false;
   }
 }
@@ -53,7 +55,8 @@ export function isPyMuPdfAvailable(): boolean {
       stdio: ['ignore', 'ignore', 'ignore'],
     });
     return result.status === 0;
-  } catch {
+  } catch (error) {
+    console.warn('PyMuPDF check failed:', error);
     return false;
   }
 }

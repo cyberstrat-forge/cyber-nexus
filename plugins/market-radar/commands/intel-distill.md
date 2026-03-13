@@ -667,13 +667,17 @@ npx tsx reporting/scan-cards.ts \
 ```json
 {
   "$schema": "https://cyberstrat-forge.github.io/cyber-nexus/schemas/state.schema.json",
-  "version": "2.1",
-  "last_updated": "2026-03-13T15:25:00+08:00",
+  "version": "2.1.0",
+  "updated_at": "2026-03-13T15:25:00+08:00",
+
+  "queue": {
+    "processing": {}
+  },
 
   "review": {
     "pending": [
       {
-        "pending_id": "pending-threat-20260313-001",
+        "pending_id": "pending-threat-intelligence-20260313-001",
         "converted_file": "converted/2026/03/report-2026.md",
         "archived_source": "archive/2026/03/report-2026.pdf",
         "added_at": "2026-03-13T10:00:00Z",
@@ -682,30 +686,50 @@ npx tsx reporting/scan-cards.ts \
     ]
   },
 
-  "processed": [
-    {
-      "source_file": "converted/2026/03/report-2026.md",
+  "processed": {
+    "converted/2026/03/report-2026.md": {
+      "content_hash": "abc123def456789...",
+      "source_hash": "fed987cba654321...",
       "processed_at": "2026-03-13T15:18:00+08:00",
       "intelligence_count": 2,
       "intelligence_ids": [
-        "threat-intelligence-20250301-001",
-        "threat-intelligence-20250301-002"
+        "threat-intelligence-20260313-001",
+        "threat-intelligence-20260313-002"
       ],
-      "skip_reason": null,
+      "output_files": [
+        "threat-intelligence/20260313-ransomware-trend.md",
+        "threat-intelligence/20260313-apt-activity.md"
+      ],
+      "session": "20260313-151800",
+      "archived_source": "archive/2026/03/report-2026.pdf",
+      "archived_exists": true,
+      "converted_exists": true,
       "review_status": null
     }
-  ],
+  },
 
-  "statistics": {
-    "total_processed": 14,
-    "total_intelligence": 12,
-    "by_domain": {
-      "threat-intelligence": 3,
-      "market-trends": 2,
-      "technology-innovation": 6,
-      "security-operations": 0,
-      "strategic-planning": 1
-    }
+  "stats": {
+    "preprocess": {
+      "scanned": 15,
+      "converted": 14,
+      "failed": 1,
+      "duplicates": 2
+    },
+    "intelligence": {
+      "processed": 14,
+      "cards_generated": 12,
+      "pending_review": 1,
+      "no_value": 2,
+      "failed": 0
+    },
+    "review": {
+      "pending": 1,
+      "approved": 0,
+      "rejected": 0
+    },
+    "archive_dir": "archive/2026/03/",
+    "converted_dir": "converted/2026/03/",
+    "last_run": "2026-03-13T15:25:00+08:00"
   }
 }
 ```
@@ -714,25 +738,34 @@ npx tsx reporting/scan-cards.ts \
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `version` | string | 状态文件格式版本（当前为 "2.1"） |
-| `last_updated` | string | 最后更新时间（ISO 8601 格式） |
+| `version` | string | 状态文件格式版本（语义化版本，如 "2.1.0"） |
+| `updated_at` | string | 最后更新时间（ISO 8601 格式） |
+| `queue.processing` | object | 正在处理中的文件（键为文件路径） |
 | `review.pending` | array | 待审核队列（未生成卡片） |
-| `review.pending[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}`） |
+| `review.pending[].pending_id` | string | 临时 ID（格式：`pending-{domain-prefix}-{YYYYMMDD}-{seq}`） |
 | `review.pending[].converted_file` | string | 转换文件路径 |
 | `review.pending[].archived_source` | string | 归档文件路径 |
 | `review.pending[].added_at` | string | 添加时间 |
 | `review.pending[].reason` | string | 审核原因 |
-| `processed` | array | 已处理文件列表 |
-| `processed[].source_file` | string | 转换文件路径 |
+| `processed` | object | 已处理文件映射（键为文件路径，值为处理结果） |
+| `processed[].content_hash` | string | 转换文件内容 MD5 哈希（用于变更检测） |
+| `processed[].source_hash` | string | 源文件 MD5 哈希（用于去重） |
 | `processed[].processed_at` | string | 处理完成时间 |
-| `processed[].intelligence_count` | number | 生成的情报卡片数量 |
+| `processed[].intelligence_count` | number | 生成的情报卡片数量（0-3） |
 | `processed[].intelligence_ids` | array | 情报卡片 ID 列表 |
-| `processed[].skip_reason` | string/null | 跳过原因（无价值文件） |
+| `processed[].output_files` | array | 输出文件路径列表 |
+| `processed[].session` | string | 会话 ID（YYYYMMDD-HHMMSS） |
+| `processed[].archived_source` | string | 归档源文件路径 |
+| `processed[].archived_exists` | boolean | 归档文件是否存在 |
+| `processed[].converted_exists` | boolean | 转换文件是否存在 |
 | `processed[].review_status` | string/null | 审核状态（`approved`/`rejected`/`pending`/null） |
-| `statistics` | object | 统计信息 |
-| `statistics.total_processed` | number | 已处理文件总数 |
-| `statistics.total_intelligence` | number | 情报卡片总数 |
-| `statistics.by_domain` | object | 按领域分布统计 |
+| `stats` | object | 统计信息 |
+| `stats.preprocess` | object | 预处理统计（scanned, converted, failed, duplicates） |
+| `stats.intelligence` | object | 情报提取统计（processed, cards_generated, pending_review, no_value, failed） |
+| `stats.review` | object | 审核统计（pending, approved, rejected） |
+| `stats.archive_dir` | string | 当前归档目录 |
+| `stats.converted_dir` | string | 当前转换目录 |
+| `stats.last_run` | string | 最后运行时间 |
 
 ---
 
