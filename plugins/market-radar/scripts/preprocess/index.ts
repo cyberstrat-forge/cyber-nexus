@@ -1,18 +1,21 @@
 #!/usr/bin/env npx tsx
 /**
- * Preprocessing entry point
+ * Preprocessing entry point (v2.0)
  *
- * Scans source directory, processes files, outputs clean Markdown
+ * Supports inbox/archive/converted directory structure:
+ * - inbox/ - User drops new files here
+ * - archive/YYYY/MM/ - Archived source files with .meta metadata
+ * - converted/YYYY/MM/ - Converted markdown files
  *
  * Usage:
- *   npx tsx index.ts --source <dir> [--output <dir>] [--force]
+ *   npx tsx index.ts --source <dir> [--force]
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import {
   PreprocessResult,
-  PreprocessMeta,
+  ArchiveMeta,
   PreprocessOptions,
   BatchResult,
   SupportedFormat,
@@ -24,50 +27,189 @@ import { calculateStats } from './cleaners/types';
 import { calculateHash } from '../utils/hash';
 
 // Current preprocessor version - increment when cleaning rules change
-const PREPROCESSOR_VERSION = '1.0.0';
+const PREPROCESSOR_VERSION = '2.0.0';
 
 /**
- * Get metadata file path for a source file
- * Uses relative path to preserve directory structure and avoid name collisions
+ * Get MIME type from file extension
  */
-function getMetaPath(metaDir: string, sourceRelPath: string): string {
-  // Convert path separators to underscores for flat storage
-  const safePath = sourceRelPath.replace(/\//g, '_').replace(/\\/g, '_');
-  return path.join(metaDir, `${safePath}.json`);
+function getMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    '.pdf': 'application/pdf',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.md': 'text/markdown',
+    '.txt': 'text/plain',
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
 }
 
 /**
- * Get converted file path for a source file
- * Preserves directory structure to avoid name collisions
+ * Get archive directory path based on date
  */
-function getConvertedPath(convertedDir: string, sourceRelPath: string): string {
-  // Remove extension and add .md
-  const ext = path.extname(sourceRelPath);
-  const baseName = sourceRelPath.slice(0, -ext.length);
-  return path.join(convertedDir, `${baseName}.md`);
+function getArchiveDir(sourceDir: string, dateRef: Date): string {
+  const year = dateRef.getFullYear();
+  const month = String(dateRef.getMonth() + 1).padStart(2, '0');
+  return path.join(sourceDir, 'archive', String(year), month);
 }
 
 /**
- * Check if file needs preprocessing
+ * Get converted directory path based on date
  */
-function needsPreprocessing(
-  sourcePath: string,
-  metaPath: string,
-  currentVersion: string
-): boolean {
+function getConvertedDir(sourceDir: string, dateRef: Date): string {
+  const year = dateRef.getFullYear();
+  const month = String(dateRef.getMonth() + 1).padStart(2, '0');
+  return path.join(sourceDir, 'converted', String(year), month);
+}
+
+/**
+ * Get archive metadata file path
+ */
+function getArchiveMetaPath(archivePath: string): string {
+  return `${archivePath}.meta`;
+}
+
+/**
+ * Load existing archive metadata
+ */
+function loadArchiveMeta(metaPath: string): ArchiveMeta | null {
   if (!fs.existsSync(metaPath)) {
-    return true; // No metadata = not processed
+    return null;
   }
-
   try {
-    const meta: PreprocessMeta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-    const currentHash = calculateHash(sourcePath);
-
-    // Reprocess if source changed or version updated
-    return meta.sourceHash !== currentHash || meta.preprocessorVersion !== currentVersion;
+    return JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
   } catch {
-    return true; // Invalid metadata = reprocess
+    return null;
   }
+}
+
+/**
+ * Save archive metadata
+ */
+function saveArchiveMeta(metaPath: string, meta: ArchiveMeta): void {
+  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
+}
+
+/**
+ * Collect known source hashes from all archive metadata files
+ */
+function collectKnownHashes(sourceDir: string): Map<string, string> {
+  const knownHashes = new Map<string, string>(); // hash -> archive path
+  const archiveBase = path.join(sourceDir, 'archive');
+
+  if (!fs.existsSync(archiveBase)) {
+    return knownHashes;
+  }
+
+  // Walk through archive/YYYY/MM/ directories
+  const years = fs.readdirSync(archiveBase, { withFileTypes: true })
+    .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
+    .map(e => e.name);
+
+  for (const year of years) {
+    const months = fs.readdirSync(path.join(archiveBase, year), { withFileTypes: true })
+      .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
+      .map(e => e.name);
+
+    for (const month of months) {
+      const monthDir = path.join(archiveBase, year, month);
+      const files = fs.readdirSync(monthDir, { withFileTypes: true })
+        .filter(e => e.isFile() && e.name.endsWith('.meta'))
+        .map(e => e.name);
+
+      for (const metaFile of files) {
+        const metaPath = path.join(monthDir, metaFile);
+        const meta = loadArchiveMeta(metaPath);
+        if (meta && meta.sourceHash) {
+          knownHashes.set(meta.sourceHash, metaPath);
+        }
+      }
+    }
+  }
+
+  return knownHashes;
+}
+
+/**
+ * Scan directory for files to process
+ * Priority: inbox/ first, then root directory (excluding special dirs)
+ */
+function scanDirectory(sourceDir: string): string[] {
+  const files: string[] = [];
+  const excludeDirs = new Set(['inbox', 'archive', 'converted', 'intelligence', '.intel']);
+
+  function scan(dir: string, isRoot: boolean = false) {
+    if (!fs.existsSync(dir)) {
+      return;
+    }
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      // Skip hidden directories and special directories
+      if (entry.name.startsWith('.') || excludeDirs.has(entry.name)) {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        scan(fullPath);
+      } else if (entry.isFile() && isSupportedFormat(fullPath)) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  // Priority 1: Scan inbox/ directory
+  const inboxDir = path.join(sourceDir, 'inbox');
+  if (fs.existsSync(inboxDir)) {
+    const inboxEntries = fs.readdirSync(inboxDir, { withFileTypes: true });
+    for (const entry of inboxEntries) {
+      const fullPath = path.join(inboxDir, entry.name);
+      if (entry.isFile() && isSupportedFormat(fullPath)) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  // Priority 2: Scan root directory (for backward compatibility)
+  scan(sourceDir, true);
+
+  return files;
+}
+
+/**
+ * Archive source file to archive/YYYY/MM/
+ */
+function archiveSourceFile(
+  sourcePath: string,
+  archiveDir: string,
+  sourceDir: string,
+  sourceHash: string
+): { archivePath: string; metaPath: string; isDuplicate: boolean } {
+  // Ensure archive directory exists
+  if (!fs.existsSync(archiveDir)) {
+    fs.mkdirSync(archiveDir, { recursive: true });
+  }
+
+  const filename = path.basename(sourcePath);
+  const archivePath = path.join(archiveDir, filename);
+  const metaPath = getArchiveMetaPath(archivePath);
+
+  // Check for duplicate based on hash
+  const existingMeta = loadArchiveMeta(metaPath);
+  if (existingMeta && existingMeta.sourceHash === sourceHash) {
+    // Same file already archived
+    return { archivePath, metaPath, isDuplicate: true };
+  }
+
+  // Copy or move file to archive
+  // Note: We copy instead of move to preserve the original in inbox until user cleans it
+  if (archivePath !== sourcePath) {
+    fs.copyFileSync(sourcePath, archivePath);
+  }
+
+  return { archivePath, metaPath, isDuplicate: false };
 }
 
 /**
@@ -75,14 +217,43 @@ function needsPreprocessing(
  */
 async function processFile(
   sourcePath: string,
-  convertedPath: string,
-  metaPath: string,
+  archiveDir: string,
+  convertedDir: string,
+  sourceDir: string,
   currentVersion: string,
-  sourceDir: string
+  knownHashes: Map<string, string>,
+  dateRef: Date
 ): Promise<PreprocessResult> {
-  let rawContent: string;
+  // Calculate source hash for deduplication
+  const sourceHash = calculateHash(sourcePath);
+
+  // Check for duplicate
+  if (knownHashes.has(sourceHash)) {
+    return {
+      success: true,
+      isDuplicate: true,
+      archivedPath: knownHashes.get(sourceHash),
+    };
+  }
+
+  // Archive source file
+  const { archivePath, metaPath, isDuplicate } = archiveSourceFile(
+    sourcePath,
+    archiveDir,
+    sourceDir,
+    sourceHash
+  );
+
+  if (isDuplicate) {
+    return {
+      success: true,
+      isDuplicate: true,
+      archivedPath: archivePath,
+    };
+  }
 
   // Phase 1: Conversion
+  let rawContent: string;
   try {
     rawContent = await convertToMarkdown(sourcePath);
   } catch (error) {
@@ -98,6 +269,7 @@ async function processFile(
     return {
       success: false,
       error: { code, message },
+      archivedPath: archivePath,
     };
   }
 
@@ -110,75 +282,61 @@ async function processFile(
     return {
       success: false,
       error: { code: 'CLEAN_FAILED', message },
+      archivedPath: archivePath,
     };
   }
 
   const cleanedContent = cleanResult.content;
 
-  // Phase 3: Write output
+  // Phase 3: Write converted file
+  const filename = path.basename(sourcePath, path.extname(sourcePath));
+  const convertedPath = path.join(convertedDir, `${filename}.md`);
+
   try {
-    // Ensure output directory exists
-    const outputDir = path.dirname(convertedPath);
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    // Ensure converted directory exists
+    if (!fs.existsSync(convertedDir)) {
+      fs.mkdirSync(convertedDir, { recursive: true });
     }
 
     // Write converted file
     fs.writeFileSync(convertedPath, cleanedContent, 'utf-8');
-
-    // Write metadata
-    const sourceRelPath = path.relative(sourceDir, sourcePath);
-    const meta: PreprocessMeta = {
-      sourcePath: sourceRelPath,
-      sourceHash: calculateHash(sourcePath),
-      preprocessorVersion: currentVersion,
-      processedAt: new Date().toISOString(),
-      detectedSource: cleanResult.source,
-      appliedRules: cleanResult.appliedRules,
-      stats: cleanResult.stats,
-    };
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: { code: 'READ_FAILED', message: `Failed to write output: ${message}` },
+      error: { code: 'ARCHIVE_FAILED', message: `Failed to write converted file: ${message}` },
+      archivedPath: archivePath,
     };
   }
+
+  // Phase 4: Write archive metadata
+  const now = new Date().toISOString();
+  const relativeSourcePath = path.relative(sourceDir, sourcePath);
+  const relativeConvertedPath = path.relative(sourceDir, convertedPath);
+
+  const meta: ArchiveMeta = {
+    sourceHash,
+    originalPath: relativeSourcePath,
+    archivedAt: now,
+    fileSize: fs.statSync(archivePath).size,
+    mimeType: getMimeType(sourcePath),
+    conversionInfo: {
+      convertedPath: relativeConvertedPath,
+      convertedAt: now,
+      conversionSuccess: true,
+    },
+  };
+
+  saveArchiveMeta(metaPath, meta);
 
   return {
     success: true,
     markdown: cleanedContent,
     stats: cleanResult.stats,
+    archivedPath: archivePath,
+    convertedPath,
+    isDuplicate: false,
   };
-}
-
-/**
- * Scan directory for supported files
- */
-function scanDirectory(sourceDir: string): string[] {
-  const files: string[] = [];
-
-  function scan(dir: string) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-
-      // Skip converted directory and hidden directories
-      if (entry.name === 'converted' || entry.name.startsWith('.')) {
-        continue;
-      }
-
-      if (entry.isDirectory()) {
-        scan(fullPath);
-      } else if (entry.isFile() && isSupportedFormat(fullPath)) {
-        files.push(fullPath);
-      }
-    }
-  }
-
-  scan(sourceDir);
-  return files;
 }
 
 /**
@@ -187,52 +345,57 @@ function scanDirectory(sourceDir: string): string[] {
 async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
   const {
     sourceDir,
+    archiveDir,
     convertedDir,
-    metaDir,
     preprocessorVersion,
     force = false,
+    dateRef = new Date(),
   } = options;
 
-  // Ensure output directories exist
-  if (!fs.existsSync(convertedDir)) {
-    fs.mkdirSync(convertedDir, { recursive: true });
-  }
-  if (!fs.existsSync(metaDir)) {
-    fs.mkdirSync(metaDir, { recursive: true });
-  }
+  // Collect known hashes for deduplication
+  const knownHashes = force ? new Map<string, string>() : collectKnownHashes(sourceDir);
 
   // Scan for files
   const files = scanDirectory(sourceDir);
   const results = new Map<string, PreprocessResult>();
   let processed = 0;
   let skipped = 0;
+  let duplicates = 0;
   let failed = 0;
 
   for (const sourcePath of files) {
-    // Calculate relative path from sourceDir for unique identification
-    const sourceRelPath = path.relative(sourceDir, sourcePath);
-    const convertedPath = getConvertedPath(convertedDir, sourceRelPath);
-    const metaPath = getMetaPath(metaDir, sourceRelPath);
+    const sourceHash = calculateHash(sourcePath);
 
-    // Check if processing needed
-    if (!force && !needsPreprocessing(sourcePath, metaPath, preprocessorVersion)) {
-      skipped++;
-      results.set(sourcePath, { success: true });
+    // Check if already processed (unless force)
+    if (!force && knownHashes.has(sourceHash)) {
+      duplicates++;
+      results.set(sourcePath, {
+        success: true,
+        isDuplicate: true,
+        archivedPath: knownHashes.get(sourceHash),
+      });
       continue;
     }
 
     // Process file
     const result = await processFile(
       sourcePath,
-      convertedPath,
-      metaPath,
+      archiveDir,
+      convertedDir,
+      sourceDir,
       preprocessorVersion,
-      sourceDir
+      knownHashes,
+      dateRef
     );
+
     results.set(sourcePath, result);
 
-    if (result.success) {
+    if (result.isDuplicate) {
+      duplicates++;
+    } else if (result.success) {
       processed++;
+      // Add to known hashes to avoid re-processing in same batch
+      knownHashes.set(sourceHash, result.archivedPath || '');
     } else {
       failed++;
       console.error(`Failed: ${sourcePath} - ${result.error?.message}`);
@@ -243,8 +406,11 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
     total: files.length,
     processed,
     skipped,
+    duplicates,
     failed,
     results,
+    archiveDir,
+    convertedDir,
   };
 }
 
@@ -254,7 +420,6 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
 async function main() {
   const args = process.argv.slice(2);
   let sourceDir = '.';
-  let outputDir: string | undefined;
   let force = false;
 
   // Parse arguments
@@ -262,18 +427,20 @@ async function main() {
     if (args[i] === '--source' && args[i + 1]) {
       sourceDir = args[i + 1];
       i++;
-    } else if (args[i] === '--output' && args[i + 1]) {
-      outputDir = args[i + 1];
-      i++;
     } else if (args[i] === '--force') {
       force = true;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: npx tsx index.ts --source <dir> [--output <dir>] [--force]
+Usage: npx tsx index.ts --source <dir> [--force]
+
+Directory Structure (v2.0):
+  {source_dir}/
+  ├── inbox/              # Drop new files here (recommended)
+  ├── archive/YYYY/MM/    # Archived source files with .meta
+  └── converted/YYYY/MM/  # Converted markdown files
 
 Options:
-  --source <dir>  Source directory containing documents (default: current directory)
-  --output <dir>  Output directory for converted files (default: {source}/converted)
+  --source <dir>  Source directory (default: current directory)
   --force         Force reprocess all files
   --help          Show this help message
       `);
@@ -283,15 +450,24 @@ Options:
 
   // Resolve paths
   sourceDir = path.resolve(sourceDir);
-  const convertedDir = outputDir
-    ? path.resolve(outputDir)
-    : path.join(sourceDir, 'converted');
-  const metaDir = path.join(convertedDir, '.meta');
+  const dateRef = new Date();
+  const archiveDir = getArchiveDir(sourceDir, dateRef);
+  const convertedDir = getConvertedDir(sourceDir, dateRef);
 
   console.log(`Source: ${sourceDir}`);
-  console.log(`Output: ${convertedDir}`);
+  console.log(`Archive: ${archiveDir}`);
+  console.log(`Converted: ${convertedDir}`);
   console.log(`Version: ${PREPROCESSOR_VERSION}`);
   console.log('');
+
+  // Check inbox directory
+  const inboxDir = path.join(sourceDir, 'inbox');
+  if (!fs.existsSync(inboxDir)) {
+    console.log('💡 Tip: Create an inbox/ directory for better file management:');
+    console.log('   mkdir -p inbox');
+    console.log('   Then drop files into inbox/ for processing.');
+    console.log('');
+  }
 
   // Check optional dependencies
   if (!isPandocAvailable()) {
@@ -313,34 +489,38 @@ Options:
   // Run batch processing
   const result = await batchProcess({
     sourceDir,
+    archiveDir,
     convertedDir,
-    metaDir,
     preprocessorVersion: PREPROCESSOR_VERSION,
     force,
+    dateRef,
   });
 
   // Print summary
   console.log('---');
   console.log(`Total files: ${result.total}`);
   console.log(`Processed: ${result.processed}`);
-  console.log(`Skipped: ${result.skipped}`);
+  console.log(`Duplicates: ${result.duplicates}`);
   console.log(`Failed: ${result.failed}`);
 
   // Output JSON for integration
   const output = {
     sourceDir,
-    convertedDir,
-    metaDir,
+    archiveDir: result.archiveDir,
+    convertedDir: result.convertedDir,
     preprocessorVersion: PREPROCESSOR_VERSION,
     stats: {
       total: result.total,
       processed: result.processed,
-      skipped: result.skipped,
+      duplicates: result.duplicates,
       failed: result.failed,
     },
-    files: Array.from(result.results.entries()).map(([path, res]) => ({
-      sourcePath: path,
+    files: Array.from(result.results.entries()).map(([filePath, res]) => ({
+      sourcePath: filePath,
       success: res.success,
+      isDuplicate: res.isDuplicate,
+      archivedPath: res.archivedPath,
+      convertedPath: res.convertedPath,
       error: res.error,
       stats: res.stats,
     })),
@@ -361,7 +541,8 @@ if (process.argv[1]?.endsWith('preprocess/index.ts') || process.argv[1]?.endsWit
 export {
   batchProcess,
   processFile,
-  needsPreprocessing,
-  calculateHash,
+  getArchiveDir,
+  getConvertedDir,
+  collectKnownHashes,
   PREPROCESSOR_VERSION,
 };

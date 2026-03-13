@@ -1,6 +1,25 @@
 # Domain Templates Reference
 
-> 七大情报领域的 Frontmatter 和 Body 模板
+> 七大情报领域的 Frontmatter 和 Body 模板 (v2.0)
+
+## 持久化元数据字段
+
+所有情报卡片都包含以下持久化元数据字段，确保卡片独立于源文件和中间产物：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `intelligence_id` | string | 正式情报卡片 ID（格式：`{domain}-{YYYYMMDD}-{seq}`） |
+| `source_hash` | string | 源文件 MD5 哈希（用于去重） |
+| `archived_source` | string | 归档文件路径（`archive/YYYY/MM/{filename}`） |
+| `converted_file` | string | 转换文件路径（`converted/YYYY/MM/{filename}.md`） |
+| `source_file` | string | 原始源文件路径（保持兼容） |
+
+这些字段确保：
+- 删除源文件后卡片仍可追溯
+- 重新加入文件时能检测重复
+- 卡片包含完整来源信息
+
+---
 
 ## 1. Threat-Landscape（威胁态势）
 
@@ -9,7 +28,11 @@
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "threat-YYYYMMDD-001"    # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Threat-Landscape
@@ -21,7 +44,7 @@ threat_actor:                   # 威胁组织名称
 target_sector:                  # 目标行业
 target_region:                  # 目标地区
 impact_scale:                   # 影响规模
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -70,7 +93,11 @@ generated_session: "YYYYMMDD-HHMMSS"
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "industry-YYYYMMDD-001"  # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Industry-Analysis
@@ -80,7 +107,7 @@ business_model_tags: []           # 业务模式标签（可选）
 security_relevance: medium
 market_scope:                   # 全球/中国/区域
 segment:                        # 细分领域
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -136,7 +163,11 @@ generated_session: "YYYYMMDD-HHMMSS"
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "vendor-YYYYMMDD-001"    # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Vendor-Intelligence
@@ -146,7 +177,7 @@ security_relevance: medium
 vendor_name:
 vendor_type:                    # 创业公司/上市企业/大厂安全部门
 business_area:                  # 业务领域
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -198,7 +229,11 @@ generated_session: "YYYYMMDD-HHMMSS"
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "emerging-YYYYMMDD-001"  # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Emerging-Tech
@@ -207,7 +242,7 @@ geo_scope: unknown                # global/china/china-primary/overseas/overseas
 security_relevance: high
 tech_name:                      # 技术名称
 maturity:                       # 概念/早期/成长/成熟
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -262,7 +297,11 @@ generated_session: "YYYYMMDD-HHMMSS"
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "customer-YYYYMMDD-001"  # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Customer-Market
@@ -271,7 +310,7 @@ geo_scope: unknown                # global/china/china-primary/overseas/overseas
 security_relevance: medium
 customer_segment:               # 客户细分
 region:                         # 地区
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -323,7 +362,11 @@ generated_session: "YYYYMMDD-HHMMSS"
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "policy-YYYYMMDD-001"    # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Policy-Regulation
@@ -334,7 +377,7 @@ policy_name:                    # 政策名称
 issuing_body:                   # 发布机构
 jurisdiction:                   # 管辖区域
 effective_date:                 # 生效时间
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -386,7 +429,11 @@ generated_session: "YYYYMMDD-HHMMSS"
 ```yaml
 ---
 title: "情报标题"
-source_file: "[[relative/path/to/source.md]]"
+intelligence_id: "capital-YYYYMMDD-001"   # 正式情报卡片 ID
+source_file: "inbox/report.pdf"           # 原始源文件路径
+source_hash: "abc123..."                  # 源文件 MD5 哈希
+archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
+converted_file: "converted/2026/03/report.md"  # 转换文件路径
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Capital-Investment
@@ -396,7 +443,7 @@ security_relevance: medium
 event_type:                    # 融资/并购/IPO
 company:                       # 涉及公司
 investors:                     # 投资方/收购方
-review_status: pending
+review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
 generated_by: intelligence-analyzer
 generated_session: "YYYYMMDD-HHMMSS"
 ---
@@ -483,9 +530,15 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 | Value | Description |
 |-------|-------------|
-| pending | 待人工审核 |
+| null | 自动批准（Agent 明确判断有价值） |
+| pending | 待人工审核（Agent 无法确定，需复核） |
 | approved | 已审核通过 |
-| revised | 审核后修改 |
+| rejected | 已审核拒绝 |
+
+**v2.0 变更**：
+- `null` 表示自动批准，无需人工审核
+- `pending` 表示 Agent 无法确定战略价值，需人工复核
+- 审核后状态变为 `approved` 或 `rejected`
 
 ### business_model_tags（业务模式标签）
 

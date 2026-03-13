@@ -2,15 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "state.schema.json",
   "title": "Intelligence Processing State Schema",
-  "description": "JSON Schema for state.json validation in intel-distill workflow",
+  "description": "JSON Schema for state.json validation in intel-distill workflow (v2.0)",
   "type": "object",
-  "required": ["version", "updated_at", "queue", "processed", "stats"],
+  "required": ["version", "updated_at", "queue", "review", "processed", "stats"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
-      "pattern": "^\\d+\\.\\d+$",
-      "description": "State file format version (e.g., 1.0)"
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "State file format version (e.g., 2.0.0)"
     },
     "updated_at": {
       "type": "string",
@@ -19,6 +19,9 @@
     },
     "queue": {
       "$ref": "#/definitions/queue"
+    },
+    "review": {
+      "$ref": "#/definitions/review"
     },
     "processed": {
       "type": "object",
@@ -34,45 +37,58 @@
   "definitions": {
     "queue": {
       "type": "object",
-      "required": ["pending", "processing", "failed"],
+      "required": ["processing"],
       "additionalProperties": false,
       "properties": {
-        "pending": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/pending_item"
-          },
-          "description": "Files waiting to be processed"
-        },
         "processing": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/processing_entry"
           },
           "description": "Files currently being processed"
-        },
-        "failed": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/failed_entry"
-          },
-          "description": "Files that failed processing"
         }
       }
     },
-    "pending_item": {
+    "review": {
       "type": "object",
-      "required": ["path", "content_hash"],
+      "required": ["pending"],
       "additionalProperties": false,
       "properties": {
-        "path": {
+        "pending": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pending_review_item"
+          },
+          "description": "Items pending user review"
+        }
+      }
+    },
+    "pending_review_item": {
+      "type": "object",
+      "required": ["pending_id", "converted_file", "archived_source", "added_at", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "pending_id": {
           "type": "string",
-          "description": "Relative file path"
+          "pattern": "^pending-[a-z]+-\\d{8}-\\d{3}$",
+          "description": "Temporary ID for pending review (format: pending-{domain}-{YYYYMMDD}-{seq})"
         },
-        "content_hash": {
+        "converted_file": {
           "type": "string",
-          "pattern": "^[a-f0-9]{32}$",
-          "description": "MD5 hash of file content at scan time"
+          "description": "Path to converted markdown file (relative to source_dir)"
+        },
+        "archived_source": {
+          "type": "string",
+          "description": "Path to archived source file (relative to source_dir)"
+        },
+        "added_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When added to pending queue (ISO 8601)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requiring review"
         }
       }
     },
@@ -98,54 +114,24 @@
         }
       }
     },
-    "failed_entry": {
-      "type": "object",
-      "required": ["error", "failed_at", "retries", "content_hash"],
-      "additionalProperties": false,
-      "properties": {
-        "error": {
-          "type": "string",
-          "description": "Error message"
-        },
-        "failed_at": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Failure timestamp (ISO 8601)"
-        },
-        "retries": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Number of retry attempts (max 1)"
-        },
-        "content_hash": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{32}$",
-          "description": "MD5 hash of file content at failure time"
-        },
-        "validation_errors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Schema validation errors (if applicable)"
-        }
-      }
-    },
     "processed_entry": {
       "type": "object",
       "required": ["content_hash", "processed_at", "intelligence_count", "session"],
       "additionalProperties": false,
       "properties": {
+        "intelligence_id": {
+          "type": ["string", "null"],
+          "description": "Formal intelligence card ID, or null if not generated"
+        },
         "content_hash": {
           "type": "string",
           "pattern": "^[a-f0-9]{32}$",
-          "description": "MD5 hash of source file content for change detection"
+          "description": "MD5 hash of converted file content for change detection"
         },
-        "source_mtime": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Source file modification time (Unix timestamp) - retained for backward compatibility"
+        "source_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "MD5 hash of original source file (for deduplication)"
         },
         "processed_at": {
           "type": "string",
@@ -155,7 +141,7 @@
         "intelligence_count": {
           "type": "integer",
           "minimum": 0,
-          "description": "Number of intelligence items extracted"
+          "description": "Number of intelligence items extracted (0 = no value)"
         },
         "output_files": {
           "type": "array",
@@ -168,28 +154,141 @@
           "type": "string",
           "pattern": "^\\d{8}-\\d{6}$",
           "description": "Session ID (YYYYMMDD-HHMMSS)"
+        },
+        "archived_source": {
+          "type": "string",
+          "description": "Path to archived source file (relative to source_dir)"
+        },
+        "archived_exists": {
+          "type": "boolean",
+          "description": "Whether archived source file still exists"
+        },
+        "converted_exists": {
+          "type": "boolean",
+          "description": "Whether converted file still exists"
+        },
+        "review_status": {
+          "type": ["string", "null"],
+          "enum": ["pending", "approved", "rejected", null],
+          "description": "Review status: pending (in queue), approved, rejected, or null (auto-approved)"
+        },
+        "reviewed_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "When review was completed (ISO 8601 or null)"
+        },
+        "approved_reason": {
+          "type": ["string", "null"],
+          "description": "Reason for approval (positive feedback for agent)"
+        },
+        "rejected_reason": {
+          "type": ["string", "null"],
+          "description": "Reason for rejection (negative feedback for agent)"
+        },
+        "reviewed_by": {
+          "type": ["string", "null"],
+          "description": "Who performed the review (e.g., 'user' or null)"
         }
       }
     },
     "stats": {
       "type": "object",
-      "required": ["total_files", "total_intelligence", "last_run"],
+      "required": ["preprocess", "intelligence", "review", "last_run"],
       "additionalProperties": false,
       "properties": {
-        "total_files": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Total number of files processed"
+        "preprocess": {
+          "type": "object",
+          "required": ["scanned", "converted", "failed"],
+          "additionalProperties": false,
+          "properties": {
+            "scanned": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total files scanned"
+            },
+            "converted": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Files successfully converted"
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Files that failed conversion"
+            },
+            "duplicates": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Duplicate files detected"
+            }
+          }
         },
-        "total_intelligence": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Total number of intelligence items extracted"
+        "intelligence": {
+          "type": "object",
+          "required": ["processed", "cards_generated", "pending_review", "no_value", "failed"],
+          "additionalProperties": false,
+          "properties": {
+            "processed": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Files processed for intelligence"
+            },
+            "cards_generated": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Intelligence cards generated"
+            },
+            "pending_review": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Files pending review"
+            },
+            "no_value": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Files with no strategic value"
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Files that failed processing"
+            }
+          }
+        },
+        "review": {
+          "type": "object",
+          "required": ["pending", "approved", "rejected"],
+          "additionalProperties": false,
+          "properties": {
+            "pending": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Currently pending review"
+            },
+            "approved": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total approved"
+            },
+            "rejected": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total rejected"
+            }
+          }
+        },
+        "archive_dir": {
+          "type": "string",
+          "description": "Current archive directory (archive/YYYY/MM/)"
+        },
+        "converted_dir": {
+          "type": "string",
+          "description": "Current converted directory (converted/YYYY/MM/)"
         },
         "last_run": {
-          "type": ["string", "null"],
+          "type": "string",
           "format": "date-time",
-          "description": "Last processing run timestamp (ISO 8601 or null)"
+          "description": "Last processing run timestamp (ISO 8601)"
         }
       }
     }

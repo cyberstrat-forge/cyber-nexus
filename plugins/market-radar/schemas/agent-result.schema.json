@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "agent-result.schema.json",
   "title": "Agent Result Schema",
-  "description": "JSON Schema for intelligence-analyzer agent lightweight result validation",
+  "description": "JSON Schema for intelligence-analyzer agent lightweight result validation (v2.0)",
   "type": "object",
   "required": [
     "status",
@@ -23,13 +23,21 @@
       "description": "Relative path to the source file"
     },
     "has_strategic_value": {
-      "type": "boolean",
-      "description": "Whether strategic value intelligence was found"
+      "type": ["boolean", "null"],
+      "description": "Whether strategic value intelligence was found. null = needs review"
+    },
+    "review_reason": {
+      "type": "string",
+      "description": "Reason for requiring review (when has_strategic_value is null)"
     },
     "intelligence_count": {
       "type": "integer",
       "minimum": 0,
       "description": "Number of intelligence items extracted (required when status=success and has_strategic_value=true)"
+    },
+    "intelligence_id": {
+      "type": "string",
+      "description": "Generated intelligence card ID (required when status=success and has_strategic_value=true)"
     },
     "output_files": {
       "type": "array",
@@ -84,7 +92,19 @@
         "required": ["status", "has_strategic_value"]
       },
       "then": {
-        "required": ["intelligence_count", "output_files"]
+        "required": ["intelligence_count", "intelligence_id", "output_files"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "success" },
+          "has_strategic_value": { "type": "null" }
+        },
+        "required": ["status", "has_strategic_value"]
+      },
+      "then": {
+        "required": ["review_reason"]
       }
     },
     {

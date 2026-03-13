@@ -1,7 +1,7 @@
 ---
 name: intel-distill
 description: Extract strategic intelligence from source documents and generate intelligence cards
-argument-hint: "[--source <目录>] [--output <目录>] [--report <weekly|monthly> [周期]]"
+argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [pending_id] [--reason <原因>]] [--report <weekly|monthly> [周期]]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -11,16 +11,22 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 
 支持从现有情报卡片生成周报/月报简报。
 
+支持审核机制：对待复核的情报进行批准或拒绝。
+
 ## 参数与使用示例
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `--source <dir>` | 否 | 包含文档的源目录（默认：当前目录） |
 | `--output <dir>` | 否 | 情报卡片输出目录（默认：当前目录） |
-| `--report <type> [period]` | 否 | 生成情报简报：<br>- `weekly` - 周报（从现有卡片生成）<br>- `monthly` - 月报（从现有卡片生成）<br>- 可选周期参数：`2026-W10` 或 `2026-03` |
+| `--review <action>` | 否 | 审核操作：`list`/`approve`/`reject` |
+| `--reason <text>` | 条件 | 审核原因（approve/reject 时推荐） |
+| `--report <type> [period]` | 否 | 生成情报简报：`weekly`/`monthly` |
 | `--help` | 否 | 显示使用帮助 |
 
 ```bash
+# === 情报提取模式 ===
+
 # 处理当前目录下的所有文档
 /intel-distill
 
@@ -30,23 +36,27 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 # 指定输出位置
 /intel-distill --source ./docs --output ./intelligence
 
+# === 审核模式 ===
+
+# 列出所有待审核任务
+/intel-distill --review list
+
+# 批准待审核项
+/intel-distill --review approve pending-threat-20260313-001 --reason "情报准确"
+
+# 拒绝待审核项
+/intel-distill --review reject pending-emerging-20260313-002 --reason "信息来源不可靠"
+
+# === 报告模式 ===
+
 # 生成当前周报（从现有卡片）
 /intel-distill --report weekly
 
 # 生成指定周报
 /intel-distill --report weekly 2026-W10
 
-# 生成指定周报（年+周）
-/intel-distill --report weekly 2026 10
-
 # 生成当前月报
 /intel-distill --report monthly
-
-# 生成指定月报
-/intel-distill --report monthly 2026-03
-
-# 指定情报卡片位置生成报告
-/intel-distill --report weekly --output ./intel
 
 # 显示帮助
 /intel-distill --help
@@ -65,35 +75,53 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 将内容展示给用户，无需执行后续流程。
 ```
 
-## 目录结构
+## 目录结构（v2.0）
 
-### 输出目录（用户可见）
-
-```
-{output_dir}/
-├── Threat-Landscape/
-├── Industry-Analysis/
-├── Vendor-Intelligence/
-├── Emerging-Tech/
-├── Customer-Market/
-├── Policy-Regulation/
-├── Capital-Investment/
-└── reports/                   # 情报报告
-    ├── weekly/                # 周报
-    │   ├── 2026-W09-briefing.md
-    │   └── 2026-W10-briefing.md
-    └── monthly/               # 月报
-        ├── 2026-01-briefing.md
-        └── 2026-02-briefing.md
-```
-
-### 管理目录（隐藏）
+### 推荐目录布局
 
 ```
-{output_dir}/.intel/
-├── state.json              # 状态管理
-└── history/                # 历史归档（按月）
+{source_dir}/
+├── inbox/                          # ⭐️ 待处理文档（推荐入口）
+│   ├── report-2026.pdf
+│   ├── ai-article.docx
+│   └── vendor-news.pdf
+│
+├── archive/                        # ⭐️ 已归档文档（按年月组织）
+│   └── 2026/
+│       └── 03/
+│           ├── report-2026.pdf
+│           ├── report-2026.pdf.meta  # ⭐️ 元数据文件
+│           ├── ai-article.docx
+│           └── vendor-news.pdf
+│
+├── converted/                      # ⭐️ 转换后的 Markdown（按年月组织）
+│   └── 2026/
+│       └── 03/
+│           ├── report-2026.md
+│           ├── ai-article.md
+│           └── vendor-news.md
+│
+├── intelligence/                   # 情报卡片输出
+│   ├── Threat-Landscape/
+│   ├── Industry-Analysis/
+│   └── ...
+│
+└── .intel/                         # ⭐️ 管理目录（隐藏）
+    └── state.json                  # ⭐️ 状态文件 v2.0
 ```
+
+### 目录说明
+
+| 目录 | 说明 | 文件命名规则 |
+|------|------|-------------|
+| `inbox/` | 待处理文档目录 | 保持原名 |
+| `archive/YYYY/MM/` | 已归档文档目录 | 保持原名 |
+| `archive/YYYY/MM/*.meta` | 归档文件元数据 | `{filename}.meta` |
+| `converted/YYYY/MM/` | 转换后的 Markdown | 保持原名（仅改扩展名） |
+| `.intel/` | 管理目录 | - |
+| `.intel/state.json` | 状态文件 v2.0 | - |
+
+---
 
 ## 执行流程
 
@@ -105,16 +133,92 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 参数解析：
 - source = --source 参数值
 - output = --output 参数值或当前目录
+- review_action = --review 参数值（list/approve/reject 或无）
+- review_target = 审核目标 pending_id
+- review_reason = --reason 参数值
 - report_type = --report 参数值（weekly/monthly 或无）
-- period_param = 周期参数（如 2026-W10 或 2026-03）
+- period_param = 周期参数
 ```
 
 **模式判断**：
 
 | 条件 | 执行模式 |
 |------|---------|
+| `--review` 参数存在 | **审核模式** → 执行审核流程 |
 | `--report` 参数存在 | **报告模式** → 执行报告生成流程 |
-| `--report` 参数不存在 | **提取模式** → 执行情报提取流程 |
+| 两者都不存在 | **提取模式** → 执行情报提取流程 |
+
+---
+
+## 审核模式流程
+
+当 `--review` 参数存在时，执行以下流程：
+
+### A1：列出待审核（`--review list`）
+
+1. 读取 `state.json` 的 `review.pending` 队列
+2. 对每个待审核项，显示：
+   - `pending_id`
+   - 来源文件（归档路径）
+   - 转换文件（转换路径）
+   - 审核原因
+   - 添加时间
+
+**输出示例**：
+```
+📋 待审核情报卡片 (2 个)
+
+1. pending_id: pending-threat-20260313-001
+   来源文件: archive/2026/03/report-2026.pdf
+   转换文件: converted/2026/03/report-2026.md
+   原因: 检测到高风险威胁指标，需人工确认
+   添加时间: 2026-03-13 10:00:00
+
+💡 操作:
+   /intel-distill --review approve <pending_id> --reason "原因"
+   /intel-distill --review reject <pending_id> --reason "原因"
+```
+
+### A2：批准审核（`--review approve <pending_id> --reason`）
+
+1. **查找待审核项**
+   - 从 `state.review.pending` 中查找 `pending_id`
+   - 如果不存在，报错退出
+
+2. **检查转换文件**
+   - 检查 `converted_file` 是否存在
+   - 如果不存在，执行转换文件恢复流程
+
+3. **调用 Agent 生成情报卡片**
+   - 调用 `intelligence-analyzer` Agent
+   - 参数：`source`、`output`、`session_id`、`archived_source`、`source_hash`
+
+4. **更新状态文件**
+   - 在 `state.processed` 中更新 `intelligence_id`、`review_status = "approved"`
+   - 从 `state.review.pending` 中移除该待审核项
+
+**输出示例**：
+```
+✅ 已批准: pending-threat-20260313-001
+   • 情报卡片已生成: threat-20260313-001
+   • 输出位置: ./intelligence/Threat-Landscape/threat-20260313-001.md
+   • 批准原因已记录
+```
+
+### A3：拒绝审核（`--review reject <pending_id> --reason`）
+
+1. **查找待审核项**
+2. **更新状态文件**
+   - 不调用 Agent（不生成情报卡片）
+   - `intelligence_id = null`、`review_status = "rejected"`
+   - 从 `state.review.pending` 中移除
+
+**输出示例**：
+```
+✅ 已拒绝: pending-emerging-20260313-002
+   • 不生成情报卡片
+   • 拒绝原因已记录
+```
 
 ---
 
@@ -132,27 +236,7 @@ npx tsx reporting/scan-cards.ts \
   --output-dir {output}
 ```
 
-**参数说明**：
-
-| 参数 | 说明 |
-|------|------|
-| `--period` | 报告类型：`weekly` 或 `monthly` |
-| `--param` | 周期参数（可选）：`2026-W10` 或 `2026-03` |
-| `--output-dir` | 情报卡片目录 |
-
 ### R2：解析扫描结果
-
-脚本返回 JSON 格式结果：
-
-```json
-{
-  "period": "weekly",
-  "period_param": "2026-W10",
-  "date_range": {"start": "2026-03-02", "end": "2026-03-08"},
-  "cards": [...],
-  "stats": {"total": 15, "by_domain": {...}}
-}
-```
 
 ### R3：检查卡片列表
 
@@ -168,13 +252,6 @@ npx tsx reporting/scan-cards.ts \
 参数: card_list（扫描结果）, output_dir, report_date（当前日期）
 ```
 
-Agent 职责：
-- 读取每张卡片的 `## 核心事实` 章节
-- 按七大领域分组并排序
-- 生成执行摘要、情报综述、情报目录
-- 写入报告文件到 `reports/{period}/{period_param}-briefing.md`
-- 展示报告内容
-
 ### R5：显示报告位置
 
 ```
@@ -185,7 +262,16 @@ Agent 职责：
 
 ## 情报提取流程
 
-### 步骤 1：初始化路径
+### 步骤 1：首次运行检测
+
+**目的**：引导用户使用 `inbox/` 目录。
+
+**执行逻辑**：
+1. 检测 `source_dir/inbox/` 目录是否存在
+2. 如果不存在，显示引导信息
+3. 询问用户是否创建 `inbox/` 目录
+
+### 步骤 2：初始化路径
 
 ```
 source_dir = --source 参数或当前目录
@@ -194,49 +280,18 @@ intel_dir = output_dir/.intel/
 state_file = intel_dir/state.json
 ```
 
-| 参数情况 | 情报卡片输出位置 | 状态文件位置 |
-|---------|-----------------|-------------|
-| 无参数 | `./` | `./.intel/state.json` |
-| `--source ./docs` | `./docs/` | `./docs/.intel/state.json` |
-| `--output ./intel` | `./intel/` | `./intel/.intel/state.json` |
-| `--source ./docs --output ./intel` | `./intel/` | `./intel/.intel/state.json` |
+### 步骤 3：加载或创建状态文件
 
-### 步骤 2：加载或创建状态文件
+读取 `state.json`，如不存在则创建默认结构（v2.0.0）。
 
-读取 `state.json`，如不存在则创建默认结构。
+**状态文件版本迁移**：
+- 如果 `version` 为 `1.0` 或 `1.x`，执行迁移到 `2.0.0`
+- 添加 `review.pending` 数组
+- 更新 `processed` 条目格式
 
-**校验现有 state.json**：
+### 步骤 4：预处理（格式转换与内容清洗）
 
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx validate-json.ts state {output_dir}/.intel/state.json
-```
-
-**处理校验结果**：
-
-| 退出码 | 处理方式 |
-|--------|----------|
-| 0 | 加载现有状态 |
-| 1 | 备份为 `.broken`，创建新文件 |
-| 2 | 安装依赖后重试，仍失败则跳过校验 |
-
-**状态文件字段**：
-
-| 字段 | 说明 |
-|------|------|
-| `queue.pending` | 待处理文件列表 |
-| `queue.processing` | 正在处理的文件 |
-| `queue.failed` | 失败的文件及错误信息 |
-| `processed` | 已完成文件的元数据 |
-| `stats` | 统计信息 |
-
-详细结构参见 `schemas/state.schema.json`。
-
-### 步骤 3：预处理（格式转换与内容清洗）
-
-在扫描源目录前，先执行预处理，将所有文档转换为干净的 Markdown。
-
-#### 3.1 调用预处理脚本
+#### 4.1 调用预处理脚本
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
@@ -244,170 +299,108 @@ npx tsx preprocess/index.ts --source {source_dir}
 ```
 
 **输出位置**：
-- 转换后的 Markdown：`{source_dir}/converted/`
-- 元数据文件：`{source_dir}/converted/.meta/`
+- 归档文件：`{source_dir}/archive/YYYY/MM/`
+- 转换文件：`{source_dir}/converted/YYYY/MM/`
+- 元数据文件：`{source_dir}/archive/YYYY/MM/{filename}.meta`
 
-#### 3.2 预处理逻辑
+#### 4.2 预处理逻辑
 
 脚本会自动：
-1. 扫描源目录下的所有支持文件（md/txt/pdf/docx）
-2. 检查 `.meta/` 目录中的元数据，跳过已处理的文件
-3. 执行格式转换（PDF/DOCX → Markdown）和噪声清洗
-4. 输出到 `converted/` 目录，保留原文件名
+1. 优先扫描 `inbox/` 目录
+2. 兼容扫描根目录
+3. 检查已知源文件哈希，跳过重复文件
+4. 执行格式转换和噪声清洗
+5. 归档源文件
+6. 保存元数据
 
-#### 3.3 清洗规则
+### 步骤 5：扫描转换后的文件
 
-| 规则 | 操作 |
-|------|------|
-| 图片链接 | 删除，保留有语义的 alt text |
-| 社交媒体元数据 | 删除头像 URL、@handle、平台 UI 残留 |
-| 社交平台链接 | 删除独立的社交平台链接行 |
-| 连续空行 | 折叠 3+ 连续空行为 1 行 |
-
-#### 3.4 预处理失败处理
-
-| 错误码 | 说明 | 处理方式 |
-|--------|------|---------|
-| `READ_FAILED` | 源文件读取失败 | 记录错误，跳过该文件 |
-| `CONVERSION_FAILED` | PDF/DOCX 转换失败 | 记录错误，跳过该文件 |
-| `DEPENDENCY_MISSING` | pandoc 等依赖未安装 | 记录错误，提示用户安装 |
-
-#### 3.5 目录结构
-
-```
-{source_dir}/
-├── report.pdf
-├── article.docx
-├── note.md
-└── converted/                    # 预处理输出（用户可见）
-    ├── .meta/                    # 元数据（隐藏）
-    │   ├── report.json
-    │   ├── article.json
-    │   └── note.json
-    ├── report.md
-    ├── article.md
-    └── note.md
-```
-
-### 步骤 4：扫描转换后的文件
-
-从 `converted/` 目录扫描干净的 Markdown 文件：
+从 `converted/YYYY/MM/` 目录扫描 Markdown 文件：
 
 ```bash
-glob pattern: {source_dir}/converted/*.md
+glob pattern: {source_dir}/converted/**/*.md
 ```
 
-### 步骤 5：构建处理队列
+### 步骤 6：构建处理队列
 
-#### 5.1 计算文件内容 Hash
+#### 6.1 计算文件内容 Hash
 
-使用 MD5 算法计算**转换后文件**的内容哈希：
+使用 MD5 算法计算转换后文件的内容哈希。
 
-```bash
-# macOS / Linux 通用
-md5sum <converted_file_path> 2>/dev/null || md5 -q <converted_file_path>
-```
-
-**Hash 存储位置**：`processed[filepath].content_hash`
-
-**注意**：此处 filepath 为转换后的 Markdown 文件路径（`converted/` 目录下）。
-
-#### 5.2 变更检测逻辑
-
-对每个扫描到的文件计算当前 content_hash，与 `state.json` 中记录比对：
+#### 6.2 变更检测逻辑
 
 | 条件 | 操作 |
 |------|------|
 | content_hash 相同 | 跳过（无变更） |
 | content_hash 不同 | 加入 pending（内容变更） |
 | 新文件（无记录） | 加入 pending |
-| 之前失败且 retries < 1 | 加入 pending（重试） |
+| review_status = pending | 跳过（已在审核队列） |
 
-**注意**：`source_mtime` 字段保留用于参考，但变更检测以 `content_hash` 为准。
+### 步骤 7：逐个处理文件
 
-### 步骤 6：逐个处理文件
-
-#### 6.1 移入 processing 状态
-
-更新 `state.json`，记录 `started_at`、`session`、`content_hash`，立即写入。
-
-#### 6.2 生成会话 ID
-
-```
-session_id = YYYYMMDD-HHMMSS 格式
-```
-
-#### 6.3 调用情报分析 Agent
+#### 7.1 调用情报分析 Agent
 
 ```
 使用 Agent 工具，subagent_type="intelligence-analyzer"
-参数: source（转换后的 markdown 路径）, output, session_id
+参数: source（转换文件路径）, output, session_id, archived_source, source_hash
 ```
 
-Agent 职责：读取干净的 markdown → 提取日期 → 分析内容 → 生成卡片 → 检测冲突 → 写入文件 → 返回状态
+#### 7.2 处理 Agent 返回结果
 
-#### 6.4 校验 Agent 返回结果
+**情况 1：明确有价值（`has_strategic_value = true`）**
+- 生成情报卡片
+- 分配正式 `intelligence_id`
+- `review_status = null`（无需审核）
 
-```bash
-npx tsx validate-json.ts agent-result {output_dir}/.intel/temp/{session_id}.json
+**情况 2：明确无价值（`has_strategic_value = false`）**
+- 不生成情报卡片
+- `intelligence_id = null`
+- `intelligence_count = 0`
+- `review_status = null`
+
+**情况 3：需要复核（`has_strategic_value = null`）**
+- 不生成情报卡片
+- 添加到 `state.review.pending` 队列
+- 分配临时 `pending_id`（格式：`pending-{domain}-{timestamp}`）
+- `review_status = "pending"`
+
+### 步骤 8：统一输出统计
+
+**输出格式**：
+```
+════════════════════════════════════════════════════════
+📊 情报提取执行报告
+════════════════════════════════════════════════════════
+
+【预处理统计】
+• 扫描到文件: 15 个
+• 转换成功: 14 个
+• 转换失败: 1 个
+• 重复文件: 2 个（已跳过）
+• 归档位置: ./archive/2026/03/
+• 转换文件: ./converted/2026/03/
+
+【情报提取统计】
+• 处理文件: 14 个
+• 生成情报卡片: 3 个  ⭐️（自动批准）
+• 待用户复核: 2 个    ⭐️（等待审核）
+• 无价值文件: 1 个
+
+【审核任务】⭐️
+• 待人工复核: 2 个文件
+
+  1. pending-threat-20260313-001
+     来源: report-2026.md
+     原因: 检测到高风险威胁指标，需人工确认
+
+💡 操作提示:
+   /intel-distill --review list
+   /intel-distill --review approve <pending_id> --reason "原因"
+   /intel-distill --review reject <pending_id> --reason "原因"
+════════════════════════════════════════════════════════
 ```
 
-| 退出码 | 处理方式 |
-|--------|----------|
-| 0 | 继续更新状态 |
-| 1 | 记录错误，重试一次 |
-| 2 | 安装依赖后重试 |
-
-#### 6.5 处理返回结果
-
-**成功**：更新 `processed` 和 `stats`，删除临时文件 `.intel/temp/{session_id}.json`
-
-**失败**：更新 `queue.failed`，保留临时文件供排查
-
-返回格式参见 `agents/references/json-format.md`。
-
-#### 6.6 写入状态
-
-更新 `state.json` 前校验，失败则中止写入。
-
-### 步骤 7：重试失败文件
-
-对 `queue.failed` 中 `retries < 1` 的文件重试一次。
-
-### 步骤 8：归档历史数据
-
-#### 8.1 归档触发条件
-
-每次运行时检查 `processed` 条目，自动归档满足以下条件的记录：
-
-```
-processed_at 超过 30 天 → 自动归档
-```
-
-#### 8.2 归档操作
-
-1. 将符合条件的条目追加到 `history/YYYY-MM.json`
-2. 从 `state.json` 的 `processed` 中移除已归档条目
-3. 更新 `stats` 中的 `total_files` 计数
-
-**归档文件结构**：
-
-```
-{output_dir}/.intel/
-├── state.json              # 当前状态（仅保留 30 天内数据）
-└── history/
-    ├── 2026-01.json        # 2026年1月归档
-    ├── 2026-02.json        # 2026年2月归档
-    └── ...
-```
-
-#### 8.3 归档文件格式
-
-归档文件使用与 `state.json` 相同的 Schema，仅包含 `processed` 字段。
-
-### 步骤 9：生成汇总报告
-
-输出处理统计、输出位置、失败文件。
+---
 
 ## 错误处理
 
@@ -417,7 +410,6 @@ processed_at 超过 30 天 → 自动归档
 | 权限被拒绝 | 记录错误，标记为失败 |
 | Agent 返回 error | 记录错误信息，标记为失败 |
 | Agent 超时 | 重试一次，然后标记为失败 |
-| Schema 校验失败 | 记录错误详情，重试一次，然后标记为失败 |
 
 ## 关联 Skills
 
@@ -439,4 +431,6 @@ processed_at 超过 30 天 → 自动归档
 - 处理是顺序执行的，而非并行
 - Agent 负责完整的文件处理流程
 - 状态变更后立即写入 `state.json`
-- 建议将 `.intel/` 添加到 `.gitignore`
+- 删除源文件或转换文件后，情报卡片仍保留
+- 重新加入历史文件时会检测重复
+- 建议将 `.intel/` 和 `inbox/` 添加到 `.gitignore`

@@ -31,9 +31,11 @@ skills:
 
 | 参数 | 说明 |
 |------|------|
-| `source` | 转换后的 Markdown 文件路径（位于 `{source_dir}/converted/` 目录下） |
+| `source` | 转换后的 Markdown 文件路径（位于 `converted/YYYY/MM/` 目录下） |
 | `output` | 输出目录路径 |
 | `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
+| `archived_source` | 归档源文件路径（`archive/YYYY/MM/{filename}`） |
+| `source_hash` | 源文件 MD5 哈希 |
 
 **注意**：源文件已由命令层预处理为统一的 Markdown 格式，无需处理格式转换和噪声清洗。
 
@@ -51,7 +53,7 @@ skills:
 
 源文件已由命令层预处理为干净的 Markdown 格式，直接使用 Read 工具读取。
 
-**输入文件路径**：`{source}`（位于 `{source_dir}/converted/` 目录下）
+**输入文件路径**：`{source}`（位于 `converted/YYYY/MM/` 目录下）
 
 **文件格式**：统一的 Markdown，已清洗噪声 token
 
@@ -73,7 +75,18 @@ skills:
 
 应用 **analysis-methodology** skill 中的五大战略价值条件。
 
-**关键原则**：如有疑问，不予提取。
+**关键决策**：
+
+| 评估结果 | 说明 | 后续操作 |
+|---------|------|---------|
+| **明确有价值** | 满足战略标准，可独立判断 | 生成情报卡片，`has_strategic_value = true` |
+| **明确无价值** | 不满足任何战略标准 | 不生成卡片，`has_strategic_value = false` |
+| **需要复核** | 存在潜在价值但不确定 | 不生成卡片，`has_strategic_value = null` |
+
+**复核场景示例**：
+- 检测到高风险威胁指标，需人工确认真实性
+- 新兴技术突破，需人工评估市场影响
+- 敏感政策变化，需人工判断合规影响
 
 ### 步骤 4：领域分类与情报提取
 
@@ -134,9 +147,19 @@ skills:
 
 **文件命名**：`{YYYYMMDD}-{subject}-{feature}.md`（kebab-case，最大 60 字符）
 
+**intelligence_id 生成**：`{domain}-{YYYYMMDD}-{seq}`
+
 **内容生成**：
-- Frontmatter：标准字段 + 领域特定字段
+- Frontmatter：标准字段 + 领域特定字段 + 持久化元数据
 - Body：按领域模板填充各章节
+
+**持久化元数据（必需）**：
+```yaml
+intelligence_id: "{domain}-{YYYYMMDD}-{seq}"
+source_hash: "{source_hash}"              # 从输入参数获取
+archived_source: "{archived_source}"      # 从输入参数获取
+converted_file: "{source}"                # 转换文件路径
+```
 
 ### 步骤 6：去重与冲突检测
 
@@ -187,18 +210,86 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 详细格式参见 `references/json-format.md`，Schema 定义参见 `schemas/agent-result.schema.json`。
 
 **三种返回状态**：
-- 成功且有情报：`status=success`, `has_strategic_value=true`
-- 成功无情报：`status=success`, `has_strategic_value=false`
-- 失败：`status=error`，包含 `error_code` 和 `error_message`
+
+### 成功且有情报
+
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/03/report.md",
+  "has_strategic_value": true,
+  "intelligence_count": 2,
+  "intelligence_id": "threat-20260313-001",
+  "output_files": [
+    "Threat-Landscape/20260313-threat-analysis.md"
+  ],
+  "source_meta": {
+    "title": "原文档标题",
+    "published": "2026-03-01"
+  },
+  "processing_notes": "成功提取 2 条情报"
+}
+```
+
+### 成功但无情报
+
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/03/general-notes.md",
+  "has_strategic_value": false,
+  "source_meta": {
+    "title": "一般性笔记",
+    "published": "2026-03-05"
+  },
+  "processing_notes": "未发现战略价值信息"
+}
+```
+
+### 成功但需要复核
+
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/03/suspicious-report.md",
+  "has_strategic_value": null,
+  "review_reason": "检测到高风险威胁指标，需人工确认",
+  "source_meta": {
+    "title": "可疑报告",
+    "published": "2026-03-10"
+  },
+  "processing_notes": "需要人工复核后决定是否生成情报卡片"
+}
+```
+
+### 失败
+
+```json
+{
+  "status": "error",
+  "source_file": "converted/2026/03/report.md",
+  "has_strategic_value": false,
+  "source_meta": {
+    "title": null,
+    "published": null
+  },
+  "error_code": "ANALYSIS_FAILED",
+  "error_message": "Unable to extract meaningful content",
+  "processing_notes": "分析失败"
+}
+```
 
 ## 最终检查清单
 
 - [ ] 发布日期已正确提取
+- [ ] 战略价值评估明确（true/false/null）
+- [ ] 如为 null，是否提供了 review_reason
 - [ ] 每条情报至少满足一个战略标准
 - [ ] 领域分类适当
 - [ ] 地域范围（geo_scope）已正确判断
 - [ ] 业务模式标签已提取（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
+- [ ] 持久化元数据字段已添加
 - [ ] 文件名符合命名规则
 - [ ] 文件已成功写入输出目录
 - [ ] 返回 JSON 格式正确
