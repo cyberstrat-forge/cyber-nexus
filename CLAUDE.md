@@ -38,6 +38,7 @@ cyber-nexus/
 │       ├── schemas/              # JSON Schema 定义
 │       └── scripts/              # TypeScript 工具脚本
 │           ├── preprocess/       # 文件预处理模块
+│           ├── reporting/        # 报告生成模块
 │           ├── thematic/         # 主题分析模块
 │           └── utils/            # 共享工具模块
 ├── README.md
@@ -458,6 +459,30 @@ git commit -m "Fix: something"     # type 应小写
 # 创建新版本发布
 git tag v1.1.0
 git push origin v1.1.0
+```
+
+---
+
+## GitHub 操作
+
+项目支持两种 GitHub 操作方式：
+
+1. **GitHub MCP Server**（推荐）：使用 Claude Code 的 GitHub 集成工具（`mcp__plugin_github_github__*`）
+2. **gh CLI**：命令行工具作为备选
+
+**优先使用 MCP Server 工具**进行以下操作：
+- PR 创建和管理
+- Issue 操作
+- 仓库和分支管理
+- 代码审查
+
+示例：
+```bash
+# 创建 PR（优先使用 MCP）
+mcp__plugin_github_github__create_pull_request
+
+# 备选：使用 gh CLI
+gh pr create --title "..." --body "..."
 ```
 
 ---
