@@ -6,7 +6,8 @@
   "scripts": {
     "validate": "tsx validate-json.ts",
     "preprocess": "tsx preprocess/index.ts",
-    "scan-cards": "tsx reporting/scan-cards.ts"
+    "scan-cards": "tsx reporting/scan-cards.ts",
+    "scan-queue": "tsx preprocess/scan-queue.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",
