@@ -2,6 +2,53 @@
 
 本文件记录项目的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0] - 2026-03-13
+
+### 新增
+
+- **market-radar**: 重构 intel-distill 工作流，解决多个核心问题
+  - 新增 `inbox/` 目录作为待处理文档推荐入口
+  - 源文件归档到 `archive/YYYY/MM/`，按年月组织
+  - 转换文件输出到 `converted/YYYY/MM/`
+  - 元数据文件保存在 archive/ 目录 (`{filename}.meta`)
+  - 基于源文件哈希实现去重机制
+
+- **market-radar**: 情报卡片持久化支持
+  - 卡片包含 `source_hash`、`archived_source`、`converted_file` 等元数据
+  - 支持删除源文件后卡片仍可追溯
+  - 审核机制：待审核不生成卡片，批准后才生成，拒绝后不生成
+
+- **market-radar**: 新增 `scan-queue.ts` 扫描队列脚本
+  - 批量扫描 converted 目录
+  - 自动选择处理策略（< 50 文件用 Glob，>= 50 文件用脚本）
+  - 支持 object 和 array 两种 state 格式
+
+### 变更
+
+- **market-radar**: 统一 Schema 和文档格式
+  - `processed` 类型统一为 object（键值对映射）
+  - 字段命名统一：`stats`、`updated_at`
+  - `intelligence_id` 正则放宽支持多单词前缀
+  - 添加 Domain 映射关系文档
+
+- **market-radar**: 改进错误处理
+  - 为依赖检测添加错误日志
+  - 为元数据解析添加错误日志
+
+### 修复
+
+- 修复 Schema 与文档不一致问题
+- 修复静默失败问题（catch 块添加日志）
+
+## [1.1.0] - 2026-03-13
+
+### 新增
+
+- **market-radar**: 情报报告功能
+  - 支持 `--report weekly` 生成周报
+  - 支持 `--report monthly` 生成月报
+  - 报告包含：执行摘要、情报综述、情报目录
+
 ## [1.0.5] - 2026-03-13
 
 ### 新增
@@ -62,6 +109,8 @@
   - 支持 Markdown、PDF、Word 文档处理
   - 实现增量处理机制
 
+[1.2.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.3
