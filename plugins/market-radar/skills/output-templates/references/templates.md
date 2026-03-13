@@ -613,24 +613,40 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 **格式**：`{YYYYMMDD}-{subject}-{feature}.md`
 
-| 组成部分 | 说明 |
-|----------|------|
-| `YYYYMMDD` | 情报日期（源文件发布日期） |
-| `subject` | 主体/对象（简短英文） |
-| `feature` | 核心特征/动作 |
+| 组成部分 | 说明 | 示例 |
+|----------|------|------|
+| `YYYYMMDD` | 情报日期（源文件发布日期） | `20251013` |
+| `subject` | 主体/对象（简短英文） | `gartner`, `ai-security`, `lockbit` |
+| `feature` | 核心特征/动作 | `trends-2026`, `platform-rise`, `ransomware-surge` |
+
+**subject 和 feature 的生成规则**：
+
+| 组成部分 | 生成方式 | 说明 |
+|----------|---------|------|
+| `subject` | 从情报内容提取核心实体 | 公司名、技术名、威胁组织名、市场名等 |
+| `feature` | 描述情报的核心特征或动作 | 趋势、事件、突破、增长、攻击等 |
+
+**生成步骤**：
+1. 识别情报的核心主体（谁/什么）
+2. 识别情报的核心特征（发生了什么/什么趋势）
+3. 转换为简短英文 kebab-case
+4. 组合成文件名，控制在 60 字符内
 
 **原则**：
 - kebab-case 格式，全部小写
 - 最大 60 字符
 - 体现情报独特性
+- 用户看文件名即可大致了解情报内容
 
 **示例**：
 
-| 标题 | 文件名 |
-|------|--------|
-| AI安全市场高速增长 | `20260301-ai-security-market-growth.md` |
-| CrowdStrike完成B轮融资 | `20260301-crowdstrike-series-b.md` |
-| LockBit勒索软件攻击激增 | `20260301-lockbit-ransomware-surge.md` |
+| 标题 | subject | feature | 文件名 |
+|------|---------|---------|--------|
+| Gartner发布2026网络安全规划指南 | gartner | trends-2026 | `20251013-gartner-trends-2026.md` |
+| AI安全平台市场快速增长 | ai-security | market-growth | `20260301-ai-security-market-growth.md` |
+| CrowdStrike完成B轮融资 | crowdstrike | series-b | `20260301-crowdstrike-series-b.md` |
+| LockBit勒索软件攻击激增 | lockbit | ransomware-surge | `20260301-lockbit-ransomware-surge.md` |
+| 零信任架构采用率达63% | zero-trust | adoption-rate | `20260301-zero-trust-adoption-rate.md` |
 
 **领域特征词**：
 

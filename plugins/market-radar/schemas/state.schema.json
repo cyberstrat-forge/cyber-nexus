@@ -119,9 +119,13 @@
       "required": ["content_hash", "processed_at", "intelligence_count", "session"],
       "additionalProperties": false,
       "properties": {
-        "intelligence_id": {
-          "type": ["string", "null"],
-          "description": "Formal intelligence card ID, or null if not generated"
+        "intelligence_ids": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+-\\d{8}-\\d{3}$"
+          },
+          "description": "List of formal intelligence card IDs, or null if none generated"
         },
         "content_hash": {
           "type": "string",
@@ -141,7 +145,8 @@
         "intelligence_count": {
           "type": "integer",
           "minimum": 0,
-          "description": "Number of intelligence items extracted (0 = no value)"
+          "maximum": 3,
+          "description": "Number of intelligence cards extracted (0-3, 0 = no value)"
         },
         "output_files": {
           "type": "array",

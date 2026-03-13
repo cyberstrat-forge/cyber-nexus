@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "agent-result.schema.json",
   "title": "Agent Result Schema",
-  "description": "JSON Schema for intelligence-analyzer agent lightweight result validation (v2.0)",
+  "description": "JSON Schema for intelligence-analyzer agent lightweight result validation (v2.1 - multi-card support)",
   "type": "object",
   "required": [
     "status",
@@ -33,18 +33,30 @@
     "intelligence_count": {
       "type": "integer",
       "minimum": 0,
-      "description": "Number of intelligence items extracted (required when status=success and has_strategic_value=true)"
+      "maximum": 3,
+      "description": "Number of intelligence cards extracted, 0-3 per source file"
     },
-    "intelligence_id": {
-      "type": "string",
-      "description": "Generated intelligence card ID (required when status=success and has_strategic_value=true)"
+    "intelligence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]+-\\d{8}-\\d{3}$"
+      },
+      "description": "List of generated intelligence card IDs (format: {domain}-{YYYYMMDD}-{seq})"
     },
     "output_files": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "List of generated output file paths (required when status=success and has_strategic_value=true)"
+      "description": "List of generated output file paths (relative to output directory)"
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/intelligence_card"
+      },
+      "description": "Details of each generated intelligence card"
     },
     "source_meta": {
       "type": "object",
@@ -82,6 +94,57 @@
       "description": "Detailed error message (required when status=error)"
     }
   },
+  "definitions": {
+    "intelligence_card": {
+      "type": "object",
+      "required": ["intelligence_id", "primary_domain", "output_file"],
+      "additionalProperties": false,
+      "properties": {
+        "intelligence_id": {
+          "type": "string",
+          "pattern": "^[a-z]+-\\d{8}-\\d{3}$",
+          "description": "Intelligence card ID (format: {domain}-{YYYYMMDD}-{seq})"
+        },
+        "primary_domain": {
+          "type": "string",
+          "enum": [
+            "Threat-Landscape",
+            "Industry-Analysis",
+            "Vendor-Intelligence",
+            "Emerging-Tech",
+            "Customer-Market",
+            "Policy-Regulation",
+            "Capital-Investment"
+          ],
+          "description": "Primary intelligence domain"
+        },
+        "secondary_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Threat-Landscape",
+              "Industry-Analysis",
+              "Vendor-Intelligence",
+              "Emerging-Tech",
+              "Customer-Market",
+              "Policy-Regulation",
+              "Capital-Investment"
+            ]
+          },
+          "description": "Secondary domains if applicable"
+        },
+        "output_file": {
+          "type": "string",
+          "description": "Output file path relative to output directory"
+        },
+        "title": {
+          "type": "string",
+          "description": "Intelligence card title"
+        }
+      }
+    }
+  },
   "allOf": [
     {
       "if": {
@@ -92,7 +155,7 @@
         "required": ["status", "has_strategic_value"]
       },
       "then": {
-        "required": ["intelligence_count", "intelligence_id", "output_files"]
+        "required": ["intelligence_count", "intelligence_ids", "output_files", "cards"]
       }
     },
     {

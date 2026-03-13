@@ -21,7 +21,7 @@ import {
   SupportedFormat,
   PreprocessErrorCode,
 } from './types';
-import { convertToMarkdown, isSupportedFormat, isPandocAvailable, isPdfToTextAvailable } from './convert';
+import { convertToMarkdown, isSupportedFormat, isPandocAvailable, getAvailablePdfConverter, isPdfToTextAvailable, isPyMuPdfAvailable } from './convert';
 import { cleanMarkdown } from './clean';
 import { calculateStats } from './cleaners/types';
 import { calculateHash } from '../utils/hash';
@@ -499,11 +499,19 @@ Options:
     console.log('');
   }
 
-  if (!isPdfToTextAvailable()) {
-    console.log('Note: pdftotext not available. PDF files will be skipped.');
-    console.log('Install poppler to process PDF files:');
-    console.log('  macOS: brew install poppler');
-    console.log('  Linux: sudo apt-get install poppler-utils');
+  const pdfConverter = getAvailablePdfConverter();
+  if (!pdfConverter) {
+    console.log('Note: No PDF converter available. PDF files will be skipped.');
+    console.log('Install one of the following to process PDF files:');
+    console.log('  PyMuPDF (recommended, better structure): pip install PyMuPDF');
+    console.log('  pdftotext (lighter): brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
+    console.log('');
+  } else if (pdfConverter === 'pymupdf') {
+    console.log('PDF converter: PyMuPDF (recommended)');
+    console.log('');
+  } else {
+    console.log('PDF converter: pdftotext (consider installing PyMuPDF for better structure)');
+    console.log('  Install: pip install PyMuPDF');
     console.log('');
   }
 
