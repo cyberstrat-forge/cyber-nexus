@@ -31,9 +31,11 @@ skills:
 
 | 参数 | 说明 |
 |------|------|
-| `source` | 转换后的 Markdown 文件路径（位于 `{source_dir}/converted/` 目录下） |
+| `source` | 转换后的 Markdown 文件路径（位于 `converted/YYYY/MM/` 目录下） |
 | `output` | 输出目录路径 |
 | `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
+| `archived_source` | 归档源文件路径（`archive/YYYY/MM/{filename}`） |
+| `source_hash` | 源文件 MD5 哈希 |
 
 **注意**：源文件已由命令层预处理为统一的 Markdown 格式，无需处理格式转换和噪声清洗。
 
@@ -51,7 +53,7 @@ skills:
 
 源文件已由命令层预处理为干净的 Markdown 格式，直接使用 Read 工具读取。
 
-**输入文件路径**：`{source}`（位于 `{source_dir}/converted/` 目录下）
+**输入文件路径**：`{source}`（位于 `converted/YYYY/MM/` 目录下）
 
 **文件格式**：统一的 Markdown，已清洗噪声 token
 
@@ -73,15 +75,44 @@ skills:
 
 应用 **analysis-methodology** skill 中的五大战略价值条件。
 
-**关键原则**：如有疑问，不予提取。
+**关键决策**：
+
+| 评估结果 | 说明 | 后续操作 |
+|---------|------|---------|
+| **明确有价值** | 满足战略标准，可独立判断 | 生成情报卡片，`has_strategic_value = true` |
+| **明确无价值** | 不满足任何战略标准 | 不生成卡片，`has_strategic_value = false` |
+| **需要复核** | 存在潜在价值但不确定 | 不生成卡片，`has_strategic_value = null` |
+
+**复核场景示例**：
+- 检测到高风险威胁指标，需人工确认真实性
+- 新兴技术突破，需人工评估市场影响
+- 敏感政策变化，需人工判断合规影响
 
 ### 步骤 4：领域分类与情报提取
 
-应用 **domain-knowledge** skill 中的领域定义：
-1. 确定主要领域
-2. 确定次要领域（如有）
-3. 提取关键词（3-5 个）
-4. 生成去重信息
+应用 **domain-knowledge** skill 中的领域定义，识别文档中所有具有独立战略价值的情报点。
+
+**多情报识别原则**：
+- 每篇源文件可能提取 **0-3 条情报**
+- 每条情报必须聚焦**单一主题**，有独立的战略价值
+- 不同情报可能归属不同领域
+- 每条情报独立生成 ID 和文件
+
+**识别流程**：
+1. 扫描文档，识别所有具有独立战略价值的情报点
+2. 对每个情报点进行领域分类
+3. 确保每条情报满足原子化要求：
+   - 单一主题
+   - 独立完整
+   - 领域明确
+
+**情报点示例**（一份 Gartner 报告）：
+
+| 序号 | 情报主题 | 领域 | 独立性 |
+|------|---------|------|--------|
+| 1 | 网络安全市场六大趋势 | Industry-Analysis | ✅ 独立 |
+| 2 | AI 安全平台兴起 | Emerging-Tech | ✅ 独立 |
+| 3 | 零信任成熟度评估框架 | Policy-Regulation | ✅ 独立 |
 
 ### 步骤 4.1：地域范围判断
 
@@ -132,11 +163,41 @@ skills:
 
 根据 **output-templates** skill 中的模板生成。
 
-**文件命名**：`{YYYYMMDD}-{subject}-{feature}.md`（kebab-case，最大 60 字符）
+**每张情报卡片独立生成**：
+- 独立的 `intelligence_id`：`{domain}-{YYYYMMDD}-{seq}`
+- 独立的文件名：`{YYYYMMDD}-{subject}-{feature}.md`
+- 独立写入文件：`{output}/{domain}/{filename}`
+
+**文件命名规则**（详见 output-templates skill）：
+
+| 组成部分 | 生成方式 |
+|----------|---------|
+| `YYYYMMDD` | 情报日期（源文件发布日期） |
+| `subject` | 从情报内容提取核心实体（简短英文 kebab-case） |
+| `feature` | 描述情报的核心特征或动作 |
+
+**命名示例**：
+
+| 情报主题 | subject | feature | 文件名 |
+|---------|---------|---------|--------|
+| 网络安全市场六大趋势 | cybersecurity | trends-2026 | `20251013-cybersecurity-trends-2026.md` |
+| AI 安全平台兴起 | ai-security | platform-rise | `20251013-ai-security-platform-rise.md` |
+
+**ID 序号分配**：
+- 同一日期、同一领域的卡片按处理顺序递增序号
+- 例如：`industry-20251013-001`, `industry-20251013-002`
 
 **内容生成**：
-- Frontmatter：标准字段 + 领域特定字段
+- Frontmatter：标准字段 + 领域特定字段 + 持久化元数据
 - Body：按领域模板填充各章节
+
+**持久化元数据（必需）**：
+```yaml
+intelligence_id: "{domain}-{YYYYMMDD}-{seq}"
+source_hash: "{source_hash}"              # 从输入参数获取
+archived_source: "{archived_source}"      # 从输入参数获取
+converted_file: "{source}"                # 转换文件路径
+```
 
 ### 步骤 6：去重与冲突检测
 
@@ -186,19 +247,113 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 
 详细格式参见 `references/json-format.md`，Schema 定义参见 `schemas/agent-result.schema.json`。
 
-**三种返回状态**：
-- 成功且有情报：`status=success`, `has_strategic_value=true`
-- 成功无情报：`status=success`, `has_strategic_value=false`
-- 失败：`status=error`，包含 `error_code` 和 `error_message`
+**四种返回状态**：
+
+### 成功且有情报（支持多卡片）
+
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/03/report.md",
+  "has_strategic_value": true,
+  "intelligence_count": 2,
+  "intelligence_ids": [
+    "industry-20251013-001",
+    "emerging-20251013-001"
+  ],
+  "output_files": [
+    "Industry-Analysis/20251013-cybersecurity-trends-2026.md",
+    "Emerging-Tech/20251013-ai-security-platform-rise.md"
+  ],
+  "cards": [
+    {
+      "intelligence_id": "industry-20251013-001",
+      "primary_domain": "Industry-Analysis",
+      "secondary_domains": [],
+      "output_file": "Industry-Analysis/20251013-cybersecurity-trends-2026.md",
+      "title": "Gartner发布2026年网络安全规划指南：六大趋势定义未来方向"
+    },
+    {
+      "intelligence_id": "emerging-20251013-001",
+      "primary_domain": "Emerging-Tech",
+      "secondary_domains": [],
+      "output_file": "Emerging-Tech/20251013-ai-security-platform-rise.md",
+      "title": "AI安全平台（AISP）成为企业安全新焦点"
+    }
+  ],
+  "source_meta": {
+    "title": "原文档标题",
+    "published": "2025-10-13"
+  },
+  "processing_notes": "成功提取 2 条情报：行业趋势分析和AI安全平台兴起"
+}
+```
+
+### 成功但无情报
+
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/03/general-notes.md",
+  "has_strategic_value": false,
+  "intelligence_count": 0,
+  "intelligence_ids": null,
+  "output_files": [],
+  "cards": [],
+  "source_meta": {
+    "title": "一般性笔记",
+    "published": "2026-03-05"
+  },
+  "processing_notes": "未发现战略价值信息"
+}
+```
+
+### 成功但需要复核
+
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/03/suspicious-report.md",
+  "has_strategic_value": null,
+  "review_reason": "检测到高风险威胁指标，需人工确认",
+  "source_meta": {
+    "title": "可疑报告",
+    "published": "2026-03-10"
+  },
+  "processing_notes": "需要人工复核后决定是否生成情报卡片"
+}
+```
+
+### 失败
+
+```json
+{
+  "status": "error",
+  "source_file": "converted/2026/03/report.md",
+  "has_strategic_value": false,
+  "source_meta": {
+    "title": null,
+    "published": null
+  },
+  "error_code": "ANALYSIS_FAILED",
+  "error_message": "Unable to extract meaningful content",
+  "processing_notes": "分析失败"
+}
+```
 
 ## 最终检查清单
 
 - [ ] 发布日期已正确提取
+- [ ] 战略价值评估明确（true/false/null）
+- [ ] 如为 null，是否提供了 review_reason
 - [ ] 每条情报至少满足一个战略标准
+- [ ] 每条情报满足原子化要求（单一主题、独立完整）
 - [ ] 领域分类适当
 - [ ] 地域范围（geo_scope）已正确判断
 - [ ] 业务模式标签已提取（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
-- [ ] 文件名符合命名规则
-- [ ] 文件已成功写入输出目录
-- [ ] 返回 JSON 格式正确
+- [ ] 每张卡片有独立的 intelligence_id
+- [ ] 每张卡片有独立的文件名（subject-feature 格式）
+- [ ] 持久化元数据字段已添加
+- [ ] 文件已成功写入对应领域目录
+- [ ] 返回 JSON 包含 intelligence_ids 数组和 cards 数组

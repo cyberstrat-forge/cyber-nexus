@@ -10,16 +10,53 @@ import { execFileSync, spawnSync } from 'child_process';
 import { SupportedFormat, ConverterFn } from './types';
 
 /**
- * Check if a dependency is available
+ * Check if a dependency is available (using --version or -v)
  */
-export function isDependencyAvailable(name: string): boolean {
+export function isDependencyAvailable(name: string, versionFlag: string = '--version'): boolean {
   try {
-    const result = spawnSync(name, ['--version'], {
+    const result = spawnSync(name, [versionFlag], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
     });
     return result.status === 0;
-  } catch {
+  } catch (error) {
+    console.warn(`Dependency check failed for ${name}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Check if pdftotext is available (uses -v instead of --version)
+ */
+export function isPdfToTextAvailable(): boolean {
+  try {
+    // pdftotext uses -v for version, not --version
+    const result = spawnSync('pdftotext', ['-v'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    // pdftotext returns 1 for -v (it shows version but also an error about missing file)
+    // So we check if the command runs at all, not the exit code
+    return result.error === undefined;
+  } catch (error) {
+    console.warn('pdftotext check failed:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if PyMuPDF (fitz) is available for PDF conversion
+ */
+export function isPyMuPdfAvailable(): boolean {
+  try {
+    // Check if Python and PyMuPDF are available
+    const result = spawnSync('python3', ['-c', 'import fitz; print(fitz.__version__)'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return result.status === 0;
+  } catch (error) {
+    console.warn('PyMuPDF check failed:', error);
     return false;
   }
 }
@@ -32,26 +69,79 @@ export function isPandocAvailable(): boolean {
 }
 
 /**
- * Check if pdftotext is available for PDF conversion
+ * Get PDF converter preference
+ * Priority: PyMuPDF (better structure) > pdftotext (lighter)
  */
-export function isPdfToTextAvailable(): boolean {
-  return isDependencyAvailable('pdftotext');
+export function getAvailablePdfConverter(): 'pymupdf' | 'pdftotext' | null {
+  if (isPyMuPdfAvailable()) {
+    return 'pymupdf';
+  }
+  if (isPdfToTextAvailable()) {
+    return 'pdftotext';
+  }
+  return null;
 }
 
 /**
  * Convert PDF to Markdown using pdftotext
  */
-async function convertPdf(filePath: string): Promise<string> {
-  if (!isPdfToTextAvailable()) {
-    throw new Error('pdftotext is not installed. Install it to process PDF files:\n  macOS: brew install poppler\n  Linux: sudo apt-get install poppler-utils');
-  }
-
+async function convertPdfWithPdftotext(filePath: string): Promise<string> {
   const result = execFileSync(
     'pdftotext',
     [filePath, '-', '-layout'],
     { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
   );
   return result;
+}
+
+/**
+ * Convert PDF to Markdown using PyMuPDF (better structure)
+ */
+async function convertPdfWithPyMuPdf(filePath: string): Promise<string> {
+  const script = `
+import fitz
+import sys
+
+doc = fitz.open(sys.argv[1])
+text_parts = []
+
+for page_num, page in enumerate(doc):
+    # Extract text with better formatting
+    text = page.get_text("text")
+    if text.strip():
+        text_parts.append(f"--- Page {page_num + 1} ---\\n")
+        text_parts.append(text)
+        text_parts.append("\\n")
+
+doc.close()
+print("".join(text_parts))
+`;
+
+  const result = execFileSync(
+    'python3',
+    ['-c', script, filePath],
+    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
+  );
+  return result;
+}
+
+/**
+ * Convert PDF to Markdown (auto-select best available tool)
+ */
+async function convertPdf(filePath: string): Promise<string> {
+  const converter = getAvailablePdfConverter();
+
+  if (converter === 'pymupdf') {
+    return convertPdfWithPyMuPdf(filePath);
+  }
+
+  if (converter === 'pdftotext') {
+    return convertPdfWithPdftotext(filePath);
+  }
+
+  throw new Error('No PDF converter available. Install one of the following:\n' +
+    '  - PyMuPDF: pip install PyMuPDF (recommended, better structure)\n' +
+    '  - pdftotext: brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
 }
 
 /**
@@ -134,7 +224,10 @@ export function getConverterInfo(format: SupportedFormat): {
     case '.docx':
       return { requiresDependency: true, dependencyName: 'pandoc' };
     case '.pdf':
-      return { requiresDependency: true, dependencyName: 'pdftotext (poppler)' };
+      return {
+        requiresDependency: true,
+        dependencyName: 'PyMuPDF (recommended) or pdftotext (poppler)'
+      };
     case '.md':
     case '.txt':
     default:

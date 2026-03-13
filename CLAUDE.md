@@ -153,25 +153,124 @@ feat(market-radar): 实现 thematic-analysis 命令
 
 - [ ] 代码符合项目规范
 - [ ] Schema 校验通过
-- [ ] 文档已更新（README、CHANGELOG）
+- [ ] 文档已更新（参见"文档维护策略"）
 - [ ] 版本号已更新（如需要）
 
 ### 版本管理
 
-遵循 [语义化版本](https://semver.org/lang/zh-CN/)：`MAJOR.MINOR.PATCH`
+本项目采用**两级版本管理**：仓库级版本和插件级版本独立维护。
+
+#### 插件版本
+
+每个插件独立维护版本号，遵循 [语义化版本](https://semver.org/lang/zh-CN/)：`MAJOR.MINOR.PATCH`
 
 - **MAJOR**：不兼容的 API 变更
 - **MINOR**：向后兼容的功能新增
 - **PATCH**：向后兼容的问题修复
 
-**发布流程**：
+版本号在 `plugins/<name>/plugin.json` 中维护，README 徽章同步更新。
 
-1. 更新 `plugin.json` 中的版本号
-2. 更新 `CHANGELOG.md`
-3. 更新 `README.md` 中的版本徽章
-4. 创建 Git tag：`git tag v1.1.0`
-5. 推送 tag：`git push origin v1.1.0`
-6. 创建 GitHub Release
+#### 仓库版本
+
+仓库版本反映整体状态，**不严格遵循语义化版本**（仓库本身不是发布单元）：
+
+| 版本位 | 含义 | 更新时机 |
+|--------|------|---------|
+| MAJOR | 仓库架构变更 | 目录结构重组、CI 大改、插件类型扩展 |
+| MINOR | 插件生态扩展 | **新插件发布** |
+| PATCH | 插件迭代 | 任意插件的更新（功能增强、bug 修复） |
+
+#### 发布流程
+
+**Tag 格式**：`v*.*.*`（如 `v1.0.5`）
+
+**发布步骤**：
+
+1. 更新 `plugins/<name>/plugin.json` 版本号
+2. 更新 `plugins/<name>/CHANGELOG.md`
+3. 更新 `plugins/<name>/README.md` 版本徽章
+4. 更新仓库 `README.md` 插件列表中的版本
+5. 更新仓库 `CHANGELOG.md`（按插件分组汇总变更）
+6. 创建 Git tag 并推送：
+   ```bash
+   git tag v1.0.5
+   git push origin v1.0.5
+   ```
+7. GitHub Actions 自动创建 Release
+
+**Release Notes 格式要求**：
+
+```markdown
+## 📦 插件更新
+
+### <plugin-name> vX.Y.Z
+
+#### 新增
+- 功能描述
+
+#### 变更
+- 变更描述
+
+---
+
+## 📋 升级指南
+
+（如有需要，提供升级注意事项）
+
+---
+
+## 🔗 相关 Issue
+
+Closes #xxx
+```
+
+---
+
+## 文档维护策略
+
+本项目采用**两级文档架构**，仓库级与插件级文档独立维护。
+
+### 仓库级文档
+
+位置：项目根目录
+
+| 文件 | 用途 | 更新时机 |
+|------|------|---------|
+| `README.md` | 仓库概述、插件列表、安装指南 | 新增插件、重大变更 |
+| `CHANGELOG.md` | 仓库级变更记录 | 发布新版本时 |
+
+**内容要求**：
+- 插件列表保持最新版本号
+- 变更记录汇总各插件的重大更新
+- 不重复记录插件级细节
+
+### 插件级文档
+
+位置：`plugins/<plugin-name>/`
+
+| 文件 | 用途 | 更新时机 |
+|------|------|---------|
+| `README.md` | 插件功能、使用方法、配置说明 | 插件功能变更 |
+| `CHANGELOG.md` | 插件变更记录 | 插件版本更新 |
+| `plugin.json` | 插件元数据（含版本号） | 插件版本更新 |
+
+**内容要求**：
+- 完整记录每个版本的变更细节
+- 使用示例和参数说明保持最新
+
+### 更新检查清单
+
+**插件更新时**：
+- [ ] 更新 `plugins/<name>/plugin.json` 版本号
+- [ ] 更新 `plugins/<name>/CHANGELOG.md`
+- [ ] 更新 `plugins/<name>/README.md` 徽章
+- [ ] 更新仓库 `README.md` 插件列表版本
+- [ ] 如有重大变更，更新仓库 `CHANGELOG.md`
+
+**新增插件时**：
+- [ ] 在仓库 `README.md` 插件列表添加条目
+- [ ] 更新仓库 `CHANGELOG.md` 记录新增
+- [ ] 更新仓库版本号（MINOR）
 
 ---
 
@@ -391,8 +490,8 @@ plugin-name/
 
 **文档规范**：
 
-- [ ] README 已更新（如有功能变更）
-- [ ] CHANGELOG 已更新（如有版本变更）
+- [ ] 仓库级文档已更新（如有插件新增或重大变更）
+- [ ] 插件级文档已更新（如有功能变更）
 - [ ] 版本号已同步更新
 
 ### Review 工具

@@ -2,6 +2,15 @@
 
 本文件记录项目的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.0.5] - 2026-03-13
+
+### 新增
+
+- **market-radar v1.1.0**：情报报告功能
+  - 支持 `--report weekly` 生成周报
+  - 支持 `--report monthly` 生成月报
+  - 报告包含：执行摘要、情报综述、情报目录
+
 ## [1.0.4] - 2026-03-11
 
 ### 新增
@@ -53,6 +62,7 @@
   - 支持 Markdown、PDF、Word 文档处理
   - 实现增量处理机制
 
+[1.0.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.1...v1.0.2
