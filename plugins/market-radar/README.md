@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.4)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.1.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
@@ -28,6 +28,7 @@ Market Radar 是一个 Claude Code 插件，用于从文档中提取战略情报
 - **预处理管道**：自动转换格式、清洗噪声，输出统一的干净 Markdown
 - **增量处理**：跟踪已处理文件，检测变更，避免重复处理
 - **JSON Schema 校验**：自动校验输出结构，确保数据质量
+- **情报报告**：从现有卡片生成结构化周报/月报，包含执行摘要、情报综述、情报目录
 
 ### 主题分析（thematic-analysis）
 
@@ -87,6 +88,21 @@ cd plugins/market-radar/scripts && npm install
 
 # 指定输出位置
 /intel-distill --source ./docs --output ./intelligence
+
+# 生成当前周报（从现有卡片）
+/intel-distill --report weekly
+
+# 生成指定周报
+/intel-distill --report weekly 2026-W10
+
+# 生成当前月报
+/intel-distill --report monthly
+
+# 生成指定月报
+/intel-distill --report monthly 2026-03
+
+# 指定情报卡片位置生成报告
+/intel-distill --report weekly --output ./intel
 ```
 
 ### thematic-analysis 基本用法
@@ -114,6 +130,7 @@ cd plugins/market-radar/scripts && npm install
 |------|------|--------|
 | `--source <dir>` | 包含文档的源目录 | 当前目录 |
 | `--output <dir>` | 情报卡片输出目录 | 当前目录 |
+| `--report <type> [period]` | 生成情报简报：`weekly`（周报）或 `monthly`（月报），可选周期参数如 `2026-W10` 或 `2026-03` | - |
 | `--help` | 显示帮助信息 | - |
 
 ### thematic-analysis 参数说明
@@ -171,7 +188,14 @@ cd plugins/market-radar/scripts && npm install
 ├── Emerging-Tech/        # 新兴技术：AI安全、零信任、云安全
 ├── Customer-Market/      # 客户与市场：需求变化、采购行为、预算趋势
 ├── Policy-Regulation/    # 政策法规：新法规、合规要求、监管动态
-└── Capital-Investment/   # 资本动态：融资、并购、IPO
+├── Capital-Investment/   # 资本动态：融资、并购、IPO
+└── reports/              # 情报报告
+    ├── weekly/           # 周报
+    │   ├── 2026-W09-briefing.md
+    │   └── 2026-W10-briefing.md
+    └── monthly/          # 月报
+        ├── 2026-01-briefing.md
+        └── 2026-02-briefing.md
 ```
 
 ### 管理目录
@@ -262,6 +286,7 @@ market-radar/
 │   └── theme-state.schema.json
 ├── scripts/                  # 工具脚本
 │   ├── preprocess/           # 预处理模块
+│   ├── reporting/            # 报告生成模块
 │   ├── thematic/             # 主题分析脚本
 │   └── validate-json.ts
 └── README.md

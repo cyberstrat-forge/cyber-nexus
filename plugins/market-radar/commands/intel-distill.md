@@ -1,7 +1,7 @@
 ---
 name: intel-distill
 description: Extract strategic intelligence from source documents and generate intelligence cards
-argument-hint: "[--source <目录>] [--output <目录>]"
+argument-hint: "[--source <目录>] [--output <目录>] [--report <weekly|monthly> [周期]]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -9,12 +9,15 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 
 执行情报提取工作流：扫描源文档，分析战略价值，并在输出目录生成情报卡片。
 
+支持从现有情报卡片生成周报/月报简报。
+
 ## 参数与使用示例
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `--source <dir>` | 否 | 包含文档的源目录（默认：当前目录） |
 | `--output <dir>` | 否 | 情报卡片输出目录（默认：当前目录） |
+| `--report <type> [period]` | 否 | 生成情报简报：<br>- `weekly` - 周报（从现有卡片生成）<br>- `monthly` - 月报（从现有卡片生成）<br>- 可选周期参数：`2026-W10` 或 `2026-03` |
 | `--help` | 否 | 显示使用帮助 |
 
 ```bash
@@ -27,9 +30,29 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 # 指定输出位置
 /intel-distill --source ./docs --output ./intelligence
 
+# 生成当前周报（从现有卡片）
+/intel-distill --report weekly
+
+# 生成指定周报
+/intel-distill --report weekly 2026-W10
+
+# 生成指定周报（年+周）
+/intel-distill --report weekly 2026 10
+
+# 生成当前月报
+/intel-distill --report monthly
+
+# 生成指定月报
+/intel-distill --report monthly 2026-03
+
+# 指定情报卡片位置生成报告
+/intel-distill --report weekly --output ./intel
+
 # 显示帮助
 /intel-distill --help
 ```
+
+**注意**：`--report` 参数仅从现有情报卡片生成报告，不执行新的情报提取。
 
 ## 帮助信息
 
@@ -54,7 +77,14 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 ├── Emerging-Tech/
 ├── Customer-Market/
 ├── Policy-Regulation/
-└── Capital-Investment/
+├── Capital-Investment/
+└── reports/                   # 情报报告
+    ├── weekly/                # 周报
+    │   ├── 2026-W09-briefing.md
+    │   └── 2026-W10-briefing.md
+    └── monthly/               # 月报
+        ├── 2026-01-briefing.md
+        └── 2026-02-briefing.md
 ```
 
 ### 管理目录（隐藏）
@@ -66,6 +96,94 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 ```
 
 ## 执行流程
+
+### 步骤 0：参数解析与模式判断
+
+解析命令参数，确定执行模式：
+
+```
+参数解析：
+- source = --source 参数值
+- output = --output 参数值或当前目录
+- report_type = --report 参数值（weekly/monthly 或无）
+- period_param = 周期参数（如 2026-W10 或 2026-03）
+```
+
+**模式判断**：
+
+| 条件 | 执行模式 |
+|------|---------|
+| `--report` 参数存在 | **报告模式** → 执行报告生成流程 |
+| `--report` 参数不存在 | **提取模式** → 执行情报提取流程 |
+
+---
+
+## 报告生成流程
+
+当 `--report` 参数存在时，执行以下流程：
+
+### R1：调用扫描脚本
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+npx tsx reporting/scan-cards.ts \
+  --period {report_type} \
+  --param "{period_param}" \
+  --output-dir {output}
+```
+
+**参数说明**：
+
+| 参数 | 说明 |
+|------|------|
+| `--period` | 报告类型：`weekly` 或 `monthly` |
+| `--param` | 周期参数（可选）：`2026-W10` 或 `2026-03` |
+| `--output-dir` | 情报卡片目录 |
+
+### R2：解析扫描结果
+
+脚本返回 JSON 格式结果：
+
+```json
+{
+  "period": "weekly",
+  "period_param": "2026-W10",
+  "date_range": {"start": "2026-03-02", "end": "2026-03-08"},
+  "cards": [...],
+  "stats": {"total": 15, "by_domain": {...}}
+}
+```
+
+### R3：检查卡片列表
+
+| 条件 | 操作 |
+|------|------|
+| `cards.length == 0` | 输出"本周/月无情报卡片"，结束流程 |
+| `cards.length > 0` | 继续生成报告 |
+
+### R4：调用情报简报 Agent
+
+```
+使用 Agent 工具，subagent_type="intelligence-briefing-writer"
+参数: card_list（扫描结果）, output_dir, report_date（当前日期）
+```
+
+Agent 职责：
+- 读取每张卡片的 `## 核心事实` 章节
+- 按七大领域分组并排序
+- 生成执行摘要、情报综述、情报目录
+- 写入报告文件到 `reports/{period}/{period_param}-briefing.md`
+- 展示报告内容
+
+### R5：显示报告位置
+
+```
+报告文件位置：{output}/reports/{period}/{period_param}-briefing.md
+```
+
+---
+
+## 情报提取流程
 
 ### 步骤 1：初始化路径
 
