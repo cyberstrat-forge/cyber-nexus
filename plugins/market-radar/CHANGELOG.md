@@ -2,6 +2,55 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.0] - 2026-03-13
+
+### 新增
+
+- **intel-distill 工作流重构**
+  - 新增 `inbox/` 目录作为待处理文档推荐入口
+  - 源文件归档到 `archive/YYYY/MM/`，按年月组织
+  - 转换文件输出到 `converted/YYYY/MM/`
+  - 元数据文件保存在 archive/ 目录 (`{filename}.meta`)
+  - 基于源文件哈希实现去重机制
+
+- **情报卡片持久化支持**
+  - 卡片包含 `source_hash`、`archived_source`、`converted_file` 等元数据
+  - 支持删除源文件后卡片仍可追溯
+  - 审核机制：待审核不生成卡片，批准后才生成，拒绝后不生成
+
+- **审核模式**
+  - `--review list`：列出所有待审核任务
+  - `--review approve <id>`：批准待审核项
+  - `--review reject <id>`：拒绝待审核项
+
+- **scan-queue.ts 扫描队列脚本**
+  - 批量扫描 converted 目录
+  - 自动选择处理策略（< 50 文件用 Glob，>= 50 文件用脚本）
+  - 支持 object 和 array 两种 state 格式
+
+### 变更
+
+- **统一 Schema 和文档格式**
+  - `processed` 类型统一为 object（键值对映射）
+  - 字段命名统一：`stats`、`updated_at`
+  - `intelligence_id` 正则放宽支持多单词前缀
+  - 添加 Domain 映射关系文档
+
+- **改进错误处理**
+  - 为依赖检测添加错误日志
+  - 为元数据解析添加错误日志
+
+### 修复
+
+- 修复 Schema 与文档不一致问题
+- 修复静默失败问题（catch 块添加日志）
+
+### 相关 Issue
+
+- [#21](https://github.com/cyberstrat-forge/cyber-nexus/issues/21) 审核机制与处理逻辑优化
+- [#22](https://github.com/cyberstrat-forge/cyber-nexus/issues/22) 情报卡片持久化
+- [#25](https://github.com/cyberstrat-forge/cyber-nexus/issues/25) 重构 inbox 目录结构
+
 ## [1.1.0] - 2026-03-13
 
 ### 新增
@@ -132,7 +181,8 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
-[1.1.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.1.0
+[1.2.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.0.6
+[1.1.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.1...v1.0.2

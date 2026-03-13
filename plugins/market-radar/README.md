@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.1.0)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.6)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
@@ -25,10 +25,16 @@ Market Radar 是一个 Claude Code 插件，用于从文档中提取战略情报
 - **情报提取**：使用严格标准分析文档的战略价值
 - **七大情报领域**：覆盖威胁态势、行业分析、厂商情报、新兴技术、客户与市场、政策法规、资本动态
 - **多格式支持**：支持 Markdown、文本、PDF 和 DOCX 文件
-- **预处理管道**：自动转换格式、清洗噪声，输出统一的干净 Markdown
+- **目录结构**：
+  - `inbox/` 目录：待处理文档入口
+  - `archive/YYYY/MM/`：源文件归档
+  - `converted/YYYY/MM/`：转换后文件
+- **审核机制**：支持 `--review list/approve/reject` 审核待定情报
+- **情报持久化**：卡片独立于源文件，支持追溯
+- **去重机制**：基于源文件哈希自动去重
+- **情报报告**：从现有卡片生成结构化周报/月报
 - **增量处理**：跟踪已处理文件，检测变更，避免重复处理
 - **JSON Schema 校验**：自动校验输出结构，确保数据质量
-- **情报报告**：从现有卡片生成结构化周报/月报，包含执行摘要、情报综述、情报目录
 
 ### 主题分析（thematic-analysis）
 
@@ -89,6 +95,19 @@ cd plugins/market-radar/scripts && npm install
 # 指定输出位置
 /intel-distill --source ./docs --output ./intelligence
 
+# === 审核模式 ===
+
+# 列出所有待审核任务
+/intel-distill --review list
+
+# 批准待审核项
+/intel-distill --review approve pending-threat-20260313-001 --reason "情报准确"
+
+# 拒绝待审核项
+/intel-distill --review reject pending-threat-20260313-002 --reason "信息来源不可靠"
+
+# === 报告模式 ===
+
 # 生成当前周报（从现有卡片）
 /intel-distill --report weekly
 
@@ -130,7 +149,9 @@ cd plugins/market-radar/scripts && npm install
 |------|------|--------|
 | `--source <dir>` | 包含文档的源目录 | 当前目录 |
 | `--output <dir>` | 情报卡片输出目录 | 当前目录 |
-| `--report <type> [period]` | 生成情报简报：`weekly`（周报）或 `monthly`（月报），可选周期参数如 `2026-W10` 或 `2026-03` | - |
+| `--review <action> [id]` | 审核操作：`list`（列出）/`approve`（批准）/`reject`（拒绝） | - |
+| `--reason <text>` | 审核原因（approve/reject 时推荐） | - |
+| `--report <type> [period]` | 生成情报简报：`weekly`（周报）或 `monthly`（月报），可选周期参数 | - |
 | `--help` | 显示帮助信息 | - |
 
 ### thematic-analysis 参数说明
@@ -156,18 +177,24 @@ cd plugins/market-radar/scripts && npm install
 
 ### 预处理输出
 
-源文件会自动预处理为干净的 Markdown，输出到 `{source_dir}/converted/` 目录：
+源文件会自动预处理为干净的 Markdown：
 
 ```
 {source_dir}/
-├── report.pdf
-├── article.docx
-├── note.md
-└── converted/               # 预处理输出（用户可见）
-    ├── .meta/               # 元数据（隐藏）
-    ├── report.md
-    ├── article.md
-    └── note.md
+├── inbox/                    # 待处理文档（推荐入口）
+│   ├── report.pdf
+│   └── article.docx
+├── archive/                  # 已归档文档
+│   └── 2026/03/
+│       ├── report.pdf
+│       └── report.pdf.meta   # 元数据文件
+├── converted/                # 转换后的 Markdown
+│   └── 2026/03/
+│       ├── report.md
+│       └── article.md
+└── intelligence/             # 情报卡片输出
+    ├── threat-intelligence/
+    └── ...
 ```
 
 **清洗规则**：
@@ -202,8 +229,33 @@ cd plugins/market-radar/scripts && npm install
 
 ```
 {output_dir}/.intel/
-├── state.json            # 状态管理（队列 + 处理记录）
+├── state.json            # 状态管理（队列 + 处理记录 + 统计）
 └── history/              # 历史归档（按月）
+```
+
+### 状态文件结构（v2.0）
+
+```json
+{
+  "version": "2.1.0",
+  "updated_at": "2026-03-13T15:25:00+08:00",
+  "queue": { "processing": {} },
+  "review": { "pending": [] },
+  "processed": {
+    "converted/2026/03/report.md": {
+      "content_hash": "abc123...",
+      "source_hash": "def456...",
+      "intelligence_count": 2,
+      "intelligence_ids": ["threat-intelligence-20260313-001"],
+      "review_status": null
+    }
+  },
+  "stats": {
+    "preprocess": { "scanned": 15, "converted": 14, "failed": 1 },
+    "intelligence": { "processed": 14, "cards_generated": 12 },
+    "review": { "pending": 0, "approved": 0, "rejected": 0 }
+  }
+}
 ```
 
 ### 主题分析目录
@@ -297,14 +349,14 @@ market-radar/
 添加到项目的 `.gitignore`：
 
 ```gitignore
-# Market Radar 情报输出
+# Market Radar 输出目录
 .intel/
-
-# 主题分析输出
 .themes/
 
-# 预处理元数据
-converted/.meta/
+# 源文件目录
+inbox/
+archive/
+converted/
 ```
 
 ## 更新日志
