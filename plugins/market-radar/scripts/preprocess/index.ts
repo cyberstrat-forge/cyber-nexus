@@ -179,37 +179,74 @@ function scanDirectory(sourceDir: string): string[] {
 }
 
 /**
- * Archive source file to archive/YYYY/MM/
+ * Get archive paths for a source file
+ */
+function getArchivePaths(
+  sourcePath: string,
+  archiveDir: string
+): { archivePath: string; metaPath: string } {
+  const filename = path.basename(sourcePath);
+  const archivePath = path.join(archiveDir, filename);
+  const metaPath = getArchiveMetaPath(archivePath);
+  return { archivePath, metaPath };
+}
+
+/**
+ * Check if file is duplicate based on existing archive metadata
+ */
+function checkDuplicate(
+  metaPath: string,
+  sourceHash: string
+): boolean {
+  const existingMeta = loadArchiveMeta(metaPath);
+  return existingMeta !== null && existingMeta.sourceHash === sourceHash;
+}
+
+/**
+ * Move source file to archive (only called after successful conversion)
  */
 function archiveSourceFile(
   sourcePath: string,
   archiveDir: string,
-  sourceDir: string,
-  sourceHash: string
-): { archivePath: string; metaPath: string; isDuplicate: boolean } {
+  archivePath: string,
+  metaPath: string,
+  sourceHash: string,
+  convertedPath: string,
+  sourceDir: string
+): void {
   // Ensure archive directory exists
   if (!fs.existsSync(archiveDir)) {
     fs.mkdirSync(archiveDir, { recursive: true });
   }
 
-  const filename = path.basename(sourcePath);
-  const archivePath = path.join(archiveDir, filename);
-  const metaPath = getArchiveMetaPath(archivePath);
-
-  // Check for duplicate based on hash
-  const existingMeta = loadArchiveMeta(metaPath);
-  if (existingMeta && existingMeta.sourceHash === sourceHash) {
-    // Same file already archived
-    return { archivePath, metaPath, isDuplicate: true };
-  }
-
-  // Copy or move file to archive
-  // Note: We copy instead of move to preserve the original in inbox until user cleans it
+  // Move file to archive (not copy)
   if (archivePath !== sourcePath) {
-    fs.copyFileSync(sourcePath, archivePath);
+    // Check if source file still exists (might have been moved already)
+    if (fs.existsSync(sourcePath)) {
+      // Use rename to move the file
+      fs.renameSync(sourcePath, archivePath);
+    }
   }
 
-  return { archivePath, metaPath, isDuplicate: false };
+  // Save metadata
+  const now = new Date().toISOString();
+  const relativeSourcePath = path.relative(sourceDir, sourcePath);
+  const relativeConvertedPath = path.relative(sourceDir, convertedPath);
+
+  const meta: ArchiveMeta = {
+    sourceHash,
+    originalPath: relativeSourcePath,
+    archivedAt: now,
+    fileSize: fs.statSync(archivePath).size,
+    mimeType: getMimeType(sourcePath),
+    conversionInfo: {
+      convertedPath: relativeConvertedPath,
+      convertedAt: now,
+      conversionSuccess: true,
+    },
+  };
+
+  saveArchiveMeta(metaPath, meta);
 }
 
 /**
@@ -227,7 +264,19 @@ async function processFile(
   // Calculate source hash for deduplication
   const sourceHash = calculateHash(sourcePath);
 
-  // Check for duplicate
+  // Get archive paths
+  const { archivePath, metaPath } = getArchivePaths(sourcePath, archiveDir);
+
+  // Check for duplicate based on existing archive
+  if (checkDuplicate(metaPath, sourceHash)) {
+    return {
+      success: true,
+      isDuplicate: true,
+      archivedPath: archivePath,
+    };
+  }
+
+  // Check for duplicate in known hashes (from current batch)
   if (knownHashes.has(sourceHash)) {
     return {
       success: true,
@@ -236,23 +285,7 @@ async function processFile(
     };
   }
 
-  // Archive source file
-  const { archivePath, metaPath, isDuplicate } = archiveSourceFile(
-    sourcePath,
-    archiveDir,
-    sourceDir,
-    sourceHash
-  );
-
-  if (isDuplicate) {
-    return {
-      success: true,
-      isDuplicate: true,
-      archivedPath: archivePath,
-    };
-  }
-
-  // Phase 1: Conversion
+  // Phase 1: Conversion (before archiving)
   let rawContent: string;
   try {
     rawContent = await convertToMarkdown(sourcePath);
@@ -269,7 +302,6 @@ async function processFile(
     return {
       success: false,
       error: { code, message },
-      archivedPath: archivePath,
     };
   }
 
@@ -282,7 +314,6 @@ async function processFile(
     return {
       success: false,
       error: { code: 'CLEAN_FAILED', message },
-      archivedPath: archivePath,
     };
   }
 
@@ -305,29 +336,19 @@ async function processFile(
     return {
       success: false,
       error: { code: 'ARCHIVE_FAILED', message: `Failed to write converted file: ${message}` },
-      archivedPath: archivePath,
     };
   }
 
-  // Phase 4: Write archive metadata
-  const now = new Date().toISOString();
-  const relativeSourcePath = path.relative(sourceDir, sourcePath);
-  const relativeConvertedPath = path.relative(sourceDir, convertedPath);
-
-  const meta: ArchiveMeta = {
+  // Phase 4: Archive source file (only after successful conversion)
+  archiveSourceFile(
+    sourcePath,
+    archiveDir,
+    archivePath,
+    metaPath,
     sourceHash,
-    originalPath: relativeSourcePath,
-    archivedAt: now,
-    fileSize: fs.statSync(archivePath).size,
-    mimeType: getMimeType(sourcePath),
-    conversionInfo: {
-      convertedPath: relativeConvertedPath,
-      convertedAt: now,
-      conversionSuccess: true,
-    },
-  };
-
-  saveArchiveMeta(metaPath, meta);
+    convertedPath,
+    sourceDir
+  );
 
   return {
     success: true,
