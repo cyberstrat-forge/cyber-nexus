@@ -1,6 +1,6 @@
 # Cyber Nexus
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.4)
+[![Version](https://img.shields.io/badge/version-1.0.5-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.5)
 [![CI](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -16,7 +16,7 @@ Cyber Nexus 是一个正在构建的 Claude Code 插件集合，致力于将 AI 
 
 | 插件 | 版本 | 状态 | 功能 |
 |------|------|------|------|
-| [market-radar](./plugins/market-radar) | 1.0.4 | ✅ 可用 | 市场情报提取与主题分析 |
+| [market-radar](./plugins/market-radar) | 1.1.0 | ✅ 可用 | 市场情报提取与主题分析 |
 | competitive-analysis | - | 📋 规划中 | 竞争对手分析 |
 | product-management | - | 📋 规划中 | 产品管理 |
 
