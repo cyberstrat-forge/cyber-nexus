@@ -10,11 +10,11 @@ import { execFileSync, spawnSync } from 'child_process';
 import { SupportedFormat, ConverterFn } from './types';
 
 /**
- * Check if a dependency is available
+ * Check if a dependency is available (using --version or -v)
  */
-export function isDependencyAvailable(name: string): boolean {
+export function isDependencyAvailable(name: string, versionFlag: string = '--version'): boolean {
   try {
-    const result = spawnSync(name, ['--version'], {
+    const result = spawnSync(name, [versionFlag], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
     });
@@ -25,17 +25,28 @@ export function isDependencyAvailable(name: string): boolean {
 }
 
 /**
+ * Check if pdftotext is available (uses -v instead of --version)
+ */
+export function isPdfToTextAvailable(): boolean {
+  try {
+    // pdftotext uses -v for version, not --version
+    const result = spawnSync('pdftotext', ['-v'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    // pdftotext returns 1 for -v (it shows version but also an error about missing file)
+    // So we check if the command runs at all, not the exit code
+    return result.error === undefined;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Check if pandoc is available for DOCX conversion
  */
 export function isPandocAvailable(): boolean {
   return isDependencyAvailable('pandoc');
-}
-
-/**
- * Check if pdftotext is available for PDF conversion
- */
-export function isPdfToTextAvailable(): boolean {
-  return isDependencyAvailable('pdftotext');
 }
 
 /**
