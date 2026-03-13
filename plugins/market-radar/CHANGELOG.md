@@ -2,6 +2,30 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.1.0] - 2026-03-13
+
+### 新增
+
+- **情报报告功能**：从现有情报卡片生成结构化周报/月报
+  - 支持 `--report weekly` 生成周报（周一至周日）
+  - 支持 `--report monthly` 生成月报（1日至月末）
+  - 支持指定周期参数：`2026-W10` 或 `2026-03`
+  - 报告包含：执行摘要、情报综述、情报目录三部分
+
+- **新增组件**：
+  - `scripts/reporting/scan-cards.ts`：扫描情报卡片脚本
+  - `agents/intelligence-briefing-writer.md`：情报简报撰写 Agent
+
+### 变更
+
+- **命令扩展**：`intel-distill` 命令添加 `--report` 参数
+- **目录结构**：新增 `reports/weekly/` 和 `reports/monthly/` 目录
+- **依赖更新**：添加 `commander` 命令行解析库
+
+### 相关 Issue
+
+- [#23](https://github.com/cyberstrat-forge/cyber-nexus/issues/23) 增加情报提取报告功能：周报/月报
+
 ## [1.0.4] - 2026-03-11
 
 ### 新增
@@ -108,6 +132,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.1.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.1...v1.0.2
