@@ -21,6 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
+import { parseFrontmatter } from '../utils/frontmatter';
 
 // Threshold for recommending script usage
 const RECOMMENDED_SCRIPT_THRESHOLD = 50;
@@ -39,6 +40,8 @@ export type QueueItemStatus =
 export interface QueueItem {
   file: string;           // Relative path from source_dir
   content_hash: string;   // MD5 hash of file content
+  source_hash?: string;   // MD5 hash of original source file (from frontmatter)
+  archived_source?: string; // Path to archived source file (from frontmatter)
   status: QueueItemStatus;
   intelligence_count?: number;  // For already_processed items
   intelligence_ids?: string[];  // For already_processed items
@@ -93,19 +96,24 @@ function loadState(statePath: string): StateFile | null {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(statePath, 'utf-8'));
-  } catch {
-    console.error(`Warning: Failed to parse state file: ${statePath}`);
+    const content = fs.readFileSync(statePath, 'utf-8');
+    return JSON.parse(content);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = (error as NodeJS.ErrnoException).code;
+
+    if (errorCode === 'ENOENT') {
+      // File was deleted between exists check and read
+      console.warn(`Warning: State file disappeared: ${statePath}`);
+    } else if (errorCode === 'EACCES') {
+      console.error(`Error: Permission denied reading state file: ${statePath}`);
+    } else if (error instanceof SyntaxError) {
+      console.error(`Error: Invalid JSON in state file: ${statePath} - ${errMsg}`);
+    } else {
+      console.error(`Warning: Failed to read state file: ${statePath} - ${errMsg}`);
+    }
     return null;
   }
-}
-
-/**
- * Calculate MD5 hash of file content
- */
-function calculateContentHash(filePath: string): string {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return createHash('md5').update(content).digest('hex');
 }
 
 /**
@@ -125,7 +133,14 @@ function scanMarkdownFiles(dir: string, baseDir: string): string[] {
     return files;
   }
 
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot read directory ${dir}: ${errMsg}`);
+    return files;
+  }
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
@@ -202,18 +217,37 @@ function scanAndBuildQueue(
   let alreadyProcessed = 0;
   let needsProcessing = 0;
   let pendingReview = 0;
+  let readErrors = 0;
 
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
 
+    // Read file content with error handling
+    let content: string;
+    try {
+      content = fs.readFileSync(filePath, 'utf-8');
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read file ${relativePath}: ${errMsg}`);
+      readErrors++;
+      continue; // Skip files that can't be read
+    }
+
     // Calculate content hash
-    const contentHash = calculateContentHash(filePath);
+    const contentHash = createHash('md5').update(content).digest('hex');
+
+    // Parse frontmatter for metadata
+    const frontmatter = parseFrontmatter(content);
+    const sourceHash = frontmatter?.sourceHash;
+    const archivedSource = frontmatter?.archivedSource;
 
     // Check if in pending review
     if (pendingReviewSet.has(relativePath)) {
       queue.push({
         file: relativePath,
         content_hash: contentHash,
+        source_hash: sourceHash,
+        archived_source: archivedSource,
         status: 'pending_review',
       });
       pendingReview++;
@@ -228,6 +262,8 @@ function scanAndBuildQueue(
       queue.push({
         file: relativePath,
         content_hash: contentHash,
+        source_hash: sourceHash,
+        archived_source: archivedSource,
         status: 'needs_processing',
       });
       needsProcessing++;
@@ -236,12 +272,19 @@ function scanAndBuildQueue(
       queue.push({
         file: relativePath,
         content_hash: contentHash,
+        source_hash: sourceHash,
+        archived_source: archivedSource,
         status: 'already_processed',
         intelligence_count: processedInfo.intelligence_count,
         intelligence_ids: processedInfo.intelligence_ids,
       });
       alreadyProcessed++;
     }
+  }
+
+  // Log summary of read errors
+  if (readErrors > 0) {
+    console.warn(`Warning: ${readErrors} file(s) could not be read and were skipped`);
   }
 
   // Determine recommendation

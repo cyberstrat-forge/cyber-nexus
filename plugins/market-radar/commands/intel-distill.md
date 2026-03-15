@@ -99,8 +99,8 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 │  • 格式转换（PDF/DOCX → Markdown）                          │
 │  • 内容清洗（删除噪声）                                     │
 │  • 归档源文件到 archive/YYYY/MM/                           │
-│  • 保存转换文件到 converted/YYYY/MM/                       │
-│  • 保存元数据到 .meta 文件                                  │
+│  • 保存转换文件到 converted/YYYY/MM/（含 frontmatter）      │
+│  • 转换失败时生成 .error.md 到 inbox/                       │
 └─────────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -133,7 +133,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 ---
 
-## 目录结构（v2.0）
+## 目录结构（v2.1）
 
 ### 推荐目录布局
 
@@ -142,20 +142,20 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 ├── inbox/                          # ⭐️ 待处理文档（推荐入口）
 │   ├── report-2026.pdf
 │   ├── ai-article.docx
-│   └── vendor-news.pdf
+│   ├── vendor-news.pdf
+│   └── failed-doc.pdf.error.md     # ⭐️ 转换失败的错误日志
 │
 ├── archive/                        # ⭐️ 已归档文档（按年月组织）
 │   └── 2026/
 │       └── 03/
 │           ├── report-2026.pdf
-│           ├── report-2026.pdf.meta  # ⭐️ 元数据文件
 │           ├── ai-article.docx
 │           └── vendor-news.pdf
 │
 ├── converted/                      # ⭐️ 转换后的 Markdown（按年月组织）
 │   └── 2026/
 │       └── 03/
-│           ├── report-2026.md
+│           ├── report-2026.md      # ⭐️ 含 frontmatter 元数据
 │           ├── ai-article.md
 │           └── vendor-news.md
 │
@@ -174,11 +174,35 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 | 目录 | 说明 | 文件命名规则 | 用户可见性 |
 |------|------|-------------|-----------|
 | `inbox/` | 待处理文档目录 | 保持原名 | ✅ 可见 |
+| `inbox/*.error.md` | 转换失败的错误日志 | `{filename}.error.md` | ✅ 可见 |
 | `archive/YYYY/MM/` | 已归档文档目录 | 保持原名 | ✅ 可见 |
-| `archive/YYYY/MM/*.meta` | 归档文件元数据 | `{filename}.meta` | ✅ 可见 |
-| `converted/YYYY/MM/` | 转换后的 Markdown | 保持原名（仅改扩展名） | ✅ 可见 |
+| `converted/YYYY/MM/` | 转换后的 Markdown（含 frontmatter） | 保持原名（仅改扩展名） | ✅ 可见 |
 | `intelligence/` | 情报卡片输出 | `{YYYYMMDD}-{subject}-{feature}.md` | ✅ 可见 |
 | `.intel/` | 管理目录 | - | ❌ 隐藏 |
+
+### 转换文件格式（v2.1）
+
+转换后的 Markdown 文件包含 frontmatter 元数据：
+
+```markdown
+---
+sourceHash: "abc123def456..."
+originalPath: "inbox/report-2026.pdf"
+archivedAt: "2026-03-15T10:00:00Z"
+archivedSource: "archive/2026/03/report-2026.pdf"
+---
+
+# 文档内容...
+```
+
+**frontmatter 字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `sourceHash` | string | 源文件 MD5 哈希（用于去重） |
+| `originalPath` | string | 源文件原始路径（相对于 source_dir） |
+| `archivedAt` | string | 归档时间（ISO 8601 格式） |
+| `archivedSource` | string | 归档文件路径 |
 
 ---
 
@@ -284,8 +308,8 @@ npx tsx preprocess/index.ts --source {source_dir}
 
 **输出位置**：
 - 归档文件：`{source_dir}/archive/YYYY/MM/`
-- 转换文件：`{source_dir}/converted/YYYY/MM/`
-- 元数据文件：`{source_dir}/archive/YYYY/MM/{filename}.meta`
+- 转换文件：`{source_dir}/converted/YYYY/MM/`（含 frontmatter 元数据）
+- 错误日志：`{source_dir}/inbox/{filename}.error.md`（转换失败时）
 
 #### 4.2 预处理逻辑
 
@@ -294,8 +318,44 @@ npx tsx preprocess/index.ts --source {source_dir}
 2. 兼容扫描根目录（跳过 `inbox/`、`archive/`、`converted/`）
 3. 检查已知源文件哈希，跳过重复文件
 4. 执行格式转换和噪声清洗
-5. 归档源文件
-6. 保存元数据
+5. 归档源文件到 `archive/YYYY/MM/`
+6. **转换成功**：生成 Markdown 文件到 `converted/YYYY/MM/`，frontmatter 包含元数据
+7. **转换失败**：源文件保留在 `inbox/`，生成 `.error.md` 错误日志
+
+#### 4.3 转换失败处理
+
+当文件转换失败时：
+
+```
+inbox/
+├── failed-doc.pdf           # 源文件保留原位置
+└── failed-doc.pdf.error.md  # 可读的错误日志
+```
+
+**错误日志格式**：
+
+```markdown
+# 文件转换失败
+
+**文件名**: failed-doc.pdf
+**处理时间**: 2026-03-15 10:00:00
+**错误码**: CONVERSION_FAILED
+
+## 错误原因
+
+[具体错误信息]
+
+## 建议操作
+
+- [ ] 检查文件是否损坏
+- [ ] 尝试用其他工具打开
+
+---
+
+修复后删除此文件，重新运行 `/intel-distill`
+```
+
+**用户操作**：修复问题后删除 `.error.md` 文件，重新运行命令即可重新处理。
 
 ### 步骤 5：扫描转换后的文件
 
@@ -318,11 +378,11 @@ npx tsx preprocess/index.ts --source {source_dir}
 glob pattern: {source_dir}/converted/**/*.md
 ```
 
-然后逐个读取文件、计算 Hash、对比 state。
+然后逐个读取文件、解析 frontmatter 提取 `sourceHash`、计算内容 Hash、对比 state。
 
 #### 5.3 策略 B：脚本处理（>= 50 个文件）
 
-调用扫描队列脚本，一次性完成扫描、Hash 计算、状态对比：
+调用扫描队列脚本，一次性完成扫描、frontmatter 解析、Hash 计算、状态对比：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
@@ -345,6 +405,8 @@ npx tsx preprocess/scan-queue.ts \
     {
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
+      "source_hash": "def456...",
+      "archived_source": "archive/2026/03/report-2026.pdf",
       "status": "needs_processing"
     }
   ],
@@ -361,7 +423,7 @@ npx tsx preprocess/scan-queue.ts \
 | `already_processed` | 已处理文件数（跳过） |
 | `needs_processing` | 待处理文件数 |
 | `pending_review` | 已在审核队列的文件数 |
-| `queue` | 处理队列详情 |
+| `queue` | 处理队列详情（含 source_hash、archived_source） |
 | `recommendation` | 推荐策略（`glob` 或 `script`） |
 
 #### 5.4 判断逻辑
@@ -376,63 +438,104 @@ if (needs_processing + pending_review >= 50) {
 
 ### 步骤 6：构建处理队列
 
-#### 6.1 计算文件内容 Hash
+#### 6.1 解析 frontmatter 提取元数据
 
-使用 MD5 算法计算转换后文件的内容哈希。
+从转换文件的 frontmatter 中提取：
 
-#### 6.2 变更检测逻辑
+| 字段 | 来源 | 用途 |
+|------|------|------|
+| `sourceHash` | frontmatter | 去重检测、写入情报卡片 |
+| `archivedSource` | frontmatter | 传递给 Agent、写入情报卡片 |
+
+#### 6.2 计算文件内容 Hash
+
+使用 MD5 算法计算转换后文件的内容哈希（用于变更检测）。
+
+#### 6.3 变更检测逻辑
 
 | 条件 | 操作 |
 |------|------|
 | content_hash 相同 | 跳过（无变更） |
-| content_hash 不同 | 加入 pending（内容变更） |
-| 新文件（无记录） | 加入 pending |
+| content_hash 不同 | 加入队列（内容变更） |
+| 新文件（无记录） | 加入队列 |
 | review_status = pending | 跳过（已在审核队列） |
 
-#### 6.3 处理队列输出
+#### 6.4 去重检测
+
+扫描 `state.json` 中已记录的 `source_hash`，跳过已处理的相同源文件。
+
+#### 6.5 处理队列输出
 
 ```
 【处理队列】
 • 已处理（跳过）: 10 个
 • 待处理: 4 个
 • 已在审核队列: 1 个
+• 转换失败: 1 个（见 inbox/*.error.md）
 ```
 
-### 步骤 7：逐个处理文件
+### 步骤 7：处理文件
 
-#### 7.1 调用情报分析 Agent
+#### 7.1 选择执行策略
 
-```
+根据待处理文件数量：
+
+| 文件数量 | 执行策略 | 说明 |
+|---------|---------|------|
+| ≤ 3 个 | 顺序执行 | 开销小，无需并行 |
+| > 3 个 | 并行执行 | 在单个消息中发起多个 Agent 调用 |
+
+#### 7.2 调用情报分析 Agent
+
 使用 Agent 工具，subagent_type="intelligence-analyzer"
 
-重要：该 agent 需要完整的工具权限以完成情报卡片写入：
+**并行执行时**：在单个消息中发起多个 Agent 调用，由 Claude Code 自动管理并发
+
+**Agent 工具权限**：
 - Read: 读取转换后的 Markdown 文件
 - Grep: 搜索文档中的关键信息
 - Glob: 检查输出目录中的现有文件（去重检测）
 - Write: 写入情报卡片文件
 - Bash: 执行辅助命令（如日期提取）
 
-参数: source（转换文件路径）, output, session_id, archived_source, source_hash
-```
+**参数**:
+- `source`: 转换文件路径（Agent 从 frontmatter 读取 sourceHash、archivedSource）
+- `output`: 输出目录
+- `session_id`: 会话 ID
 
-#### 7.2 处理 Agent 返回结果
+**Agent 职责**：
+- 从 frontmatter 解析元数据（sourceHash、archivedSource）
+- 分析文档，提取情报
+- 写入情报卡片文件（frontmatter 包含 sourceHash、archivedSource）
+- 返回轻量级 JSON 结果（不更新 state.json）
+
+#### 7.3 收集结果并分类
+
+等待所有 Agent 完成，收集返回结果并分类：
 
 **情况 1：明确有价值（`has_strategic_value = true`）**
-- 生成情报卡片（数量不设上限，根据源文档实际内容决定）
-- 分配正式 `intelligence_id`
+- 已生成情报卡片
+- 记录 `intelligence_ids` 和 `output_files`
 - `review_status = null`（无需审核）
 
 **情况 2：明确无价值（`has_strategic_value = false`）**
-- 不生成情报卡片
+- 未生成情报卡片
 - `intelligence_ids = []`
 - `intelligence_count = 0`
 - `review_status = null`
 
 **情况 3：需要复核（`has_strategic_value = null`）**
-- 不生成情报卡片
-- 添加到 `state.review.pending` 队列
+- 未生成情报卡片
+- 添加到待审核队列
 - 分配临时 `pending_id`（格式：`pending-{domain}-{timestamp}`）
 - `review_status = "pending"`
+
+#### 7.4 统一更新状态文件
+
+所有 Agent 完成后，一次性更新 `state.json`：
+- 更新 `processed` 记录
+- 更新 `review.pending` 队列
+- 更新 `stats` 统计
 
 ### 步骤 8：统一输出统计
 
@@ -466,6 +569,8 @@ if (needs_processing + pending_review >= 50) {
 💡 操作提示:
    /intel-distill --review list
    /intel-distill --report weekly
+
+⚠️ 转换失败的文件保留在 inbox/，请查看 .error.md 文件了解详情
 ════════════════════════════════════════════════════════
 ```
 
@@ -521,7 +626,8 @@ if (needs_processing + pending_review >= 50) {
 
 3. **调用 Agent 生成情报卡片**
    - 调用 `intelligence-analyzer` Agent
-   - 参数：`source`、`output`、`session_id`、`archived_source`、`source_hash`
+   - 参数：`source`（转换文件路径）、`output`（输出目录）、`session_id`（会话 ID）
+   - Agent 从转换文件 frontmatter 读取 `sourceHash` 和 `archivedSource`
    - Agent 返回正式 `intelligence_id`
 
 4. **更新状态文件**
@@ -621,48 +727,20 @@ npx tsx reporting/scan-cards.ts \
 
 ---
 
-## 归档文件元数据（.meta）
+## 去重机制
 
-每个归档文件对应一个 `.meta` 元数据文件，用于去重和追溯。
-
-### 元数据文件格式
-
-**文件位置**：`archive/YYYY/MM/{filename}.{ext}.meta`
-
-```json
-{
-  "sourceHash": "abc123def456...",
-  "originalPath": "inbox/report-2026.pdf",
-  "archivedAt": "2026-03-13T10:00:00Z",
-  "fileSize": 123456,
-  "mimeType": "application/pdf",
-  "conversionInfo": {
-    "convertedPath": "converted/2026/03/report-2026.md",
-    "convertedAt": "2026-03-13T10:00:00Z",
-    "conversionSuccess": true
-  }
-}
-```
-
-### 元数据字段说明
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `sourceHash` | string | 源文件的 MD5 哈希（用于去重） |
-| `originalPath` | string | 源文件的原始路径（相对于 `source_dir`） |
-| `archivedAt` | string | 归档时间（ISO 8601 格式） |
-| `fileSize` | number | 文件大小（字节） |
-| `mimeType` | string | MIME 类型（如 `application/pdf`） |
-| `conversionInfo.convertedPath` | string | 转换文件路径 |
-| `conversionInfo.convertedAt` | string | 转换时间 |
-| `conversionInfo.conversionSuccess` | boolean | 转换是否成功 |
-
-### 去重机制
+### 源文件去重（预处理阶段）
 
 1. 计算新源文件的 MD5 哈希
-2. 扫描 `archive/**/*.meta` 文件中的 `sourceHash`
+2. 扫描 `converted/**/*.md` 文件 frontmatter 中的 `sourceHash`
 3. 如果哈希已存在，标记为重复文件
-4. 重复文件仍然归档（保留用户操作），但不重复处理
+4. 重复文件仍然归档（保留用户操作），但不重复转换
+
+### 内容变更检测（情报提取阶段）
+
+1. 计算转换文件的 content_hash（正文内容的 MD5）
+2. 对比 `state.json` 中记录的 `content_hash`
+3. 相同则跳过，不同则重新处理
 
 ---
 
@@ -842,12 +920,12 @@ npx tsx validate-json.ts state ./.intel/state.json
 
 ## 注意事项
 
-- 处理是顺序执行的，而非并行
-- Agent 负责完整的文件处理流程
-- 状态变更后立即写入 `state.json`
-- 删除源文件或转换文件后，情报卡片仍保留
-- 重新加入历史文件时会检测重复（基于 `.meta` 文件）
-- 建议将 `.intel/` 和 `inbox/` 添加到 `.gitignore`
+- Agent 负责完整的文件处理流程（分析、写入情报卡片、返回结果）
+- 命令层统一更新 state.json，确保状态一致性
+- 删除源文件或转换文件后，情报卡片仍保留（frontmatter 包含追溯信息）
+- 重新加入历史文件时会检测重复（基于转换文件 frontmatter 的 sourceHash）
+- 建议将 `.intel/` 添加到 `.gitignore`
+- 转换失败的文件保留在 `inbox/`，查看 `.error.md` 了解原因
 - 情报卡片数量不设上限，根据源文档实际内容和情报价值决定（详见 `intelligence-analysis-methodology` skill）
 - 情报卡片文件命名格式：`{YYYYMMDD}-{subject}-{feature}.md`
   - `YYYYMMDD`：情报日期（源文件发布日期）
