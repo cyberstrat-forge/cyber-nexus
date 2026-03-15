@@ -2,6 +2,35 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.4] - 2026-03-15
+
+### 变更
+
+- **元数据存储架构重构**
+  - 从 `.meta` 文件迁移到 Markdown frontmatter 存储
+  - 元数据字段：`sourceHash`、`originalPath`、`archivedAt`、`archivedSource`
+  - 简化存储结构，元数据与内容一体化
+
+- **错误处理优化**
+  - 转换失败时生成用户友好的 `.error.md` 错误日志
+  - 错误日志包含错误原因和建议操作清单
+  - 错误日志输出到 `inbox/` 目录，便于用户查看
+
+- **Agent 参数精简**
+  - 从 5 个参数减少到 3 个（`source`、`output`、`session_id`）
+  - 移除 `archive_dir` 和 `converted_dir` 参数
+  - 参数自动推导，简化命令调用
+
+- **跨平台兼容性**
+  - 支持 CRLF 和 LF 行尾格式
+  - YAML 字符串正确转义反斜杠和双引号
+
+### 修复
+
+- 修复预处理归档顺序问题，确保原子性（先写转换文件再归档源文件）
+- 修复未使用的 `getMimeType` 函数（死代码移除）
+- 增强 `fs.readdirSync` 错误处理
+
 ## [1.2.3] - 2026-03-15
 
 ### 变更
@@ -248,6 +277,8 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.2.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.3...v1.2.4
+[1.2.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.1...v1.2.2
 [1.2.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.0.6
 [1.1.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5
