@@ -53,6 +53,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Threat-Landscape | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦攻击事件的关键要素：谁（威胁行为者）用什么（攻击手段）攻击了谁（受害目标），造成什么影响
 
@@ -117,6 +121,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Industry-Analysis | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦市场/行业的关键洞察：什么领域呈现什么趋势（增长/衰退/转型），核心数据支撑，对安全行业的影响
 
@@ -188,6 +196,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Vendor-Intelligence | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦厂商的关键动态：谁（厂商名称）发生了什么（融资/并购/发布/转型），核心数据或意义
 
@@ -254,6 +266,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Emerging-Tech | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦技术的关键价值：什么技术/产品，解决什么安全问题，处于什么成熟阶段，市场前景如何
 
@@ -323,6 +339,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Customer-Market | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦客户的关键需求：什么行业/规模的客户，面临什么安全挑战或需求变化，呈现什么趋势
 
@@ -391,6 +411,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Policy-Regulation | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦政策的关键要求：什么政策/法规，对谁提出什么合规要求，何时生效/有何影响
 
@@ -458,6 +482,10 @@ generated_session: "YYYYMMDD-HHMMSS"
 ### Body Template
 
 ```markdown
+# {title}
+
+> **情报领域**：Capital-Investment | **日期**：{intelligence_date}
+
 ## 核心事实
 聚焦交易的关键信息：谁（投资方/收购方）投资/收购了谁（标的），金额/估值多少，业务方向是什么
 
