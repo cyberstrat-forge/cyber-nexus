@@ -291,5 +291,5 @@ A: 查看状态文件 `state.json` 中的错误信息。
 
 - 详细执行流程：`commands/intel-distill.md`
 - JSON 输出格式：`agents/references/json-format.md`
-- 领域模板：`skills/output-templates/references/templates.md`
+- 领域模板：`skills/intelligence-output-templates/references/templates.md`
 - 更新日志：`plugins/market-radar/CHANGELOG.md`

@@ -6,6 +6,22 @@
 
 ---
 
+## [1.0.7] - 2026-03-15
+
+### 插件更新
+
+#### market-radar v1.2.1
+
+**修复**
+- Agent tools 字段格式优化：从字符串格式改为数组格式，提高解析器兼容性
+- intel-distill 命令文档增强：明确列出 Agent 所需工具权限
+- Skill 目录重命名：统一目录名与 SKILL.md 中的 name 字段一致
+
+**相关 Issue**
+- [#29](https://github.com/cyberstrat-forge/cyber-nexus/issues/29) P0 Agent 工具权限配置问题
+
+---
+
 ## [1.0.6] - 2026-03-13
 
 ### 插件更新
@@ -110,6 +126,7 @@
 
 ---
 
+[1.0.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4

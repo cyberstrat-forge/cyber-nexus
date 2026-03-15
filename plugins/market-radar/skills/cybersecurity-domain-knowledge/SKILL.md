@@ -7,7 +7,7 @@ description: This skill should be used when analyzing cybersecurity-related docu
 
 网络安全战略规划的七个情报领域：Threat-Landscape、Industry-Analysis、Vendor-Intelligence、Emerging-Tech、Customer-Market、Policy-Regulation、Capital-Investment。
 
-详细定义参见 `../output-templates/references/templates.md`。
+详细定义参见 `../intelligence-output-templates/references/templates.md`。
 
 ## 领域识别关键词
 
