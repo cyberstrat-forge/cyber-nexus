@@ -2,6 +2,16 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.7] - 2026-03-15
+
+### 变更
+
+- **情报卡片模板优化**
+  - 为七大情报领域的 Body Template 添加一级标题
+  - 使用 frontmatter 的 `title` 字段作为文档标题
+  - 添加情报领域和日期的引用块元数据
+  - 改善 Markdown 导出 PDF 时的阅读体验
+
 ## [1.2.6] - 2026-03-15
 
 ### 变更
@@ -294,6 +304,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.2.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.3...v1.2.4
