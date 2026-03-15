@@ -145,20 +145,6 @@ function writeErrorLog(
 }
 
 /**
- * Get MIME type from file extension
- */
-function getMimeType(filePath: string): string {
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    '.pdf': 'application/pdf',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    '.md': 'text/markdown',
-    '.txt': 'text/plain',
-  };
-  return mimeTypes[ext] || 'application/octet-stream';
-}
-
-/**
  * Get archive directory path based on date
  */
 function getArchiveDir(sourceDir: string, dateRef: Date): string {
