@@ -23,7 +23,12 @@ description: |
 
 model: inherit
 color: green
-tools: Read, Grep, Glob, Write, Bash
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Write
+  - Bash
 skills:
   - thematic-methodology
   - cybersecurity-domain-knowledge
@@ -50,8 +55,8 @@ skills:
 以下 skills 已加载到上下文中：
 
 - **thematic-methodology**：分析方法论、跟踪维度定义
-- **domain-knowledge**：七大情报领域、领域特定指标
-- **output-templates**：输出格式参考
+- **cybersecurity-domain-knowledge**：七大情报领域、领域特定指标
+- **intelligence-output-templates**：输出格式参考
 
 ## 执行流程
 

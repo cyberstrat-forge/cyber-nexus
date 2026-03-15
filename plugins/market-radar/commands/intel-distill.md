@@ -404,6 +404,14 @@ if (needs_processing + pending_review >= 50) {
 
 ```
 使用 Agent 工具，subagent_type="intelligence-analyzer"
+
+重要：该 agent 需要完整的工具权限以完成情报卡片写入：
+- Read: 读取转换后的 Markdown 文件
+- Grep: 搜索文档中的关键信息
+- Glob: 检查输出目录中的现有文件（去重检测）
+- Write: 写入情报卡片文件
+- Bash: 执行辅助命令（如日期提取）
+
 参数: source（转换文件路径）, output, session_id, archived_source, source_hash
 ```
 
@@ -796,9 +804,9 @@ npx tsx reporting/scan-cards.ts \
 ## 关联 Skills
 
 `intelligence-analyzer` agent 预加载以下 skills：
-- **domain-knowledge** - 七大情报领域定义和关键词
-- **analysis-methodology** - 战略价值判断标准和提取原则
-- **output-templates** - 情报卡片模板
+- **cybersecurity-domain-knowledge** - 七大情报领域定义和关键词
+- **intelligence-analysis-methodology** - 战略价值判断标准和提取原则
+- **intelligence-output-templates** - 情报卡片模板
 
 ## Schema 校验
 
@@ -846,4 +854,4 @@ npx tsx validate-json.ts state ./.intel/state.json
   - `subject`：主体/对象（简短英文 kebab-case）
   - `feature`：核心特征/动作（简短英文 kebab-case）
   - 示例：`20260301-lockbit-ransomware-surge.md`
-  - 详细规则参见 `output-templates/references/templates.md` 中的 File Naming Rules
+  - 详细规则参见 `intelligence-output-templates/references/templates.md` 中的 File Naming Rules

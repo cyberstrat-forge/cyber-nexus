@@ -2,6 +2,36 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.1] - 2026-03-15
+
+### 修复
+
+- **Agent tools 字段格式优化**
+  - 将所有 agent 的 `tools` 字段从字符串格式改为数组格式
+  - 提高与不同解析器的兼容性，确保工具权限被正确读取
+  - 受影响文件：`intelligence-analyzer.md`, `intelligence-cluster.md`, `theme-analyzer.md`, `panorama-synthesizer.md`, `intelligence-briefing-writer.md`
+
+- **intel-distill 命令文档增强**
+  - 在 Agent 调用说明中明确列出所需工具权限
+  - 确保评测和执行时工具分配正确
+
+- **Skill 目录重命名**
+  - 统一 skill 目录名与 SKILL.md 中的 name 字段
+  - `domain-knowledge/` → `cybersecurity-domain-knowledge/`
+  - `analysis-methodology/` → `intelligence-analysis-methodology/`
+  - `output-templates/` → `intelligence-output-templates/`
+  - 更新所有相关文件中的引用路径
+
+- **geo_scope 字段必填强化**
+  - 在 output-templates 模板中标注 geo_scope 为必填字段
+  - 在 intelligence-analyzer 最终检查清单中强调不可省略
+  - 无法判断时必须使用 `unknown` 值
+
+### 相关 Issue
+
+- [#29](https://github.com/cyberstrat-forge/cyber-nexus/issues/29) P0 Agent 工具权限配置问题
+- [#29](https://github.com/cyberstrat-forge/cyber-nexus/issues/29) P1 geo_scope 字段缺失率高
+
 ## [1.2.0] - 2026-03-13
 
 ### 新增

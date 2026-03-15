@@ -30,5 +30,5 @@ description: Markdown templates and output structure for intelligence cards. Use
 
 ## 相关 Skills
 
-- **`../domain-knowledge/SKILL.md`** - 领域定义
-- **`../analysis-methodology/SKILL.md`** - 提取方法论
+- **`../cybersecurity-domain-knowledge/SKILL.md`** - 领域定义
+- **`../intelligence-analysis-methodology/SKILL.md`** - 提取方法论

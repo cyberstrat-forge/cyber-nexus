@@ -14,7 +14,12 @@ description: |
 
 model: inherit
 color: cyan
-tools: Read, Grep, Glob, Write, Bash
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Write
+  - Bash
 skills:
   - cybersecurity-domain-knowledge
   - intelligence-analysis-methodology
@@ -43,9 +48,9 @@ skills:
 
 以下 skills 已加载到上下文中：
 
-- **domain-knowledge**: 七大情报领域定义、关键词、领域特定指标
-- **analysis-methodology**: 战略价值判断标准、过滤规则、提取原则
-- **output-templates**: 七大领域的前台模板和正文模板
+- **cybersecurity-domain-knowledge**: 七大情报领域定义、关键词、领域特定指标
+- **intelligence-analysis-methodology**: 战略价值判断标准、过滤规则、提取原则
+- **intelligence-output-templates**: 七大领域的前台模板和正文模板
 
 ## 执行流程
 
@@ -73,7 +78,7 @@ skills:
 
 ### 步骤 3：战略价值评估
 
-应用 **analysis-methodology** skill 中的五大战略价值条件。
+应用 **intelligence-analysis-methodology** skill 中的五大战略价值条件。
 
 **关键决策**：
 
@@ -90,7 +95,7 @@ skills:
 
 ### 步骤 4：领域分类与情报提取
 
-应用 **domain-knowledge** skill 中的领域定义，识别文档中所有具有独立战略价值的情报点。
+应用 **cybersecurity-domain-knowledge** skill 中的领域定义，识别文档中所有具有独立战略价值的情报点。
 
 **多情报识别原则**：
 - 每篇源文件可能提取 **0-3 条情报**
@@ -161,14 +166,14 @@ skills:
 
 ### 步骤 5：生成情报卡片
 
-根据 **output-templates** skill 中的模板生成。
+根据 **intelligence-output-templates** skill 中的模板生成。
 
 **每张情报卡片独立生成**：
 - 独立的 `intelligence_id`：`{domain}-{YYYYMMDD}-{seq}`
 - 独立的文件名：`{YYYYMMDD}-{subject}-{feature}.md`
 - 独立写入文件：`{output}/{domain}/{filename}`
 
-**文件命名规则**（详见 output-templates skill）：
+**文件命名规则**（详见 intelligence-output-templates skill）：
 
 | 组成部分 | 生成方式 |
 |----------|---------|
@@ -349,7 +354,7 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 - [ ] 每条情报至少满足一个战略标准
 - [ ] 每条情报满足原子化要求（单一主题、独立完整）
 - [ ] 领域分类适当
-- [ ] 地域范围（geo_scope）已正确判断
+- [ ] 地域范围（geo_scope）已填写 — **必填字段，不可省略，无法判断时使用 unknown**
 - [ ] 业务模式标签已提取（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
 - [ ] 每张卡片有独立的 intelligence_id

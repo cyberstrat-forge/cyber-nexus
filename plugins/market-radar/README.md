@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.6)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.2.1)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
@@ -324,9 +324,9 @@ market-radar/
 │   └── references/
 │       └── json-format.md    # Agent 返回格式规范
 ├── skills/                   # 技能模块
-│   ├── domain-knowledge/     # 七大情报领域
-│   ├── analysis-methodology/ # 战略价值判断
-│   ├── output-templates/     # 情报卡片模板
+│   ├── cybersecurity-domain-knowledge/     # 七大情报领域
+│   ├── intelligence-analysis-methodology/  # 战略价值判断
+│   ├── intelligence-output-templates/      # 情报卡片模板
 │   ├── clustering-methodology/   # 聚类方法论
 │   ├── thematic-methodology/     # 主题分析方法论
 │   └── thematic-templates/       # 报告模板

@@ -206,7 +206,7 @@ description: This skill should be used when extracting strategic intelligence fr
 ## 相关资源
 
 领域特定知识，参见：
-- **`../domain-knowledge/SKILL.md`** - 领域定义和关键词
+- **`../cybersecurity-domain-knowledge/SKILL.md`** - 领域定义和关键词
 
 输出模板，参见：
-- **`../output-templates/references/templates.md`** - 结构化模板
+- **`../intelligence-output-templates/references/templates.md`** - 结构化模板

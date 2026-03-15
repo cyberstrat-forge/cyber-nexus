@@ -23,7 +23,12 @@ description: |
 
 model: inherit
 color: cyan
-tools: Read, Grep, Glob, Write, Bash
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Write
+  - Bash
 skills:
   - clustering-methodology
   - cybersecurity-domain-knowledge
@@ -48,7 +53,7 @@ skills:
 以下 skills 已加载到上下文中：
 
 - **clustering-methodology**：聚类方法论、匹配规则、新主题检测
-- **domain-knowledge**：七大情报领域定义、关键词
+- **cybersecurity-domain-knowledge**：七大情报领域定义、关键词
 
 ## 执行流程
 
