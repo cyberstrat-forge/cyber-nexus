@@ -6,6 +6,20 @@
 
 ---
 
+## [1.0.8] - 2026-03-15
+
+### 插件更新
+
+#### market-radar v1.2.2
+
+**变更**
+- 情报提取方法论优化：移除数量上限限制，改为根据实际价值灵活判断
+- 新增 AI 行业重塑关注点：关注 AI 对开发模式、架构演进、产品形态、商业模式、竞争格局的影响
+- 输出模板优化：移除核心事实章节的原文引用冗余，统一放置到原文关键引用章节
+- 核心事实差异化：为7个情报领域设计差异化的核心事实描述
+
+---
+
 ## [1.0.7] - 2026-03-15
 
 ### 插件更新
@@ -128,6 +142,7 @@
 
 ---
 
+[1.0.8]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5

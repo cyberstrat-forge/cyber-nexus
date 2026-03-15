@@ -2,6 +2,25 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.2] - 2026-03-15
+
+### 变更
+
+- **情报提取方法论优化**
+  - 移除情报提取数量上限（原0-3条），改为根据源文档实际内容和情报价值灵活判断
+  - 强调原子化原则：一个洞察点=一张情报卡片，有多少有价值洞察就提取多少
+
+- **新增 AI 行业重塑关注点**
+  - 开发模式：AI 辅助代码生成、自动化测试、智能漏洞挖掘
+  - 架构演进：AI-native 安全架构、实时自适应防护、边缘智能
+  - 产品形态：从工具到平台、从规则到智能、从被动到主动
+  - 商业模式：SaaS 化、按效果付费、AI Agent 即服务
+  - 竞争格局：新进入者、传统厂商转型、技术壁垒变化
+
+- **输出模板优化**
+  - 移除"核心事实"章节下的原文引用，统一放置到"原文关键引用"章节
+  - 为7个领域设计差异化核心事实描述，采用"聚焦xxx: 结构化要素"格式
+
 ## [1.2.1] - 2026-03-15
 
 ### 修复
@@ -211,6 +230,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.2.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.1...v1.2.2
 [1.2.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.0.6
 [1.1.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.3...v1.0.4
