@@ -23,12 +23,7 @@ description: |
 
 model: inherit
 color: green
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Bash
+tools: Read, Grep, Glob, Write, Bash
 skills:
   - thematic-methodology
   - cybersecurity-domain-knowledge
