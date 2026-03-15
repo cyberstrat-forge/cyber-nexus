@@ -12,7 +12,7 @@
       "name": "market-radar",
       "source": "./plugins/market-radar",
       "description": "从文档提取战略情报，支持七大情报领域",
-      "version": "1.2.5"
+      "version": "1.2.6"
     }
   ]
 }

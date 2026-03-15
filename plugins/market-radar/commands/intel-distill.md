@@ -288,7 +288,26 @@ intel_dir = output_dir/.intel/
 state_file = intel_dir/state.json
 ```
 
-### 步骤 3：加载或创建状态文件
+### 步骤 3：检查脚本依赖
+
+在执行脚本前，检查 `node_modules` 是否存在：
+
+```bash
+检查 ${CLAUDE_PLUGIN_ROOT}/scripts/node_modules 目录是否存在
+```
+
+**如果不存在**，提示用户安装依赖并退出：
+
+```
+⚠️  脚本依赖未安装
+
+请先安装依赖：
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+
+安装完成后重新执行命令。
+```
+
+### 步骤 4：加载或创建状态文件
 
 读取 `state.json`，如不存在则创建默认结构（v2.0.0）。
 
@@ -297,9 +316,9 @@ state_file = intel_dir/state.json
 - 添加 `review.pending` 数组
 - 更新 `processed` 条目格式（添加 `intelligence_ids` 数组）
 
-### 步骤 4：预处理（格式转换与内容清洗）
+### 步骤 5：预处理（格式转换与内容清洗）
 
-#### 4.1 调用预处理脚本
+#### 5.1 调用预处理脚本
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
@@ -311,7 +330,7 @@ npx tsx preprocess/index.ts --source {source_dir}
 - 转换文件：`{source_dir}/converted/YYYY/MM/`（含 frontmatter 元数据）
 - 错误日志：`{source_dir}/inbox/{filename}.error.md`（转换失败时）
 
-#### 4.2 预处理逻辑
+#### 5.2 预处理逻辑
 
 脚本会自动：
 1. 优先扫描 `inbox/` 目录
@@ -322,7 +341,7 @@ npx tsx preprocess/index.ts --source {source_dir}
 6. **转换成功**：生成 Markdown 文件到 `converted/YYYY/MM/`，frontmatter 包含元数据
 7. **转换失败**：源文件保留在 `inbox/`，生成 `.error.md` 错误日志
 
-#### 4.3 转换失败处理
+#### 5.3 转换失败处理
 
 当文件转换失败时：
 
@@ -357,11 +376,11 @@ inbox/
 
 **用户操作**：修复问题后删除 `.error.md` 文件，重新运行命令即可重新处理。
 
-### 步骤 5：扫描转换后的文件
+### 步骤 6：扫描转换后的文件
 
 从 `converted/YYYY/MM/` 目录扫描 Markdown 文件。
 
-#### 5.1 扫描策略选择
+#### 6.1 扫描策略选择
 
 根据转换文件数量选择扫描策略：
 
@@ -370,7 +389,7 @@ inbox/
 | **< 50 个** | Glob 工具 | 简单直接，无需额外调用 |
 | **>= 50 个** | 脚本处理 | 批量处理性能更优 |
 
-#### 5.2 策略 A：Glob 工具（< 50 个文件）
+#### 6.2 策略 A：Glob 工具（< 50 个文件）
 
 直接使用 Glob 工具扫描：
 
@@ -380,7 +399,7 @@ glob pattern: {source_dir}/converted/**/*.md
 
 然后逐个读取文件、解析 frontmatter 提取 `sourceHash`、计算内容 Hash、对比 state。
 
-#### 5.3 策略 B：脚本处理（>= 50 个文件）
+#### 6.3 策略 B：脚本处理（>= 50 个文件）
 
 调用扫描队列脚本，一次性完成扫描、frontmatter 解析、Hash 计算、状态对比：
 
@@ -426,7 +445,7 @@ npx tsx preprocess/scan-queue.ts \
 | `queue` | 处理队列详情（含 source_hash、archived_source） |
 | `recommendation` | 推荐策略（`glob` 或 `script`） |
 
-#### 5.4 判断逻辑
+#### 6.4 判断逻辑
 
 ```
 if (needs_processing + pending_review >= 50) {
@@ -436,9 +455,9 @@ if (needs_processing + pending_review >= 50) {
 }
 ```
 
-### 步骤 6：构建处理队列
+### 步骤 7：构建处理队列
 
-#### 6.1 解析 frontmatter 提取元数据
+#### 7.1 解析 frontmatter 提取元数据
 
 从转换文件的 frontmatter 中提取：
 
@@ -447,11 +466,11 @@ if (needs_processing + pending_review >= 50) {
 | `sourceHash` | frontmatter | 去重检测、写入情报卡片 |
 | `archivedSource` | frontmatter | 传递给 Agent、写入情报卡片 |
 
-#### 6.2 计算文件内容 Hash
+#### 7.2 计算文件内容 Hash
 
 使用 MD5 算法计算转换后文件的内容哈希（用于变更检测）。
 
-#### 6.3 变更检测逻辑
+#### 7.3 变更检测逻辑
 
 | 条件 | 操作 |
 |------|------|
@@ -460,11 +479,11 @@ if (needs_processing + pending_review >= 50) {
 | 新文件（无记录） | 加入队列 |
 | review_status = pending | 跳过（已在审核队列） |
 
-#### 6.4 去重检测
+#### 7.4 去重检测
 
 扫描 `state.json` 中已记录的 `source_hash`，跳过已处理的相同源文件。
 
-#### 6.5 处理队列输出
+#### 7.5 处理队列输出
 
 ```
 【处理队列】
@@ -474,9 +493,9 @@ if (needs_processing + pending_review >= 50) {
 • 转换失败: 1 个（见 inbox/*.error.md）
 ```
 
-### 步骤 7：处理文件
+### 步骤 8：处理文件
 
-#### 7.1 选择执行策略
+#### 8.1 选择执行策略
 
 根据待处理文件数量：
 
@@ -485,7 +504,7 @@ if (needs_processing + pending_review >= 50) {
 | ≤ 3 个 | 顺序执行 | 开销小，无需并行 |
 | > 3 个 | 并行执行 | 在单个消息中发起多个 Agent 调用 |
 
-#### 7.2 调用情报分析 Agent
+#### 8.2 调用情报分析 Agent
 
 使用 Agent 工具，subagent_type="intelligence-analyzer"
 
@@ -509,7 +528,7 @@ if (needs_processing + pending_review >= 50) {
 - 写入情报卡片文件（frontmatter 包含 sourceHash、archivedSource）
 - 返回轻量级 JSON 结果（不更新 state.json）
 
-#### 7.3 收集结果并分类
+#### 8.3 收集结果并分类
 
 等待所有 Agent 完成，收集返回结果并分类：
 
@@ -530,14 +549,14 @@ if (needs_processing + pending_review >= 50) {
 - 分配临时 `pending_id`（格式：`pending-{domain}-{timestamp}`）
 - `review_status = "pending"`
 
-#### 7.4 统一更新状态文件
+#### 8.4 统一更新状态文件
 
 所有 Agent 完成后，一次性更新 `state.json`：
 - 更新 `processed` 记录
 - 更新 `review.pending` 队列
 - 更新 `stats` 统计
 
-### 步骤 8：统一输出统计
+### 步骤 9：统一输出统计
 
 **输出格式**：
 ```
@@ -681,6 +700,25 @@ if (needs_processing + pending_review >= 50) {
 ## 报告生成流程
 
 当 `--report` 参数存在时，执行以下流程：
+
+### 步骤 R0：检查脚本依赖
+
+在执行脚本前，检查 `node_modules` 是否存在：
+
+```bash
+检查 ${CLAUDE_PLUGIN_ROOT}/scripts/node_modules 目录是否存在
+```
+
+**如果不存在**，提示用户安装依赖并退出：
+
+```
+⚠️  脚本依赖未安装
+
+请先安装依赖：
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+
+安装完成后重新执行命令。
+```
 
 ### 步骤 R1：调用扫描脚本
 

@@ -6,6 +6,17 @@
 
 ---
 
+## [1.0.12] - 2026-03-15
+
+### 插件更新
+
+#### market-radar v1.2.6
+
+**变更**
+- 脚本依赖检查：在情报提取和报告生成流程中添加依赖检查步骤，改善首次使用体验
+
+---
+
 ## [1.0.11] - 2026-03-15
 
 ### 插件更新
@@ -185,6 +196,7 @@
 
 ---
 
+[1.0.12]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.11...v1.0.12
 [1.0.11]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.10...v1.0.11
 [1.0.10]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.9...v1.0.10
 [1.0.9]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.8...v1.0.9

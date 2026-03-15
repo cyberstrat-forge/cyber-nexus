@@ -2,6 +2,15 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.6] - 2026-03-15
+
+### 变更
+
+- **脚本依赖检查**
+  - 在情报提取和报告生成流程中添加依赖检查步骤
+  - 如果 `node_modules` 不存在，提示用户安装依赖
+  - 改善首次使用体验
+
 ## [1.2.5] - 2026-03-15
 
 ### 变更
@@ -285,6 +294,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.2.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.2...v1.2.3
