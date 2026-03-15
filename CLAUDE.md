@@ -558,9 +558,7 @@ git tag v1.1.0
 git push origin v1.1.0
 ```
 
----
-
-## GitHub 操作
+### GitHub 操作
 
 项目支持两种 GitHub 操作方式：
 
@@ -572,77 +570,6 @@ git push origin v1.1.0
 - Issue 操作
 - 仓库和分支管理
 - 代码审查
-
-示例：
-```bash
-# 创建 PR（优先使用 MCP）
-mcp__plugin_github_github__create_pull_request
-
-# 备选：使用 gh CLI
-gh pr create --title "..." --body "..."
-```
-
----
-
-## 常用命令
-
-### 开发命令
-
-```bash
-# 安装根目录依赖（husky + commitlint）
-npm install
-
-# 安装插件依赖
-cd plugins/market-radar/scripts && npm install
-
-# 运行 Schema 校验
-npx tsx validate-json.ts <schema-name> <json-file>
-
-# TypeScript 类型检查
-npx tsc --noEmit
-```
-
-### Git 命令
-
-```bash
-# 查看状态
-git status
-
-# 创建分支
-git checkout -b feature/new-feature
-
-# 提交变更
-git add <files>
-git commit -m "feat(market-radar): add new feature"
-
-# 推送分支
-git push -u origin feature/new-feature
-
-# 创建 PR
-gh pr create --title "feat(market-radar): add new feature" --body "..."
-```
-
----
-
-## 注意事项
-
-### 安全
-
-- 不要在代码中硬编码敏感信息
-- 不要提交 `.env` 文件或凭证
-- API 密钥应通过环境变量或安全配置管理
-
-### 性能
-
-- 处理大文件时使用流式读取
-- 避免在循环中执行 I/O 操作
-- 状态文件更新后立即写入
-
-### 可维护性
-
-- 保持文档与代码同步更新
-- 变更后更新 CHANGELOG.md
-- 复杂逻辑添加必要注释
 
 ---
 
