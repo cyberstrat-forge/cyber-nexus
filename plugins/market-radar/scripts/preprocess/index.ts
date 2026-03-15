@@ -1,11 +1,15 @@
 #!/usr/bin/env npx tsx
 /**
- * Preprocessing entry point (v2.0)
+ * Preprocessing entry point (v2.1)
  *
  * Supports inbox/archive/converted directory structure:
  * - inbox/ - User drops new files here
- * - archive/YYYY/MM/ - Archived source files with .meta metadata
- * - converted/YYYY/MM/ - Converted markdown files
+ * - archive/YYYY/MM/ - Archived source files
+ * - converted/YYYY/MM/ - Converted markdown files with frontmatter metadata
+ *
+ * v2.1 Changes:
+ * - Metadata is written to converted file frontmatter (not separate .meta file)
+ * - Failed conversions generate .error.md in inbox/
  *
  * Usage:
  *   npx tsx index.ts --source <dir> [--force]
@@ -27,7 +31,104 @@ import { calculateStats } from './cleaners/types';
 import { calculateHash } from '../utils/hash';
 
 // Current preprocessor version - increment when cleaning rules change
-const PREPROCESSOR_VERSION = '2.0.0';
+const PREPROCESSOR_VERSION = '2.1.0';
+
+/**
+ * Generate frontmatter for converted file
+ */
+function generateFrontmatter(
+  sourceHash: string,
+  originalPath: string,
+  archivedAt: string,
+  archivedSource: string
+): string {
+  return `---
+sourceHash: "${sourceHash}"
+originalPath: "${originalPath}"
+archivedAt: "${archivedAt}"
+archivedSource: "${archivedSource}"
+---
+
+`;
+}
+
+/**
+ * Generate error log markdown for failed conversions
+ */
+function generateErrorLog(
+  filename: string,
+  errorCode: string,
+  errorMessage: string,
+  timestamp: string
+): string {
+  const suggestionMap: Record<string, string[]> = {
+    CONVERSION_FAILED: [
+      '检查文件是否损坏',
+      '尝试用其他工具打开文件',
+      '如为扫描版 PDF，请使用 OCR 工具处理',
+    ],
+    DEPENDENCY_MISSING: [
+      '安装缺失的依赖工具',
+      'macOS: brew install pandoc poppler',
+      'Python: pip install PyMuPDF',
+    ],
+    READ_FAILED: [
+      '检查文件是否存在',
+      '检查文件权限',
+      '确认文件未被其他程序占用',
+    ],
+    CLEAN_FAILED: [
+      '检查文件内容格式',
+      '尝试手动查看文件内容',
+    ],
+  };
+
+  const suggestions = suggestionMap[errorCode] || ['检查文件状态'];
+
+  return `# 文件转换失败
+
+**文件名**: ${filename}
+**处理时间**: ${timestamp}
+**错误码**: ${errorCode}
+
+## 错误原因
+
+${errorMessage}
+
+## 建议操作
+
+${suggestions.map(s => `- [ ] ${s}`).join('\n')}
+
+---
+
+修复后删除此文件，重新运行 \`/intel-distill\`
+`;
+}
+
+/**
+ * Write error log to inbox directory
+ */
+function writeErrorLog(
+  sourcePath: string,
+  sourceDir: string,
+  errorCode: string,
+  errorMessage: string
+): string {
+  const inboxDir = path.join(sourceDir, 'inbox');
+  const filename = path.basename(sourcePath);
+  const errorLogPath = path.join(inboxDir, `${filename}.error.md`);
+
+  // Ensure inbox directory exists
+  if (!fs.existsSync(inboxDir)) {
+    fs.mkdirSync(inboxDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const content = generateErrorLog(filename, errorCode, errorMessage, timestamp);
+
+  fs.writeFileSync(errorLogPath, content, 'utf-8');
+  return errorLogPath;
+}
 
 /**
  * Get MIME type from file extension
@@ -62,66 +163,72 @@ function getConvertedDir(sourceDir: string, dateRef: Date): string {
 }
 
 /**
- * Get archive metadata file path
+ * Get archive path for a source file
  */
-function getArchiveMetaPath(archivePath: string): string {
-  return `${archivePath}.meta`;
+function getArchivePath(sourcePath: string, archiveDir: string): string {
+  const filename = path.basename(sourcePath);
+  return path.join(archiveDir, filename);
 }
 
 /**
- * Load existing archive metadata
+ * Parse frontmatter from markdown content
  */
-function loadArchiveMeta(metaPath: string): ArchiveMeta | null {
-  if (!fs.existsSync(metaPath)) {
+function parseFrontmatter(content: string): Record<string, string> | null {
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) {
     return null;
   }
-  try {
-    return JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-  } catch (error) {
-    console.warn(`Failed to parse meta file: ${metaPath}`, error);
-    return null;
+
+  const frontmatter: Record<string, string> = {};
+  const lines = frontmatterMatch[1].split('\n');
+
+  for (const line of lines) {
+    const match = line.match(/^(\w+):\s*"(.*)"$/);
+    if (match) {
+      frontmatter[match[1]] = match[2];
+    }
   }
+
+  return frontmatter;
 }
 
 /**
- * Save archive metadata
- */
-function saveArchiveMeta(metaPath: string, meta: ArchiveMeta): void {
-  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
-}
-
-/**
- * Collect known source hashes from all archive metadata files
+ * Collect known source hashes from converted files' frontmatter
  */
 function collectKnownHashes(sourceDir: string): Map<string, string> {
-  const knownHashes = new Map<string, string>(); // hash -> archive path
-  const archiveBase = path.join(sourceDir, 'archive');
+  const knownHashes = new Map<string, string>(); // hash -> converted path
+  const convertedBase = path.join(sourceDir, 'converted');
 
-  if (!fs.existsSync(archiveBase)) {
+  if (!fs.existsSync(convertedBase)) {
     return knownHashes;
   }
 
-  // Walk through archive/YYYY/MM/ directories
-  const years = fs.readdirSync(archiveBase, { withFileTypes: true })
+  // Walk through converted/YYYY/MM/ directories
+  const years = fs.readdirSync(convertedBase, { withFileTypes: true })
     .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
     .map(e => e.name);
 
   for (const year of years) {
-    const months = fs.readdirSync(path.join(archiveBase, year), { withFileTypes: true })
+    const months = fs.readdirSync(path.join(convertedBase, year), { withFileTypes: true })
       .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
       .map(e => e.name);
 
     for (const month of months) {
-      const monthDir = path.join(archiveBase, year, month);
+      const monthDir = path.join(convertedBase, year, month);
       const files = fs.readdirSync(monthDir, { withFileTypes: true })
-        .filter(e => e.isFile() && e.name.endsWith('.meta'))
+        .filter(e => e.isFile() && e.name.endsWith('.md'))
         .map(e => e.name);
 
-      for (const metaFile of files) {
-        const metaPath = path.join(monthDir, metaFile);
-        const meta = loadArchiveMeta(metaPath);
-        if (meta && meta.sourceHash) {
-          knownHashes.set(meta.sourceHash, metaPath);
+      for (const mdFile of files) {
+        const mdPath = path.join(monthDir, mdFile);
+        try {
+          const content = fs.readFileSync(mdPath, 'utf-8');
+          const frontmatter = parseFrontmatter(content);
+          if (frontmatter && frontmatter.sourceHash) {
+            knownHashes.set(frontmatter.sourceHash, mdPath);
+          }
+        } catch (error) {
+          // Skip files that can't be read
         }
       }
     }
@@ -180,77 +287,6 @@ function scanDirectory(sourceDir: string): string[] {
 }
 
 /**
- * Get archive paths for a source file
- */
-function getArchivePaths(
-  sourcePath: string,
-  archiveDir: string
-): { archivePath: string; metaPath: string } {
-  const filename = path.basename(sourcePath);
-  const archivePath = path.join(archiveDir, filename);
-  const metaPath = getArchiveMetaPath(archivePath);
-  return { archivePath, metaPath };
-}
-
-/**
- * Check if file is duplicate based on existing archive metadata
- */
-function checkDuplicate(
-  metaPath: string,
-  sourceHash: string
-): boolean {
-  const existingMeta = loadArchiveMeta(metaPath);
-  return existingMeta !== null && existingMeta.sourceHash === sourceHash;
-}
-
-/**
- * Move source file to archive (only called after successful conversion)
- */
-function archiveSourceFile(
-  sourcePath: string,
-  archiveDir: string,
-  archivePath: string,
-  metaPath: string,
-  sourceHash: string,
-  convertedPath: string,
-  sourceDir: string
-): void {
-  // Ensure archive directory exists
-  if (!fs.existsSync(archiveDir)) {
-    fs.mkdirSync(archiveDir, { recursive: true });
-  }
-
-  // Move file to archive (not copy)
-  if (archivePath !== sourcePath) {
-    // Check if source file still exists (might have been moved already)
-    if (fs.existsSync(sourcePath)) {
-      // Use rename to move the file
-      fs.renameSync(sourcePath, archivePath);
-    }
-  }
-
-  // Save metadata
-  const now = new Date().toISOString();
-  const relativeSourcePath = path.relative(sourceDir, sourcePath);
-  const relativeConvertedPath = path.relative(sourceDir, convertedPath);
-
-  const meta: ArchiveMeta = {
-    sourceHash,
-    originalPath: relativeSourcePath,
-    archivedAt: now,
-    fileSize: fs.statSync(archivePath).size,
-    mimeType: getMimeType(sourcePath),
-    conversionInfo: {
-      convertedPath: relativeConvertedPath,
-      convertedAt: now,
-      conversionSuccess: true,
-    },
-  };
-
-  saveArchiveMeta(metaPath, meta);
-}
-
-/**
  * Process a single file
  */
 async function processFile(
@@ -265,19 +301,11 @@ async function processFile(
   // Calculate source hash for deduplication
   const sourceHash = calculateHash(sourcePath);
 
-  // Get archive paths
-  const { archivePath, metaPath } = getArchivePaths(sourcePath, archiveDir);
+  // Get archive path
+  const archivePath = getArchivePath(sourcePath, archiveDir);
 
-  // Check for duplicate based on existing archive
-  if (checkDuplicate(metaPath, sourceHash)) {
-    return {
-      success: true,
-      isDuplicate: true,
-      archivedPath: archivePath,
-    };
-  }
-
-  // Check for duplicate in known hashes (from current batch)
+  // Check for duplicate based on existing converted files with frontmatter
+  // (knownHashes now collects from converted files, not .meta files)
   if (knownHashes.has(sourceHash)) {
     return {
       success: true,
@@ -300,9 +328,13 @@ async function processFile(
       code = 'READ_FAILED';
     }
 
+    // Write error log to inbox
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, code, message);
+
     return {
       success: false,
       error: { code, message },
+      errorLogPath,
     };
   }
 
@@ -312,17 +344,38 @@ async function processFile(
     cleanResult = await cleanMarkdown(rawContent, sourcePath);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
+    // Write error log to inbox
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'CLEAN_FAILED', message);
+
     return {
       success: false,
       error: { code: 'CLEAN_FAILED', message },
+      errorLogPath,
     };
   }
 
   const cleanedContent = cleanResult.content;
 
-  // Phase 3: Write converted file
+  // Phase 3: Archive source file
+  const now = new Date().toISOString();
+  const relativeSourcePath = path.relative(sourceDir, sourcePath);
+  const relativeArchivePath = path.relative(sourceDir, archivePath);
+
+  // Ensure archive directory exists
+  if (!fs.existsSync(archiveDir)) {
+    fs.mkdirSync(archiveDir, { recursive: true });
+  }
+
+  // Move file to archive (only after successful conversion)
+  if (archivePath !== sourcePath && fs.existsSync(sourcePath)) {
+    fs.renameSync(sourcePath, archivePath);
+  }
+
+  // Phase 4: Write converted file with frontmatter
   const filename = path.basename(sourcePath, path.extname(sourcePath));
   const convertedPath = path.join(convertedDir, `${filename}.md`);
+  const relativeConvertedPath = path.relative(sourceDir, convertedPath);
 
   try {
     // Ensure converted directory exists
@@ -330,26 +383,29 @@ async function processFile(
       fs.mkdirSync(convertedDir, { recursive: true });
     }
 
-    // Write converted file
-    fs.writeFileSync(convertedPath, cleanedContent, 'utf-8');
+    // Generate frontmatter
+    const frontmatter = generateFrontmatter(
+      sourceHash,
+      relativeSourcePath,
+      now,
+      relativeArchivePath
+    );
+
+    // Write converted file with frontmatter
+    const fullContent = frontmatter + cleanedContent;
+    fs.writeFileSync(convertedPath, fullContent, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
+    // Write error log to inbox
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to write converted file: ${message}`);
+
     return {
       success: false,
       error: { code: 'ARCHIVE_FAILED', message: `Failed to write converted file: ${message}` },
+      errorLogPath,
     };
   }
-
-  // Phase 4: Archive source file (only after successful conversion)
-  archiveSourceFile(
-    sourcePath,
-    archiveDir,
-    archivePath,
-    metaPath,
-    sourceHash,
-    convertedPath,
-    sourceDir
-  );
 
   return {
     success: true,

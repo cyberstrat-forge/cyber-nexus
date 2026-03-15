@@ -34,10 +34,8 @@ skills:
 | `source` | 转换后的 Markdown 文件路径（位于 `converted/YYYY/MM/` 目录下） |
 | `output` | 输出目录路径 |
 | `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
-| `archived_source` | 归档源文件路径（`archive/YYYY/MM/{filename}`） |
-| `source_hash` | 源文件 MD5 哈希 |
 
-**注意**：源文件已由命令层预处理为统一的 Markdown 格式，无需处理格式转换和噪声清洗。
+**注意**：源文件已由命令层预处理为统一的 Markdown 格式，包含 frontmatter 元数据（sourceHash、archivedSource 等），无需处理格式转换和噪声清洗。
 
 ## 预加载知识
 
@@ -49,13 +47,36 @@ skills:
 
 ## 执行流程
 
-### 步骤 1：读取源文件
+### 步骤 1：读取源文件并解析 frontmatter
 
 源文件已由命令层预处理为干净的 Markdown 格式，直接使用 Read 工具读取。
 
 **输入文件路径**：`{source}`（位于 `converted/YYYY/MM/` 目录下）
 
-**文件格式**：统一的 Markdown，已清洗噪声 token
+**文件格式**：统一的 Markdown，已清洗噪声 token，包含 frontmatter 元数据
+
+**步骤 1.1：解析 frontmatter**
+
+从转换文件的 frontmatter 中提取元数据：
+
+| 字段 | 说明 | 用途 |
+|------|------|------|
+| `sourceHash` | 源文件 MD5 哈希 | 写入情报卡片 frontmatter，用于追溯和去重 |
+| `archivedSource` | 归档文件路径 | 写入情报卡片 frontmatter，用于追溯 |
+| `originalPath` | 源文件原始路径 | 记录来源 |
+
+**frontmatter 示例**：
+
+```yaml
+---
+sourceHash: "abc123def456..."
+originalPath: "inbox/report-2026.pdf"
+archivedAt: "2026-03-15T10:00:00Z"
+archivedSource: "archive/2026/03/report-2026.pdf"
+---
+
+# 文档内容...
+```
 
 ### 步骤 2：提取发布日期
 
@@ -194,9 +215,9 @@ skills:
 **持久化元数据（必需）**：
 ```yaml
 intelligence_id: "{domain}-{YYYYMMDD}-{seq}"
-source_hash: "{source_hash}"              # 从输入参数获取
-archived_source: "{archived_source}"      # 从输入参数获取
-converted_file: "{source}"                # 转换文件路径
+source_hash: "{sourceHash}"              # 从转换文件 frontmatter 获取
+archived_source: "{archivedSource}"      # 从转换文件 frontmatter 获取
+converted_file: "{source}"               # 转换文件路径
 ```
 
 ### 步骤 6：去重与冲突检测

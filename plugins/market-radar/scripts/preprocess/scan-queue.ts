@@ -39,6 +39,8 @@ export type QueueItemStatus =
 export interface QueueItem {
   file: string;           // Relative path from source_dir
   content_hash: string;   // MD5 hash of file content
+  source_hash?: string;   // MD5 hash of original source file (from frontmatter)
+  archived_source?: string; // Path to archived source file (from frontmatter)
   status: QueueItemStatus;
   intelligence_count?: number;  // For already_processed items
   intelligence_ids?: string[];  // For already_processed items
@@ -101,11 +103,26 @@ function loadState(statePath: string): StateFile | null {
 }
 
 /**
- * Calculate MD5 hash of file content
+ * Parse frontmatter from markdown content
+ * Returns key-value pairs from the frontmatter section
  */
-function calculateContentHash(filePath: string): string {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return createHash('md5').update(content).digest('hex');
+function parseFrontmatter(content: string): Record<string, string> | null {
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) {
+    return null;
+  }
+
+  const frontmatter: Record<string, string> = {};
+  const lines = frontmatterMatch[1].split('\n');
+
+  for (const line of lines) {
+    const match = line.match(/^(\w+):\s*"(.*)"$/);
+    if (match) {
+      frontmatter[match[1]] = match[2];
+    }
+  }
+
+  return frontmatter;
 }
 
 /**
@@ -206,14 +223,24 @@ function scanAndBuildQueue(
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
 
+    // Read file content
+    const content = fs.readFileSync(filePath, 'utf-8');
+
     // Calculate content hash
-    const contentHash = calculateContentHash(filePath);
+    const contentHash = createHash('md5').update(content).digest('hex');
+
+    // Parse frontmatter for metadata
+    const frontmatter = parseFrontmatter(content);
+    const sourceHash = frontmatter?.sourceHash;
+    const archivedSource = frontmatter?.archivedSource;
 
     // Check if in pending review
     if (pendingReviewSet.has(relativePath)) {
       queue.push({
         file: relativePath,
         content_hash: contentHash,
+        source_hash: sourceHash,
+        archived_source: archivedSource,
         status: 'pending_review',
       });
       pendingReview++;
@@ -228,6 +255,8 @@ function scanAndBuildQueue(
       queue.push({
         file: relativePath,
         content_hash: contentHash,
+        source_hash: sourceHash,
+        archived_source: archivedSource,
         status: 'needs_processing',
       });
       needsProcessing++;
@@ -236,6 +265,8 @@ function scanAndBuildQueue(
       queue.push({
         file: relativePath,
         content_hash: contentHash,
+        source_hash: sourceHash,
+        archived_source: archivedSource,
         status: 'already_processed',
         intelligence_count: processedInfo.intelligence_count,
         intelligence_ids: processedInfo.intelligence_ids,

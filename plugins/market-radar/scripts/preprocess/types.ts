@@ -34,12 +34,13 @@ export interface PreprocessStats {
 }
 
 /**
- * Result of preprocessing a single file
+ * Result of preprocessing a single file (v2.1)
  */
 export interface PreprocessResult {
   success: boolean;
   markdown?: string;         // Cleaned markdown content
   error?: PreprocessError;
+  errorLogPath?: string;     // Path to error log file in inbox (v2.1, for failed conversions)
   stats?: PreprocessStats;
   archivedPath?: string;     // Path to archived source file (v2.0)
   convertedPath?: string;    // Path to converted file (v2.0)
@@ -47,20 +48,15 @@ export interface PreprocessResult {
 }
 
 /**
- * Metadata for archived source files (v2.0)
- * Stored in {source_dir}/archive/YYYY/MM/{filename}.{ext}.meta
+ * Metadata for converted files (v2.1)
+ * Stored as frontmatter in converted markdown files (converted/YYYY/MM/{filename}.md)
+ * @deprecated This interface is kept for reference. Actual frontmatter uses a simpler structure.
  */
 export interface ArchiveMeta {
   sourceHash: string;        // MD5 hash of source file content (for deduplication)
   originalPath: string;      // Original path relative to source_dir (e.g., inbox/report.pdf)
   archivedAt: string;        // ISO 8601 timestamp when archived
-  fileSize: number;          // File size in bytes
-  mimeType: string;          // MIME type (e.g., application/pdf)
-  conversionInfo: {
-    convertedPath: string;   // Path to converted file (relative to source_dir)
-    convertedAt: string;     // ISO 8601 timestamp when converted
-    conversionSuccess: boolean;
-  };
+  archivedSource: string;    // Path to archived source file (relative to source_dir)
 }
 
 /**
