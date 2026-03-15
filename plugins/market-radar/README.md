@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.2.3)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.2.4)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
