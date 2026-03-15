@@ -6,6 +6,17 @@
 
 ---
 
+## [1.0.11] - 2026-03-15
+
+### 插件更新
+
+#### market-radar v1.2.5
+
+**变更**
+- Obsidian 链接格式支持：`archived_source` 和 `converted_file` 字段改用 `[[]]` 格式，支持在 Obsidian 中建立文件链接
+
+---
+
 ## [1.0.10] - 2026-03-15
 
 ### 插件更新
@@ -174,6 +185,9 @@
 
 ---
 
+[1.0.11]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.10...v1.0.11
+[1.0.10]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.9...v1.0.10
+[1.0.9]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.5...v1.0.6

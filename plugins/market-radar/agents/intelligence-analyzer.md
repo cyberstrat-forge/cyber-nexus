@@ -215,9 +215,9 @@ archivedSource: "archive/2026/03/report-2026.pdf"
 **持久化元数据（必需）**：
 ```yaml
 intelligence_id: "{domain}-{YYYYMMDD}-{seq}"
-source_hash: "{sourceHash}"              # 从转换文件 frontmatter 获取
-archived_source: "{archivedSource}"      # 从转换文件 frontmatter 获取
-converted_file: "{source}"               # 转换文件路径
+source_hash: "{sourceHash}"                      # 从转换文件 frontmatter 获取
+archived_source: "[[{archivedSource}]]"          # Obsidian 链接格式
+converted_file: "[[{source}]]"                   # Obsidian 链接格式
 ```
 
 ### 步骤 6：去重与冲突检测

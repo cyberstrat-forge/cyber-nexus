@@ -2,6 +2,14 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.2.5] - 2026-03-15
+
+### 变更
+
+- **Obsidian 链接格式支持**
+  - `archived_source` 和 `converted_file` 字段改用 `[[]]` 格式
+  - 支持在 Obsidian 中建立文件链接，便于追溯和管理
+
 ## [1.2.4] - 2026-03-15
 
 ### 变更
@@ -277,6 +285,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.2.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.1...v1.2.2

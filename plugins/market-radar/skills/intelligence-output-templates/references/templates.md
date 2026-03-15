@@ -10,8 +10,8 @@
 |------|------|------|
 | `intelligence_id` | string | 正式情报卡片 ID（格式：`{domain}-{YYYYMMDD}-{seq}`） |
 | `source_hash` | string | 源文件 MD5 哈希（用于去重） |
-| `archived_source` | string | 归档文件路径（`archive/YYYY/MM/{filename}`） |
-| `converted_file` | string | 转换文件路径（`converted/YYYY/MM/{filename}.md`） |
+| `archived_source` | string | 归档文件路径（Obsidian 链接格式：`[[archive/YYYY/MM/{filename}]]`） |
+| `converted_file` | string | 转换文件路径（Obsidian 链接格式：`[[converted/YYYY/MM/{filename}.md]]`） |
 | `source_file` | string | 原始源文件路径（保持兼容） |
 
 这些字段确保：
@@ -31,8 +31,8 @@ title: "情报标题"
 intelligence_id: "threat-YYYYMMDD-001"    # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Threat-Landscape
@@ -97,8 +97,8 @@ title: "情报标题"
 intelligence_id: "industry-YYYYMMDD-001"  # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Industry-Analysis
@@ -168,8 +168,8 @@ title: "情报标题"
 intelligence_id: "vendor-YYYYMMDD-001"    # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Vendor-Intelligence
@@ -235,8 +235,8 @@ title: "情报标题"
 intelligence_id: "emerging-YYYYMMDD-001"  # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Emerging-Tech
@@ -304,8 +304,8 @@ title: "情报标题"
 intelligence_id: "customer-YYYYMMDD-001"  # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Customer-Market
@@ -370,8 +370,8 @@ title: "情报标题"
 intelligence_id: "policy-YYYYMMDD-001"    # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Policy-Regulation
@@ -438,8 +438,8 @@ title: "情报标题"
 intelligence_id: "capital-YYYYMMDD-001"   # 正式情报卡片 ID
 source_file: "inbox/report.pdf"           # 原始源文件路径
 source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "archive/2026/03/report.pdf"  # 归档文件路径
-converted_file: "converted/2026/03/report.md"  # 转换文件路径
+archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
+converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
 intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Capital-Investment
