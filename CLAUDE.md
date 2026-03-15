@@ -184,6 +184,22 @@ feat(market-radar): 实现 thematic-analysis 命令
 
 **Tag 格式**：`v*.*.*`（如 `v1.0.5`）
 
+**发布触发条件**：
+
+以下变更需要更新版本号并执行发布流程：
+
+| 变更类型 | 版本更新 | 示例 |
+|----------|----------|------|
+| 新增功能 | MINOR | 新增命令、新增 Agent、新增 Skill |
+| 功能增强/优化 | PATCH | 现有功能改进、性能优化、体验提升 |
+| Bug 修复 | PATCH | 问题修复 |
+| 文档更新 | 无需发布 | README、CLAUDE.md 更新 |
+| 规范调整 | 无需发布 | 代码风格、流程优化 |
+
+**判断原则**：
+- 如果变更会影响**用户使用**或**输出结果**，则需要发布
+- 如果仅影响**开发流程**或**文档说明**，则无需发布
+
 **发布步骤**：
 
 1. 更新 `plugins/<name>/plugin.json` 版本号
@@ -275,11 +291,41 @@ Closes #xxx
 
 ---
 
+## 插件开发指南
+
+本项目为 Claude Code 插件集合，开发时**优先参考官方插件**：
+
+### 开发参考
+
+| 场景 | 使用插件 |
+|------|----------|
+| 创建新插件 | `/plugin-dev:create-plugin` |
+| 开发命令 | `/plugin-dev:command-development` |
+| 开发 Agent | `/plugin-dev:agent-development` |
+| 开发 Skill | `/plugin-dev:skill-development` 或 `/skill-creator:skill-creator` |
+| 配置 MCP | `/plugin-dev:mcp-integration` |
+| 添加 Hook | `/plugin-dev:hook-development` |
+
+### 关键规范速查
+
+> 以下为核心规范摘要，完整规范请使用上述官方插件。
+
+**Agent description 要求**：
+- 必须包含触发条件和 `<example>` 示例
+- 使用 `<commentary>` 解释触发逻辑
+
+**Skill 开发原则**：
+- SKILL.md 控制在 500 行以内
+- 使用 progressive disclosure：描述 → 正文 → references
+- description 是触发关键，要"pushy"但准确
+
+---
+
 ## 代码风格
 
-### Markdown 文件规范
+### Frontmatter 格式速查
 
-#### Command 文件（commands/）
+#### Command（commands/）
 
 ```markdown
 ---
@@ -288,24 +334,9 @@ description: Brief description
 argument-hint: "[--option <value>]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
-
-## 命令概述
-...
-
-## 执行流程
-...
 ```
 
-**Frontmatter 字段**：
-
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| `name` | 是 | 命令名称（kebab-case） |
-| `description` | 是 | 命令描述 |
-| `argument-hint` | 否 | 参数提示，显示在自动补全中 |
-| `allowed-tools` | 否 | 允许的工具列表，逗号分隔 |
-
-#### Agent 文件（agents/）
+#### Agent（agents/）
 
 ```markdown
 ---
@@ -325,47 +356,21 @@ color: cyan
 tools: Read, Grep, Glob, Write, Bash
 skills:
   - skill-name-1
-  - skill-name-2
 ---
-
-## 任务使命
-...
-
-## 执行流程
-...
 ```
 
-**Frontmatter 字段**：
-
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| `name` | 是 | Agent 名称（kebab-case） |
-| `description` | 是 | 描述，包含触发条件和示例 |
-| `model` | 否 | 模型：`inherit`（默认）、`sonnet`、`opus`、`haiku` |
-| `color` | 否 | UI 显示颜色：`cyan`、`green`、`magenta` 等 |
-| `tools` | 否 | 允许的工具列表，逗号分隔 |
-| `skills` | 否 | 预加载的 skill 名称列表 |
-
-#### Skill 文件（skills/）
+#### Skill（skills/）
 
 ```markdown
 ---
 name: skill-name
 description: What this skill does and when to use it
 ---
-
-## 概述
-...
 ```
 
-**Frontmatter 字段**：
-
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| `name` | 是 | Skill 名称（kebab-case，小写字母和连字符） |
-| `description` | 是 | 描述，用于触发匹配 |
-
-**注意**：`version` 字段已弃用，版本由 `plugin.json` 统一管理。
+> **注意**：`version` 字段已弃用，版本由 `plugin.json` 统一管理。
+>
+> 完整 frontmatter 规范请使用 `/plugin-dev:command-development`、`/plugin-dev:agent-development`、`/plugin-dev:skill-development`。
 
 ### TypeScript 代码规范
 
