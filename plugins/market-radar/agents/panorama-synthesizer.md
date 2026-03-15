@@ -23,11 +23,7 @@ description: |
 
 model: inherit
 color: magenta
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
+tools: Read, Grep, Glob, Write
 skills:
   - thematic-templates
 ---
