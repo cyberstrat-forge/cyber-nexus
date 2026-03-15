@@ -306,6 +306,28 @@ Closes #xxx
 | 配置 MCP | `/plugin-dev:mcp-integration` |
 | 添加 Hook | `/plugin-dev:hook-development` |
 
+### 目录结构
+
+```
+plugin-name/
+├── .claude-plugin/
+│   └── plugin.json       # 必需：插件元数据
+├── commands/             # 命令定义
+│   ├── <command>.md
+│   └── references/       # 命令参考文档
+├── agents/               # Agent 定义
+│   ├── <agent>.md
+│   └── references/       # Agent 参考文档
+├── skills/               # Skill 定义
+│   └── <skill-name>/
+│       ├── SKILL.md
+│       └── references/   # 参考文档（可选）
+├── schemas/              # JSON Schema
+└── scripts/              # 工具脚本
+```
+
+**重要**：`commands/`、`agents/`、`skills/` 目录必须放在插件根目录，而非 `.claude-plugin/` 内部。
+
 ### 关键规范速查
 
 > 以下为核心规范摘要，完整规范请使用上述官方插件。
@@ -315,9 +337,28 @@ Closes #xxx
 - 使用 `<commentary>` 解释触发逻辑
 
 **Skill 开发原则**：
+- 单一职责：每个 Skill 专注一个知识领域
+- 可组合：多个 Skill 可组合使用
+- 自描述：内容清晰，无需额外解释
 - SKILL.md 控制在 500 行以内
 - 使用 progressive disclosure：描述 → 正文 → references
 - description 是触发关键，要"pushy"但准确
+
+**plugin.json 格式**：
+
+```json
+{
+  "name": "plugin-name",
+  "version": "1.0.0",
+  "description": "Brief description",
+  "author": {
+    "name": "author-name",
+    "email": "email@example.com"
+  },
+  "keywords": ["keyword1", "keyword2"],
+  "license": "MIT"
+}
+```
 
 ---
 
@@ -414,55 +455,6 @@ interface ValidationResult {
 - 文件位置：`schemas/` 目录
 - 文件命名：`<name>.schema.json`
 - Schema 版本：Draft 7 或更高
-
----
-
-## 插件开发规范
-
-### 目录结构
-
-```
-plugin-name/
-├── .claude-plugin/
-│   └── plugin.json       # 必需：插件元数据
-├── commands/             # 命令定义
-│   ├── <command>.md
-│   └── references/       # 命令参考文档
-├── agents/               # Agent 定义
-│   ├── <agent>.md
-│   └── references/       # Agent 参考文档
-├── skills/               # Skill 定义
-│   └── <skill-name>/
-│       ├── SKILL.md
-│       └── references/   # 参考文档（可选）
-├── schemas/              # JSON Schema
-└── scripts/              # 工具脚本
-```
-
-**重要**：`commands/`、`agents/`、`skills/` 目录必须放在插件根目录，而非 `.claude-plugin/` 内部。
-
-### plugin.json 格式
-
-```json
-{
-  "name": "plugin-name",
-  "version": "1.0.0",
-  "description": "Brief description",
-  "author": {
-    "name": "author-name",
-    "email": "email@example.com"
-  },
-  "keywords": ["keyword1", "keyword2"],
-  "license": "MIT"
-}
-```
-
-### Skill 开发原则
-
-1. **单一职责**：每个 Skill 专注一个知识领域
-2. **可组合**：多个 Skill 可组合使用
-3. **自描述**：内容清晰，无需额外解释
-4. **可维护**：避免重复，统一更新
 
 ---
 
