@@ -1,6 +1,6 @@
 # Cyber Nexus
 
-[![Version](https://img.shields.io/badge/version-1.0.9-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.9)
+[![Version](https://img.shields.io/badge/version-1.0.10-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.0.10)
 [![CI](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberstrat-forge/cyber-nexus/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
