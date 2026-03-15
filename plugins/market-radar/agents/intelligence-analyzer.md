@@ -354,7 +354,7 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 - [ ] 每条情报至少满足一个战略标准
 - [ ] 每条情报满足原子化要求（单一主题、独立完整）
 - [ ] 领域分类适当
-- [ ] 地域范围（geo_scope）已正确判断
+- [ ] 地域范围（geo_scope）已填写 — **必填字段，不可省略，无法判断时使用 unknown**
 - [ ] 业务模式标签已提取（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
 - [ ] 每张卡片有独立的 intelligence_id

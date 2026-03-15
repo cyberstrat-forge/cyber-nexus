@@ -22,9 +22,15 @@
   - `output-templates/` → `intelligence-output-templates/`
   - 更新所有相关文件中的引用路径
 
+- **geo_scope 字段必填强化**
+  - 在 output-templates 模板中标注 geo_scope 为必填字段
+  - 在 intelligence-analyzer 最终检查清单中强调不可省略
+  - 无法判断时必须使用 `unknown` 值
+
 ### 相关 Issue
 
 - [#29](https://github.com/cyberstrat-forge/cyber-nexus/issues/29) P0 Agent 工具权限配置问题
+- [#29](https://github.com/cyberstrat-forge/cyber-nexus/issues/29) P1 geo_scope 字段缺失率高
 
 ## [1.2.0] - 2026-03-13
 

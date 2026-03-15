@@ -37,7 +37,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Threat-Landscape
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 security_relevance: high
 threat_type:                    # 勒索软件/APT/供应链攻击等
 threat_actor:                   # 威胁组织名称
@@ -102,7 +102,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Industry-Analysis
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 business_model_tags: []           # 业务模式标签（可选）
 security_relevance: medium
 market_scope:                   # 全球/中国/区域
@@ -172,7 +172,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Vendor-Intelligence
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 security_relevance: medium
 vendor_name:
 vendor_type:                    # 创业公司/上市企业/大厂安全部门
@@ -238,7 +238,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Emerging-Tech
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 security_relevance: high
 tech_name:                      # 技术名称
 maturity:                       # 概念/早期/成长/成熟
@@ -306,7 +306,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Customer-Market
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 security_relevance: medium
 customer_segment:               # 客户细分
 region:                         # 地区
@@ -371,7 +371,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Policy-Regulation
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 security_relevance: high
 policy_name:                    # 政策名称
 issuing_body:                   # 发布机构
@@ -438,7 +438,7 @@ intelligence_date: YYYY-MM-DD
 created_date: YYYY-MM-DD
 primary_domain: Capital-Investment
 secondary_domains: []
-geo_scope: unknown                # global/china/china-primary/overseas/overseas-primary/unknown
+geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
 security_relevance: medium
 event_type:                    # 融资/并购/IPO
 company:                       # 涉及公司
