@@ -3,6 +3,7 @@
  *
  * Handles file conversion and content cleaning for intel-distill pipeline
  *
+ * v2.1: Metadata stored in converted file frontmatter (not separate .meta files)
  * v2.0: Supports inbox/archive/converted directory structure
  */
 
@@ -62,7 +63,8 @@ export interface ArchiveMeta {
 /**
  * Legacy metadata for tracking processed files (v1.0 compatibility)
  * Stored in {source_dir}/converted/.meta/{filename}.json
- * @deprecated Use ArchiveMeta instead
+ * @deprecated Legacy format. Metadata is now stored in converted file frontmatter.
+ *             See ArchiveMeta for the v2.1 frontmatter structure (also deprecated, for reference only).
  */
 export interface PreprocessMeta {
   sourcePath: string;        // Relative path to source file

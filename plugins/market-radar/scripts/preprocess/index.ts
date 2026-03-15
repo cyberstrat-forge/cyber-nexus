@@ -19,7 +19,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   PreprocessResult,
-  ArchiveMeta,
   PreprocessOptions,
   BatchResult,
   SupportedFormat,
@@ -29,6 +28,7 @@ import { convertToMarkdown, isSupportedFormat, isPandocAvailable, getAvailablePd
 import { cleanMarkdown } from './clean';
 import { calculateStats } from './cleaners/types';
 import { calculateHash } from '../utils/hash';
+import { parseFrontmatter } from '../utils/frontmatter';
 
 // Current preprocessor version - increment when cleaning rules change
 const PREPROCESSOR_VERSION = '2.1.0';
@@ -185,28 +185,6 @@ function getArchivePath(sourcePath: string, archiveDir: string): string {
 }
 
 /**
- * Parse frontmatter from markdown content
- */
-function parseFrontmatter(content: string): Record<string, string> | null {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!frontmatterMatch) {
-    return null;
-  }
-
-  const frontmatter: Record<string, string> = {};
-  const lines = frontmatterMatch[1].split('\n');
-
-  for (const line of lines) {
-    const match = line.match(/^(\w+):\s*"(.*)"$/);
-    if (match) {
-      frontmatter[match[1]] = match[2];
-    }
-  }
-
-  return frontmatter;
-}
-
-/**
  * Collect known source hashes from converted files' frontmatter
  */
 function collectKnownHashes(sourceDir: string): Map<string, string> {
@@ -218,20 +196,41 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
   }
 
   // Walk through converted/YYYY/MM/ directories
-  const years = fs.readdirSync(convertedBase, { withFileTypes: true })
-    .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
-    .map(e => e.name);
+  let years: string[];
+  try {
+    years = fs.readdirSync(convertedBase, { withFileTypes: true })
+      .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
+      .map(e => e.name);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot read converted directory ${convertedBase}: ${errMsg}`);
+    return knownHashes;
+  }
 
   for (const year of years) {
-    const months = fs.readdirSync(path.join(convertedBase, year), { withFileTypes: true })
-      .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
-      .map(e => e.name);
+    let months: string[];
+    try {
+      months = fs.readdirSync(path.join(convertedBase, year), { withFileTypes: true })
+        .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
+        .map(e => e.name);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read year directory ${year}: ${errMsg}`);
+      continue;
+    }
 
     for (const month of months) {
       const monthDir = path.join(convertedBase, year, month);
-      const files = fs.readdirSync(monthDir, { withFileTypes: true })
-        .filter(e => e.isFile() && e.name.endsWith('.md'))
-        .map(e => e.name);
+      let files: string[];
+      try {
+        files = fs.readdirSync(monthDir, { withFileTypes: true })
+          .filter(e => e.isFile() && e.name.endsWith('.md'))
+          .map(e => e.name);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Cannot read month directory ${monthDir}: ${errMsg}`);
+        continue;
+      }
 
       for (const mdFile of files) {
         const mdPath = path.join(monthDir, mdFile);
@@ -266,7 +265,14 @@ function scanDirectory(sourceDir: string): string[] {
       return;
     }
 
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read directory ${dir}: ${errMsg}`);
+      return;
+    }
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
@@ -287,12 +293,17 @@ function scanDirectory(sourceDir: string): string[] {
   // Priority 1: Scan inbox/ directory
   const inboxDir = path.join(sourceDir, 'inbox');
   if (fs.existsSync(inboxDir)) {
-    const inboxEntries = fs.readdirSync(inboxDir, { withFileTypes: true });
-    for (const entry of inboxEntries) {
-      const fullPath = path.join(inboxDir, entry.name);
-      if (entry.isFile() && isSupportedFormat(fullPath)) {
-        files.push(fullPath);
+    try {
+      const inboxEntries = fs.readdirSync(inboxDir, { withFileTypes: true });
+      for (const entry of inboxEntries) {
+        const fullPath = path.join(inboxDir, entry.name);
+        if (entry.isFile() && isSupportedFormat(fullPath)) {
+          files.push(fullPath);
+        }
       }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read inbox directory ${inboxDir}: ${errMsg}`);
     }
   }
 
@@ -373,61 +384,12 @@ async function processFile(
 
   const cleanedContent = cleanResult.content;
 
-  // Phase 3: Archive source file
+  // Phase 3: Write converted file with frontmatter
+  // (Write converted file BEFORE archiving source to ensure atomicity)
   const now = new Date().toISOString();
   const relativeSourcePath = path.relative(sourceDir, sourcePath);
-  const relativeArchivePath = path.relative(sourceDir, archivePath);
-
-  // Ensure archive directory exists
-  try {
-    if (!fs.existsSync(archiveDir)) {
-      fs.mkdirSync(archiveDir, { recursive: true });
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to create archive directory: ${message}`);
-    return {
-      success: false,
-      error: { code: 'ARCHIVE_FAILED', message: `Failed to create archive directory: ${message}` },
-      errorLogPath,
-    };
-  }
-
-  // Move file to archive (only after successful conversion)
-  if (archivePath !== sourcePath && fs.existsSync(sourcePath)) {
-    try {
-      fs.renameSync(sourcePath, archivePath);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      // Handle cross-device link error by falling back to copy + delete
-      if ((error as NodeJS.ErrnoException).code === 'EXDEV') {
-        try {
-          fs.copyFileSync(sourcePath, archivePath);
-          fs.unlinkSync(sourcePath);
-        } catch (copyError) {
-          const copyMessage = copyError instanceof Error ? copyError.message : String(copyError);
-          const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to archive file: ${copyMessage}`);
-          return {
-            success: false,
-            error: { code: 'ARCHIVE_FAILED', message: `Failed to archive file: ${copyMessage}` },
-            errorLogPath,
-          };
-        }
-      } else {
-        const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to move file to archive: ${message}`);
-        return {
-          success: false,
-          error: { code: 'ARCHIVE_FAILED', message: `Failed to move file to archive: ${message}` },
-          errorLogPath,
-        };
-      }
-    }
-  }
-
-  // Phase 4: Write converted file with frontmatter
   const filename = path.basename(sourcePath, path.extname(sourcePath));
   const convertedPath = path.join(convertedDir, `${filename}.md`);
-  const relativeConvertedPath = path.relative(sourceDir, convertedPath);
 
   try {
     // Ensure converted directory exists
@@ -436,6 +398,8 @@ async function processFile(
     }
 
     // Generate frontmatter
+    const relativeArchivePath = path.relative(sourceDir, archivePath);
+
     const frontmatter = generateFrontmatter(
       sourceHash,
       relativeSourcePath,
@@ -457,6 +421,69 @@ async function processFile(
       error: { code: 'ARCHIVE_FAILED', message: `Failed to write converted file: ${message}` },
       errorLogPath,
     };
+  }
+
+  // Phase 4: Archive source file (only after successful conversion)
+  const relativeArchivePath = path.relative(sourceDir, archivePath);
+
+  // Ensure archive directory exists
+  try {
+    if (!fs.existsSync(archiveDir)) {
+      fs.mkdirSync(archiveDir, { recursive: true });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Note: Converted file already written, but source not archived
+    // This is recoverable - user can manually archive later
+    console.warn(`Warning: Failed to create archive directory, source file not archived: ${message}`);
+    // Still return success since converted file was written
+    return {
+      success: true,
+      markdown: cleanedContent,
+      stats: cleanResult.stats,
+      archivedPath: sourcePath, // Source remains in place
+      convertedPath,
+      isDuplicate: false,
+    };
+  }
+
+  // Move file to archive
+  if (archivePath !== sourcePath && fs.existsSync(sourcePath)) {
+    try {
+      fs.renameSync(sourcePath, archivePath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Handle cross-device link error by falling back to copy + delete
+      if ((error as NodeJS.ErrnoException).code === 'EXDEV') {
+        try {
+          fs.copyFileSync(sourcePath, archivePath);
+          fs.unlinkSync(sourcePath);
+        } catch (copyError) {
+          const copyMessage = copyError instanceof Error ? copyError.message : String(copyError);
+          // Log warning but don't fail - converted file was written successfully
+          console.warn(`Warning: Failed to archive source file: ${copyMessage}`);
+          return {
+            success: true,
+            markdown: cleanedContent,
+            stats: cleanResult.stats,
+            archivedPath: sourcePath,
+            convertedPath,
+            isDuplicate: false,
+          };
+        }
+      } else {
+        // Log warning but don't fail - converted file was written successfully
+        console.warn(`Warning: Failed to move source file to archive: ${message}`);
+        return {
+          success: true,
+          markdown: cleanedContent,
+          stats: cleanResult.stats,
+          archivedPath: sourcePath,
+          convertedPath,
+          isDuplicate: false,
+        };
+      }
+    }
   }
 
   return {

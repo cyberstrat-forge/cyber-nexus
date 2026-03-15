@@ -21,6 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
+import { parseFrontmatter } from '../utils/frontmatter';
 
 // Threshold for recommending script usage
 const RECOMMENDED_SCRIPT_THRESHOLD = 50;
@@ -113,29 +114,6 @@ function loadState(statePath: string): StateFile | null {
     }
     return null;
   }
-}
-
-/**
- * Parse frontmatter from markdown content
- * Returns key-value pairs from the frontmatter section
- */
-function parseFrontmatter(content: string): Record<string, string> | null {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!frontmatterMatch) {
-    return null;
-  }
-
-  const frontmatter: Record<string, string> = {};
-  const lines = frontmatterMatch[1].split('\n');
-
-  for (const line of lines) {
-    const match = line.match(/^(\w+):\s*"(.*)"$/);
-    if (match) {
-      frontmatter[match[1]] = match[2];
-    }
-  }
-
-  return frontmatter;
 }
 
 /**
