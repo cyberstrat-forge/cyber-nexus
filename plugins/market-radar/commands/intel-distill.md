@@ -626,7 +626,8 @@ if (needs_processing + pending_review >= 50) {
 
 3. **调用 Agent 生成情报卡片**
    - 调用 `intelligence-analyzer` Agent
-   - 参数：`source`、`output`、`session_id`、`archived_source`、`source_hash`
+   - 参数：`source`（转换文件路径）、`output`（输出目录）、`session_id`（会话 ID）
+   - Agent 从转换文件 frontmatter 读取 `sourceHash` 和 `archivedSource`
    - Agent 返回正式 `intelligence_id`
 
 4. **更新状态文件**

@@ -95,9 +95,22 @@ function loadState(statePath: string): StateFile | null {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(statePath, 'utf-8'));
-  } catch {
-    console.error(`Warning: Failed to parse state file: ${statePath}`);
+    const content = fs.readFileSync(statePath, 'utf-8');
+    return JSON.parse(content);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = (error as NodeJS.ErrnoException).code;
+
+    if (errorCode === 'ENOENT') {
+      // File was deleted between exists check and read
+      console.warn(`Warning: State file disappeared: ${statePath}`);
+    } else if (errorCode === 'EACCES') {
+      console.error(`Error: Permission denied reading state file: ${statePath}`);
+    } else if (error instanceof SyntaxError) {
+      console.error(`Error: Invalid JSON in state file: ${statePath} - ${errMsg}`);
+    } else {
+      console.error(`Warning: Failed to read state file: ${statePath} - ${errMsg}`);
+    }
     return null;
   }
 }
@@ -142,7 +155,14 @@ function scanMarkdownFiles(dir: string, baseDir: string): string[] {
     return files;
   }
 
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot read directory ${dir}: ${errMsg}`);
+    return files;
+  }
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
@@ -219,12 +239,21 @@ function scanAndBuildQueue(
   let alreadyProcessed = 0;
   let needsProcessing = 0;
   let pendingReview = 0;
+  let readErrors = 0;
 
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
 
-    // Read file content
-    const content = fs.readFileSync(filePath, 'utf-8');
+    // Read file content with error handling
+    let content: string;
+    try {
+      content = fs.readFileSync(filePath, 'utf-8');
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read file ${relativePath}: ${errMsg}`);
+      readErrors++;
+      continue; // Skip files that can't be read
+    }
 
     // Calculate content hash
     const contentHash = createHash('md5').update(content).digest('hex');
@@ -273,6 +302,11 @@ function scanAndBuildQueue(
       });
       alreadyProcessed++;
     }
+  }
+
+  // Log summary of read errors
+  if (readErrors > 0) {
+    console.warn(`Warning: ${readErrors} file(s) could not be read and were skipped`);
   }
 
   // Determine recommendation

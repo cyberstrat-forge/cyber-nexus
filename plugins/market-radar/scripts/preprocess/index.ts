@@ -81,6 +81,11 @@ function generateErrorLog(
       '检查文件内容格式',
       '尝试手动查看文件内容',
     ],
+    ARCHIVE_FAILED: [
+      '检查输出目录权限',
+      '确认磁盘空间充足',
+      '检查 converted/ 目录是否可写',
+    ],
   };
 
   const suggestions = suggestionMap[errorCode] || ['检查文件状态'];
@@ -107,6 +112,7 @@ ${suggestions.map(s => `- [ ] ${s}`).join('\n')}
 
 /**
  * Write error log to inbox directory
+ * Falls back to console output if file write fails
  */
 function writeErrorLog(
   sourcePath: string,
@@ -118,16 +124,24 @@ function writeErrorLog(
   const filename = path.basename(sourcePath);
   const errorLogPath = path.join(inboxDir, `${filename}.error.md`);
 
-  // Ensure inbox directory exists
-  if (!fs.existsSync(inboxDir)) {
-    fs.mkdirSync(inboxDir, { recursive: true });
-  }
-
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
   const content = generateErrorLog(filename, errorCode, errorMessage, timestamp);
 
-  fs.writeFileSync(errorLogPath, content, 'utf-8');
-  return errorLogPath;
+  try {
+    // Ensure inbox directory exists
+    if (!fs.existsSync(inboxDir)) {
+      fs.mkdirSync(inboxDir, { recursive: true });
+    }
+    fs.writeFileSync(errorLogPath, content, 'utf-8');
+    return errorLogPath;
+  } catch (writeError) {
+    // Fallback: output to console if file write fails
+    console.error('⚠️  无法写入错误日志文件:', errorLogPath);
+    console.error('原始错误:', writeError instanceof Error ? writeError.message : String(writeError));
+    console.error('---');
+    console.error(content);
+    return errorLogPath; // Return path even if write failed
+  }
 }
 
 /**
@@ -228,7 +242,9 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
             knownHashes.set(frontmatter.sourceHash, mdPath);
           }
         } catch (error) {
-          // Skip files that can't be read
+          // Log warning for files that can't be read or parsed
+          const errMsg = error instanceof Error ? error.message : String(error);
+          console.warn(`Warning: Failed to read frontmatter from ${mdPath}: ${errMsg}`);
         }
       }
     }
@@ -363,13 +379,49 @@ async function processFile(
   const relativeArchivePath = path.relative(sourceDir, archivePath);
 
   // Ensure archive directory exists
-  if (!fs.existsSync(archiveDir)) {
-    fs.mkdirSync(archiveDir, { recursive: true });
+  try {
+    if (!fs.existsSync(archiveDir)) {
+      fs.mkdirSync(archiveDir, { recursive: true });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to create archive directory: ${message}`);
+    return {
+      success: false,
+      error: { code: 'ARCHIVE_FAILED', message: `Failed to create archive directory: ${message}` },
+      errorLogPath,
+    };
   }
 
   // Move file to archive (only after successful conversion)
   if (archivePath !== sourcePath && fs.existsSync(sourcePath)) {
-    fs.renameSync(sourcePath, archivePath);
+    try {
+      fs.renameSync(sourcePath, archivePath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Handle cross-device link error by falling back to copy + delete
+      if ((error as NodeJS.ErrnoException).code === 'EXDEV') {
+        try {
+          fs.copyFileSync(sourcePath, archivePath);
+          fs.unlinkSync(sourcePath);
+        } catch (copyError) {
+          const copyMessage = copyError instanceof Error ? copyError.message : String(copyError);
+          const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to archive file: ${copyMessage}`);
+          return {
+            success: false,
+            error: { code: 'ARCHIVE_FAILED', message: `Failed to archive file: ${copyMessage}` },
+            errorLogPath,
+          };
+        }
+      } else {
+        const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to move file to archive: ${message}`);
+        return {
+          success: false,
+          error: { code: 'ARCHIVE_FAILED', message: `Failed to move file to archive: ${message}` },
+          errorLogPath,
+        };
+      }
+    }
   }
 
   // Phase 4: Write converted file with frontmatter
@@ -511,11 +563,14 @@ async function main() {
       console.log(`
 Usage: npx tsx index.ts --source <dir> [--force]
 
-Directory Structure (v2.0):
+Directory Structure (v2.1):
   {source_dir}/
   ├── inbox/              # Drop new files here (recommended)
-  ├── archive/YYYY/MM/    # Archived source files with .meta
-  └── converted/YYYY/MM/  # Converted markdown files
+  ├── archive/YYYY/MM/    # Archived source files
+  └── converted/YYYY/MM/  # Converted markdown files (with frontmatter)
+
+Frontmatter fields in converted files:
+  sourceHash, originalPath, archivedAt, archivedSource
 
 Options:
   --source <dir>  Source directory (default: current directory)
