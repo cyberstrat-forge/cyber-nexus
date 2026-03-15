@@ -95,7 +95,7 @@ Agent 返回轻量状态 JSON，不包含情报内容详情，以减少主会话
 | `source_file` | string | ✅ | 源文件相对路径（converted 目录下） |
 | `has_strategic_value` | boolean/null | ✅ | `true`=有情报，`false`=无情报，`null`=需复核 |
 | `review_reason` | string | 条件 | 需要复核的原因（`has_strategic_value=null` 时必需） |
-| `intelligence_count` | number | 条件 | 情报项数量（成功且有情报时必需，0-3） |
+| `intelligence_count` | number | 条件 | 情报项数量（成功且有情报时必需，不设上限） |
 | `intelligence_ids` | array | 条件 | 情报卡片 ID 列表（成功且有情报时必需） |
 | `output_files` | array | 条件 | 输出文件路径（成功且有情报时必需） |
 | `cards` | array | 条件 | 情报卡片详情列表（成功且有情报时必需） |
