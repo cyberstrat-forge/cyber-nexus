@@ -145,8 +145,7 @@
         "intelligence_count": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 3,
-          "description": "Number of intelligence cards extracted (0-3, 0 = no value)"
+          "description": "Number of intelligence cards extracted (no upper limit, 0 = no value)"
         },
         "output_files": {
           "type": "array",

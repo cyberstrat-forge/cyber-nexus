@@ -418,7 +418,7 @@ if (needs_processing + pending_review >= 50) {
 #### 7.2 处理 Agent 返回结果
 
 **情况 1：明确有价值（`has_strategic_value = true`）**
-- 生成情报卡片（支持 0-3 张）
+- 生成情报卡片（数量不设上限，根据源文档实际内容决定）
 - 分配正式 `intelligence_id`
 - `review_status = null`（无需审核）
 
@@ -759,7 +759,7 @@ npx tsx reporting/scan-cards.ts \
 | `processed[].content_hash` | string | 转换文件内容 MD5 哈希（用于变更检测） |
 | `processed[].source_hash` | string | 源文件 MD5 哈希（用于去重） |
 | `processed[].processed_at` | string | 处理完成时间 |
-| `processed[].intelligence_count` | number | 生成的情报卡片数量（0-3） |
+| `processed[].intelligence_count` | number | 生成的情报卡片数量（不设上限） |
 | `processed[].intelligence_ids` | array | 情报卡片 ID 列表 |
 | `processed[].output_files` | array | 输出文件路径列表 |
 | `processed[].session` | string | 会话 ID（YYYYMMDD-HHMMSS） |
@@ -848,7 +848,7 @@ npx tsx validate-json.ts state ./.intel/state.json
 - 删除源文件或转换文件后，情报卡片仍保留
 - 重新加入历史文件时会检测重复（基于 `.meta` 文件）
 - 建议将 `.intel/` 和 `inbox/` 添加到 `.gitignore`
-- 每个源文档最多生成 3 张情报卡片
+- 情报卡片数量不设上限，根据源文档实际内容和情报价值决定（详见 `intelligence-analysis-methodology` skill）
 - 情报卡片文件命名格式：`{YYYYMMDD}-{subject}-{feature}.md`
   - `YYYYMMDD`：情报日期（源文件发布日期）
   - `subject`：主体/对象（简短英文 kebab-case）
