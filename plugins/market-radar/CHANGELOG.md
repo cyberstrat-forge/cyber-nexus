@@ -2,6 +2,37 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.3.0] - 2026-03-20
+
+### 新增
+
+- **intel-pull 命令**：从 cyber-pulse 情报服务 API 拉取标准化情报内容
+  - 支持增量拉取（基于 cursor 分页）
+  - 支持时间范围拉取（`--since` 参数）
+  - 支持单条情报拉取（`--id` 参数）
+  - 支持多源并行拉取（`--all` 参数）
+  - 源管理功能：列出、添加、删除、设置默认源
+  - 状态共享：与 intel-distill 共用 `state.json`
+
+- **新增模块**：
+  - `scripts/pulse/types.ts`：类型定义
+  - `scripts/pulse/config.ts`：配置管理
+  - `scripts/pulse/state.ts`：状态管理
+  - `scripts/pulse/api-client.ts`：API 客户端
+  - `scripts/pulse/output.ts`：文件输出
+  - `scripts/pulse/index.ts`：主入口
+  - `schemas/pulse-sources.schema.json`：配置文件 Schema
+
+- **配置文件**：`.claude-plugin/pulse-sources.json` 示例配置
+
+### 工作流程
+
+```
+intel-pull → 拉取情报 → inbox/
+                         ↓
+intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
+```
+
 ## [1.2.7] - 2026-03-15
 
 ### 变更
@@ -304,6 +335,7 @@
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.3.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.7...v1.3.0
 [1.2.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.4...v1.2.5

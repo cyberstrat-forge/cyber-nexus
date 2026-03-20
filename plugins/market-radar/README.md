@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.2.7-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.2.7)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.3.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
@@ -13,12 +13,21 @@ Market Radar 是一个 Claude Code 插件，用于从文档中提取战略情报
 
 | 命令 | 状态 | 功能 |
 |------|------|------|
+| `intel-pull` | ✅ 可用 | 情报拉取：从 cyber-pulse API 拉取标准化情报内容 |
 | `intel-distill` | ✅ 可用 | 情报蒸馏：从文档提取战略情报，生成情报卡片 |
 | `thematic-analysis` | ✅ 可用 | 主题分析：跨文档识别趋势和模式，生成分析报告 |
 | `insight-cards` | 📋 规划中 | 洞察卡片：生成结构化洞察报告 |
 | `strategic-judgment` | 📋 规划中 | 战略判断：基于情报生成决策建议 |
 
 ## 功能特性
+
+### 情报拉取（intel-pull）
+
+- **多源管理**：支持配置多个 cyber-pulse 情报源
+- **增量拉取**：基于 cursor 分页，只拉取新内容
+- **时间范围拉取**：支持指定时间范围拉取历史数据
+- **状态共享**：与 intel-distill 共用 `state.json`
+- **输出格式**：标准化 Markdown 文件，兼容 intel-distill
 
 ### 情报蒸馏（intel-distill）
 
@@ -78,6 +87,34 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 ```bash
 # 安装校验依赖
 cd plugins/market-radar/scripts && npm install
+```
+
+### intel-pull 基本用法
+
+```bash
+# 显示帮助
+/intel-pull --help
+
+# 配置情报源（首次使用）
+/intel-pull --add-source
+
+# 列出已配置的情报源
+/intel-pull --list-sources
+
+# 增量拉取（默认源）
+/intel-pull
+
+# 指定源拉取
+/intel-pull --source cloud
+
+# 拉取所有源
+/intel-pull --all
+
+# 时间范围拉取
+/intel-pull --since "2026-03-01"
+
+# 单条拉取
+/intel-pull --id "cnt_20260319143052_a1b2c3d4"
 ```
 
 ### intel-distill 基本用法

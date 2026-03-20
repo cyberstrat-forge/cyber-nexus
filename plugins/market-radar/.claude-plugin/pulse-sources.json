@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "name": "local",
+      "url": "http://localhost:8000",
+      "key_ref": "CYBER_PULSE_LOCAL_KEY"
+    }
+  ],
+  "default_source": "local"
+}

@@ -6,6 +6,25 @@
 
 ---
 
+## [1.0.14] - 2026-03-20
+
+### 插件更新
+
+#### market-radar v1.3.0
+
+**新增**
+- intel-pull 命令：从 cyber-pulse 情报服务 API 拉取标准化情报内容
+  - 支持增量拉取、时间范围拉取、单条拉取、多源并行拉取
+  - 源管理功能：列出、添加、删除、设置默认源
+  - 状态共享：与 intel-distill 共用 state.json
+
+**新增模块**
+- scripts/pulse/：TypeScript 脚本模块（types, config, state, api-client, output, index）
+- schemas/pulse-sources.schema.json：配置文件 JSON Schema
+- commands/intel-pull.md：命令定义文件
+
+---
+
 ## [1.0.13] - 2026-03-15
 
 ### 插件更新
