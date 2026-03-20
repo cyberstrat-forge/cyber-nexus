@@ -25,6 +25,7 @@ const SCHEMA_FILES: Record<string, string> = {
   'state': 'state.schema.json',
   'themes-config': 'themes-config.schema.json',
   'theme-state': 'theme-state.schema.json',
+  'pulse-sources': 'pulse-sources.schema.json',
 };
 
 interface ValidationResult {
