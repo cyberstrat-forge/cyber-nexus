@@ -37,7 +37,6 @@ import {
   removeSource,
   setDefaultSource,
   formatSourcesList,
-  getDefaultConfigPath,
 } from './config.js';
 
 import {
@@ -217,7 +216,7 @@ async function pullFromSource(
     } else {
       // List mode (incremental, since, or all)
       const cursorValue = options.since ? undefined : getCursor(state, source.name).cursor;
-      const cursor = cursorValue ?? undefined; // Convert null to undefined
+      const cursor: string | undefined = cursorValue ?? undefined; // Convert null to undefined
       const limit = 100;
 
       let response;
