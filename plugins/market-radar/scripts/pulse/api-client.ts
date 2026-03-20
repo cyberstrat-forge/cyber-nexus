@@ -12,7 +12,6 @@
 
 import { request, errors } from 'undici';
 import {
-  PulseContent,
   PulseListResponse,
   PulseItemResponse,
   PulseError,
