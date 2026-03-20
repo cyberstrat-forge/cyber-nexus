@@ -35,12 +35,21 @@ let validateSchema: ReturnType<Ajv['compile']> | null = null;
  */
 function getValidator(): ReturnType<Ajv['compile']> {
   if (!validateSchema) {
-    const ajv = new Ajv({ allErrors: true, strict: false });
-    addFormats(ajv);
+    try {
+      const ajv = new Ajv({ allErrors: true, strict: false });
+      addFormats(ajv);
 
-    const schemaPath = path.join(SCHEMAS_DIR, 'pulse-sources.schema.json');
-    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
-    validateSchema = ajv.compile(schema);
+      const schemaPath = path.join(SCHEMAS_DIR, 'pulse-sources.schema.json');
+      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+      validateSchema = ajv.compile(schema);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new PulseError(
+        'CONFIG_PARSE_ERROR',
+        `Schema 加载失败: ${message}`,
+        { error }
+      );
+    }
   }
   return validateSchema;
 }
@@ -112,12 +121,10 @@ export function validateConfig(config: unknown): asserts config is PulseSourcesC
     );
   }
 
-  // At this point, config is validated as PulseSourcesConfig
-  // But we still need to check default_source
-  const typedConfig = config as PulseSourcesConfig;
-
+  // At this point, schema validation passed
   // Additional validation: default_source must exist in sources
-  const sourceNames = new Set(typedConfig.sources.map((s: PulseSource) => s.name));
+  const typedConfig = config as PulseSourcesConfig;
+  const sourceNames = new Set(typedConfig.sources.map(s => s.name));
   if (!sourceNames.has(typedConfig.default_source)) {
     throw new PulseError(
       'CONFIG_PARSE_ERROR',

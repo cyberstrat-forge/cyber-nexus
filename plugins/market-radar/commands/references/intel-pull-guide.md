@@ -281,7 +281,7 @@ intel-distill → 处理 inbox/ 生成情报卡片
 |--------|------|
 | `CONFIG_NOT_FOUND` | 配置文件不存在 |
 | `CONFIG_PARSE_ERROR` | 配置文件格式错误 |
-| `ENV_NOT_SET` | 环境变量未设置 |
+| `ENV_VAR_NOT_SET` | 环境变量未设置 |
 | `API_CONNECTION_FAILED` | API 连接失败 |
 | `API_AUTH_FAILED` | API 认证失败 |
 | `API_TIMEOUT` | API 请求超时 |

@@ -103,22 +103,43 @@ export interface PulseState {
 // ==================== Pull Result Types ====================
 
 /**
- * Result of pulling from a single source
+ * Result of pulling from a single source (success case)
  */
-export interface PullSourceResult {
+export interface PullSourceResultSuccess {
   /** Source name */
   source: string;
-  /** Whether pull was successful */
-  success: boolean;
+  /** Always true for success case */
+  success: true;
   /** Number of items pulled */
   count: number;
-  /** Error message if failed */
-  error?: string;
   /** New cursor after pull */
   new_cursor?: string;
   /** Files written */
   files?: string[];
 }
+
+/**
+ * Result of pulling from a single source (failure case)
+ */
+export interface PullSourceResultFailure {
+  /** Source name */
+  source: string;
+  /** Always false for failure case */
+  success: false;
+  /** Always 0 for failure case */
+  count: 0;
+  /** Error message (required for failure) */
+  error: string;
+}
+
+/**
+ * Result of pulling from a single source
+ *
+ * Discriminated union ensures:
+ * - success=true: no error field, count is actual number
+ * - success=false: error is required, count is 0
+ */
+export type PullSourceResult = PullSourceResultSuccess | PullSourceResultFailure;
 
 /**
  * Overall pull result

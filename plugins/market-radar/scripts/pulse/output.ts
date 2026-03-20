@@ -58,8 +58,12 @@ function generateFrontmatter(content: PulseContent, sourceName: string): string 
     `last_seen_at: "${content.last_seen_at}"`,
     `source_count: ${content.source_count}`,
     `pulse_source: "${sourceName}"`,
+    // Placeholder fields for intel-distill processing
+    // sourceHash: content hash for deduplication (populated by intel-distill)
     `sourceHash: ""`,
+    // archivedSource: path to archived source file (populated by intel-distill)
     `archivedSource: ""`,
+    // convertedFile: path to converted markdown file (populated by intel-distill)
     `convertedFile: ""`,
     '---',
   ];

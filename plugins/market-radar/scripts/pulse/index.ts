@@ -22,6 +22,8 @@ import {
   PullOptions,
   PullResult,
   PullSourceResult,
+  PullSourceResultSuccess,
+  PullSourceResultFailure,
   PulseSource,
   PulseSourcesConfig,
   PulseContent,
@@ -133,12 +135,17 @@ async function interactiveAddSource(): Promise<void> {
     let config: PulseSourcesConfig;
     try {
       config = loadConfig();
-    } catch {
-      // Create new config if doesn't exist
-      config = {
-        sources: [],
-        default_source: name,
-      };
+    } catch (error) {
+      // Only create new config if file doesn't exist
+      // Other errors (parse error, validation error) should be thrown
+      if (error instanceof PulseError && error.code === 'CONFIG_NOT_FOUND') {
+        config = {
+          sources: [],
+          default_source: name,
+        };
+      } else {
+        throw error;
+      }
     }
 
     // Add new source
@@ -172,7 +179,10 @@ async function interactiveAddSource(): Promise<void> {
 // ==================== Pull Operations ====================
 
 /**
- * Determine pull mode based on options
+ * Determine pull mode based on CLI options
+ *
+ * @param options - Parsed CLI arguments
+ * @returns The determined pull mode: 'incremental', 'since', 'single', or 'all'
  */
 function determinePullMode(options: PullOptions): 'incremental' | 'since' | 'single' | 'all' {
   if (options.id) {
@@ -189,18 +199,20 @@ function determinePullMode(options: PullOptions): 'incremental' | 'since' | 'sin
 
 /**
  * Pull content from a single source
+ *
+ * Fetches content from the specified source using the appropriate mode.
+ * Handles pagination automatically when has_more is true.
+ *
+ * @param source - The pulse source configuration
+ * @param options - Parsed CLI arguments
+ * @param state - Current state object for cursor tracking
+ * @returns Result object with success status, count, and optional cursor/files
  */
 async function pullFromSource(
   source: PulseSource,
   options: PullOptions,
   state: Record<string, unknown>
 ): Promise<PullSourceResult> {
-  const result: PullSourceResult = {
-    source: source.name,
-    success: false,
-    count: 0,
-  };
-
   try {
     const apiKey = getApiKey(source);
     const client = new PulseClient(source.url, apiKey);
@@ -216,40 +228,61 @@ async function pullFromSource(
     } else {
       // List mode (incremental, since, or all)
       const cursorValue = options.since ? undefined : getCursor(state, source.name).cursor;
-      const cursor: string | undefined = cursorValue ?? undefined; // Convert null to undefined
+      let cursor: string | undefined = cursorValue ?? undefined; // Convert null to undefined
       const limit = 100;
 
-      let response;
-      if (options.since) {
-        response = await client.listContentSince(options.since, cursor, limit);
-      } else {
-        response = await client.listContent(cursor, limit);
-      }
+      // Paginate through all results when has_more is true
+      let hasMore = true;
+      while (hasMore) {
+        let response;
+        if (options.since) {
+          response = await client.listContentSince(options.since, cursor, limit);
+        } else {
+          response = await client.listContent(cursor, limit);
+        }
 
-      items = response.items;
-      newCursor = response.next_cursor || undefined;
+        items.push(...response.items);
+        cursor = response.next_cursor || undefined;
+        hasMore = response.has_more === true && !!cursor;
+      }
+      newCursor = cursor;
     }
 
     // Write files
     const files = await writeContentFiles(items, options.output, source.name);
 
-    result.success = true;
-    result.count = items.length;
-    result.files = files;
-    result.new_cursor = newCursor;
+    // Return success result
+    const successResult: PullSourceResultSuccess = {
+      source: source.name,
+      success: true,
+      count: items.length,
+      files,
+      new_cursor: newCursor,
+    };
+    return successResult;
   } catch (error) {
-    if (error instanceof PulseError) {
-      result.error = error.message;
-    } else {
-      result.error = error instanceof Error ? error.message : String(error);
-    }
+    // Return failure result
+    const errorMessage = error instanceof PulseError ? error.message
+      : error instanceof Error ? error.message
+      : String(error);
+    const failureResult: PullSourceResultFailure = {
+      source: source.name,
+      success: false,
+      count: 0,
+      error: errorMessage,
+    };
+    return failureResult;
   }
-
-  return result;
 }
 
 /**
  * Execute pull operation
+ *
+ * Orchestrates the pull operation across one or more sources.
+ * Manages state persistence and cursor updates.
+ *
+ * @param options - Parsed CLI arguments
+ * @returns Overall pull result with per-source details
  */
 async function executePull(options: PullOptions): Promise<PullResult> {
   const mode = determinePullMode(options);
@@ -300,6 +333,12 @@ async function executePull(options: PullOptions): Promise<PullResult> {
 
 /**
  * Generate pull report
+ *
+ * Creates a formatted report string summarizing the pull operation.
+ * Includes per-source statistics and any error messages.
+ *
+ * @param result - The pull result to format
+ * @returns Formatted report string for console output
  */
 function generateReport(result: PullResult): string {
   const lines: string[] = [
@@ -319,8 +358,8 @@ function generateReport(result: PullResult): string {
   };
 
   // Report each source
+  const config = loadConfig();  // Load config once outside the loop
   for (const sourceResult of result.sources) {
-    const config = loadConfig();
     const source = getSource(config, sourceResult.source);
 
     lines.push(`源: ${source.name} (${source.url})`);
@@ -408,11 +447,8 @@ program
         return;
       }
 
-      // Pull mode - ensure at least one source option or use default
-      if (!options.source && !options.all && !options.id) {
-        // Default to incremental pull from default source
-        options.source = undefined;
-      }
+      // Pull mode - no explicit source specified, will use default_source from config
+      // options.source remains undefined, which triggers default behavior in getSource()
 
       // Validate conflicting options
       if (options.source && options.all) {

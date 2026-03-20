@@ -2,7 +2,11 @@
 /**
  * Pulse state management
  *
- * Manages cursor tracking in state.json (shared with intel-distill)
+ * Manages cursor tracking in state.json (shared with intel-distill).
+ *
+ * Field ownership in state.json:
+ * - pulse.cursors: managed by intel-pull (this module)
+ * - queue, review, processed, stats: managed by intel-distill
  *
  * Usage:
  *   import { loadState, saveState, getCursor, setCursor } from './state';
@@ -87,9 +91,15 @@ function migrateState(state: Record<string, unknown>): Record<string, unknown> {
 
 /**
  * Get pulse state from full state
+ *
+ * Returns the pulse portion of the shared state.json, with validation.
  */
 export function getPulseState(state: Record<string, unknown>): PulseState {
-  return (state.pulse as PulseState) || DEFAULT_PULSE_STATE;
+  const pulse = state.pulse;
+  if (pulse && typeof pulse === 'object' && 'cursors' in pulse) {
+    return pulse as PulseState;
+  }
+  return DEFAULT_PULSE_STATE;
 }
 
 /**

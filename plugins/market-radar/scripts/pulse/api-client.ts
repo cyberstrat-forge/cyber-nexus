@@ -135,7 +135,8 @@ export class PulseClient {
               errorMessage = errorJson.message;
             }
           } catch {
-            // Use default message if body is not JSON
+            // Body is not valid JSON, use default error message
+            // Raw body is already included in details for debugging (line 143)
           }
           throw new PulseError(
             'API_ERROR',
@@ -220,7 +221,16 @@ export class PulseClient {
           );
         }
 
-        // Generic error - retry
+        // Programming errors should not be retried
+        if (error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError) {
+          throw new PulseError(
+            'API_ERROR',
+            `内部错误: ${error.message}`,
+            { url: url.toString(), originalError: error.constructor.name }
+          );
+        }
+
+        // Generic error - retry for transient issues
         lastError = error instanceof Error ? error : new Error(String(error));
 
         // Retry on transient errors
