@@ -1,6 +1,6 @@
 # intel-pull 命令设计文档
 
-**版本**: v1.0
+**版本**: v1.1
 **日期**: 2026-03-20
 **作者**: 老罗
 **状态**: 待批准
@@ -151,18 +151,30 @@ export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
 
 ### 4.1 状态文件
 
-**位置**：`{output_dir}/.pulse/state.json`
+**位置**：`{output_dir}/.intel/state.json`
+
+与 `intel-distill` 共享同一状态文件，在现有结构中新增 `pulse` 字段：
 
 ```json
 {
-  "cursors": {
-    "local": "cnt_20260319143052_a1b2c3d4",
-    "cloud": "cnt_20260318120000_xyz789"
+  "version": "2.2.0",
+  "updated_at": "2026-03-20T15:30:00+08:00",
+
+  "pulse": {
+    "cursors": {
+      "local": "cnt_20260319143052_a1b2c3d4",
+      "cloud": "cnt_20260318120000_xyz789"
+    },
+    "last_pull": {
+      "local": "2026-03-20T10:00:00Z",
+      "cloud": "2026-03-20T09:30:00Z"
+    }
   },
-  "last_pull": {
-    "local": "2026-03-20T10:00:00Z",
-    "cloud": "2026-03-20T09:30:00Z"
-  }
+
+  "queue": { ... },
+  "review": { ... },
+  "processed": { ... },
+  "stats": { ... }
 }
 ```
 
@@ -170,8 +182,13 @@ export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `cursors` | object | 各情报源的游标（content_id） |
-| `last_pull` | object | 各情报源的最后拉取时间 |
+| `pulse.cursors` | object | 各情报源的游标（content_id） |
+| `pulse.last_pull` | object | 各情报源的最后拉取时间 |
+
+**设计说明**：
+- 复用 `.intel/state.json`，避免多个状态文件
+- `pulse` 字段独立，不影响 intel-distill 现有字段
+- 版本号升级为 `2.2.0`（新增 pulse 字段）
 
 ### 4.3 去重策略
 
@@ -204,9 +221,9 @@ first_seen_at: "2026-03-19T14:30:52Z"
 last_seen_at: "2026-03-19T15:45:00Z"
 source_count: 3
 pulse_source: "local"
-source_hash: ""
-archived_source: ""
-converted_file: ""
+sourceHash: ""
+archivedSource: ""
+convertedFile: ""
 ---
 
 # {normalized_title}
@@ -224,9 +241,13 @@ converted_file: ""
 | `last_seen_at` | string | 最后发现时间 |
 | `source_count` | number | 来源数量 |
 | `pulse_source` | string | 拉取源名称 |
-| `source_hash` | string | 留空（兼容 intel-distill） |
-| `archived_source` | string | 留空（兼容 intel-distill） |
-| `converted_file` | string | 留空（兼容 intel-distill） |
+| `sourceHash` | string | 留空（驼峰命名，兼容 intel-distill） |
+| `archivedSource` | string | 留空（驼峰命名，兼容 intel-distill） |
+| `convertedFile` | string | 留空（驼峰命名，兼容 intel-distill） |
+
+**字段填充说明**：
+- `sourceHash`、`archivedSource`、`convertedFile` 由 intel-distill 处理时填充
+- intel-pull 从 API 获取的数据无法提供这些字段，故留空
 
 ---
 
@@ -248,7 +269,26 @@ converted_file: ""
 | 默认 | 增量拉取模式 |
 ```
 
-### 6.2 配置检查流程
+### 6.2 检查脚本依赖
+
+在执行脚本前，检查 `node_modules` 是否存在：
+
+```bash
+检查 ${CLAUDE_PLUGIN_ROOT}/scripts/node_modules 目录是否存在
+```
+
+**如果不存在**，提示用户安装依赖并退出：
+
+```
+⚠️  脚本依赖未安装
+
+请先安装依赖：
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+
+安装完成后重新执行命令。
+```
+
+### 6.3 配置检查流程
 
 ```
 1. 检查配置文件是否存在
@@ -261,7 +301,7 @@ converted_file: ""
    - 未设置 → 显示需要设置的环境变量名，退出
 ```
 
-### 6.3 增量拉取流程
+### 6.4 增量拉取流程
 
 ```
 1. 加载状态文件（不存在则创建默认结构）
@@ -273,17 +313,19 @@ converted_file: ""
 7. 输出拉取统计报告
 ```
 
-### 6.4 时间范围拉取流程
+### 6.5 时间范围拉取流程
 
 ```
-1. 不使用 cursor
-2. 调用 API：GET /content?since={since}&limit=100
-3. 遍历返回数据，写入 Markdown 文件
-4. 不更新 cursor（cursor 仅用于增量模式）
-5. 输出拉取统计报告
+1. 调用 API：GET /content?since={since}&limit=100
+2. 遍历返回数据，写入 Markdown 文件
+3. 如果 has_more=true，使用返回的 next_cursor 继续请求：
+   GET /content?since={since}&cursor={next_cursor}&limit=100
+4. 重复步骤 2-3 直到 has_more=false
+5. 不更新本地 cursor（cursor 仅用于增量模式）
+6. 输出拉取统计报告
 ```
 
-### 6.5 单条拉取流程
+### 6.6 单条拉取流程
 
 ```
 1. 调用 API：GET /content/{content_id}
@@ -291,13 +333,16 @@ converted_file: ""
 3. 输出结果
 ```
 
-### 6.6 `--all` 多源拉取流程
+### 6.7 `--all` 多源拉取流程
 
 ```
 1. 遍历配置中的所有源
 2. 对每个源执行增量拉取流程
-3. 一个源失败不影响其他源继续
-4. 最终输出汇总报告
+3. 记录每个源的执行结果（成功/失败/部分成功）
+4. 仅更新成功拉取的源的 cursor
+5. 失败的源保留原有 cursor，下次拉取时可重试
+6. 一个源失败不影响其他源继续
+7. 最终输出汇总报告
 ```
 
 ---
@@ -362,8 +407,19 @@ API URL: https://pulse.example.com
 | 环境变量未设置 | 显示需要设置的环境变量名，退出 |
 | API 连接失败 | 显示错误信息，建议检查网络/URL |
 | API 认证失败 | 提示 API Key 无效，建议检查环境变量 |
+| API 请求超时 | 重试 1 次（间隔 2 秒）；仍失败则记录错误，继续处理下一个源（`--all` 模式）或退出 |
+| 响应数据过大 | 分批写入，避免内存溢出 |
 | 源名称不存在 | 显示可用源列表，退出 |
 | 单条拉取 404 | 提示 content_id 不存在，退出 |
+
+### 8.1 网络请求配置
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| 连接超时 | 10 秒 | 建立连接的超时时间 |
+| 请求超时 | 30 秒 | 单次请求的总超时时间 |
+| 重试次数 | 1 次 | 超时后重试一次 |
+| 重试间隔 | 2 秒 | 重试前等待时间 |
 
 ---
 
@@ -462,3 +518,4 @@ plugins/market-radar/
 | 版本 | 日期 | 作者 | 说明 |
 |------|------|------|------|
 | v1.0 | 2026-03-20 | 老罗 | 初始版本 |
+| v1.1 | 2026-03-20 | 老罗 | 根据 spec review 修复：统一状态文件位置、驼峰命名 frontmatter、补充依赖检查/分页处理/超时重试/多源状态更新策略 |
