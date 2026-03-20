@@ -284,8 +284,8 @@ async function executePull(options: PullOptions): Promise<PullResult> {
     result.sources.push(sourceResult);
     result.total_count += sourceResult.count;
 
-    // Update cursor if pull was successful and not single item mode
-    if (sourceResult.success && sourceResult.new_cursor && !options.id) {
+    // Update cursor only in incremental mode (spec requirement)
+    if (sourceResult.success && sourceResult.new_cursor && mode === 'incremental') {
       state = setCursor(state, source.name, sourceResult.new_cursor);
     }
   }
