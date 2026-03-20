@@ -54,7 +54,7 @@ import { writeContentFiles } from './output.js';
 // ==================== Constants ====================
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PLUGIN_ROOT = path.resolve(__dirname, '..', '..');
+const SCRIPTS_DIR = path.resolve(__dirname, '..');
 
 /** Default output directory */
 const DEFAULT_OUTPUT_DIR = './inbox';
@@ -65,7 +65,7 @@ const DEFAULT_OUTPUT_DIR = './inbox';
  * Check if node_modules exists
  */
 function checkDependencies(): void {
-  const nodeModulesPath = path.resolve(PLUGIN_ROOT, 'node_modules');
+  const nodeModulesPath = path.resolve(SCRIPTS_DIR, 'node_modules');
   if (!fs.existsSync(nodeModulesPath)) {
     console.error('错误: 依赖未安装');
     console.error('');
