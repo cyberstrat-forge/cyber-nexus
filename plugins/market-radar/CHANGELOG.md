@@ -353,6 +353,7 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.3.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.7...v1.3.0
 [1.2.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.5...v1.2.6

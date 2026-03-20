@@ -243,6 +243,8 @@
 
 ---
 
+[1.0.15]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.14...v1.0.15
+[1.0.14]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.13...v1.0.14
 [1.0.13]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.12...v1.0.13
 [1.0.12]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.11...v1.0.12
 [1.0.11]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.10...v1.0.11
