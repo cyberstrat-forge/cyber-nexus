@@ -2,6 +2,26 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.3.3] - 2026-03-22
+
+### 修复
+
+- **API 响应验证**：添加运行时响应结构验证
+  - 列表响应验证 `data` 数组和 `meta` 对象
+  - 单条响应验证必需字段（`id`, `fetched_at`, `canonical_hash`）
+  - 新增错误码 `API_INVALID_RESPONSE`
+- **YAML 字符串转义**：修复特殊字符（引号、换行符等）导致格式错误的问题
+- **错误详情保留**：catch 块保留 `PulseError.code` 和 `details`
+
+### 变更
+
+- **类型定义增强**：
+  - 新增 `SourceTier` 字面量联合类型（`'T0' | 'T1' | 'T2' | 'T3'`）
+  - 新增 `SourceType` 字面量联合类型（`'rss' | 'api' | 'web' | 'media'`）
+  - 新增 `Timestamp` 和 `QualityScore` 类型别名
+- **错误消息改进**：`generateFilename` 错误包含预期格式说明
+- **状态迁移增强**：版本号类型检查和迁移日志
+
 ## [1.3.2] - 2026-03-22
 
 ### 修复
