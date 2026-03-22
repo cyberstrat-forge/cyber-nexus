@@ -275,11 +275,12 @@ npx tsx pulse/index.ts [--source {name}] [--output {dir}]
 
 1. 加载状态文件（不存在则创建默认结构）
 2. 获取对应源的 cursor
-3. 调用 API：`GET /content?cursor={cursor}&limit=100`
-4. 遍历返回数据，写入 Markdown 文件
-5. 更新状态文件 cursor
-6. 如果 `has_more=true`，重复步骤 3-5
-7. 输出拉取统计报告
+3. 调用 API：`GET /api/v1/contents?cursor={cursor}&limit=100`
+4. 解析响应：`response.data` 为内容列表，`response.meta` 包含分页信息
+5. 遍历返回数据，写入 Markdown 文件
+6. 更新状态文件 cursor
+7. 如果 `meta.has_more=true`，重复步骤 3-5
+8. 输出拉取统计报告
 
 ### 步骤 P3：时间范围拉取（`--since`）
 
@@ -292,11 +293,12 @@ npx tsx pulse/index.ts --since "{datetime}" [--source {name}] [--output {dir}]
 
 **脚本执行逻辑**：
 
-1. 调用 API：`GET /content?since={since}&limit=100`
-2. 遍历返回数据，写入 Markdown 文件
-3. 如果 `has_more=true`，使用返回的 `next_cursor` 继续请求
-4. 不更新本地 cursor（cursor 仅用于增量模式）
-5. 输出拉取统计报告
+1. 调用 API：`GET /api/v1/contents?since={since}&limit=100`
+2. 解析响应：`response.data` 为内容列表，`response.meta` 包含分页信息
+3. 遍历返回数据，写入 Markdown 文件
+4. 如果 `meta.has_more=true`，使用返回的 `meta.next_cursor` 继续请求
+5. 不更新本地 cursor（cursor 仅用于增量模式）
+6. 输出拉取统计报告
 
 ### 步骤 P4：`--all` 多源拉取
 
@@ -328,9 +330,10 @@ npx tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {dir}]
 
 **脚本执行逻辑**：
 
-1. 调用 API：`GET /content/{content_id}`
-2. 写入 Markdown 文件
-3. 输出结果
+1. 调用 API：`GET /api/v1/contents/{content_id}`
+2. API 直接返回内容对象（不包装）
+3. 写入 Markdown 文件
+4. 输出结果
 
 ### 步骤 P6：输出拉取报告
 
@@ -485,36 +488,50 @@ export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
 content_id: "cnt_20260319143052_a1b2c3d4"
 canonical_hash: "abc123def456..."
 first_seen_at: "2026-03-19T14:30:52Z"
-last_seen_at: "2026-03-19T15:45:00Z"
-source_count: 3
 pulse_source: "local"
+url: "https://example.com/article"
+author: "Security Team"
+tags: ["vulnerability", "CVE"]
+published_at: "2026-03-19T14:00:00Z"
+quality_score: 85
+source_id: "src_a1b2c3d4"
+source_name: "安全客"
+source_tier: "T1"
 sourceHash: ""
 archivedSource: ""
 convertedFile: ""
 ---
 
-# {normalized_title}
+# {title}
 
-{normalized_body}
+{content}
 ```
 
 ### Frontmatter 字段说明
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `content_id` | string | cyber-pulse 内容 ID |
+| `content_id` | string | cyber-pulse 内容 ID（来自 API `id` 字段） |
 | `canonical_hash` | string | 去重哈希值 |
-| `first_seen_at` | string | 首次发现时间 |
-| `last_seen_at` | string | 最后发现时间 |
-| `source_count` | number | 来源数量 |
+| `first_seen_at` | string | 采集时间（来自 API `fetched_at` 字段） |
 | `pulse_source` | string | 拉取源名称 |
+| `url` | string | 原始 URL（可选） |
+| `author` | string | 作者（可选） |
+| `tags` | array | 标签列表（可选） |
+| `published_at` | string | 发布时间（可选） |
+| `quality_score` | number | 质量评分 0-100（可选） |
+| `source_id` | string | 情报源 ID（可选） |
+| `source_name` | string | 情报源名称（可选） |
+| `source_tier` | string | 情报源等级 T0-T3（可选） |
 | `sourceHash` | string | 留空（驼峰命名，兼容 intel-distill） |
 | `archivedSource` | string | 留空（驼峰命名，兼容 intel-distill） |
 | `convertedFile` | string | 留空（驼峰命名，兼容 intel-distill） |
 
-**字段填充说明**：
-- `sourceHash`、`archivedSource`、`convertedFile` 由 intel-distill 处理时填充
-- intel-pull 从 API 获取的数据无法提供这些字段，故留空
+**字段映射说明**（API v1.3.0 → frontmatter）：
+- `id` → `content_id`
+- `title` → Markdown 标题
+- `content` → Markdown 正文
+- `fetched_at` → `first_seen_at`
 
 ---
 
@@ -547,9 +564,24 @@ convertedFile: ""
 
 | intel-pull 参数 | cyber-pulse API |
 |------------------|-----------------|
-| 默认（增量） | `GET /content?cursor={cursor}&limit=100` |
-| `--since` | `GET /content?since={since}&limit=100` |
-| `--id` | `GET /content/{content_id}` |
+| 默认（增量） | `GET /api/v1/contents?cursor={cursor}&limit=100` |
+| `--since` | `GET /api/v1/contents?since={since}&limit=100` |
+| `--id` | `GET /api/v1/contents/{content_id}` |
+
+**API 响应格式（v1.3.0）**：
+
+列表响应：
+```json
+{
+  "data": [ /* PulseContent 数组 */ ],
+  "meta": {
+    "next_cursor": "cnt_xxx",
+    "has_more": true
+  }
+}
+```
+
+单条响应：直接返回 `PulseContent` 对象（不包装）
 
 ---
 

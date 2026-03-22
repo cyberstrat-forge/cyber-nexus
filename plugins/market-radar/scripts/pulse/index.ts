@@ -28,6 +28,8 @@ import {
   PulseSourcesConfig,
   PulseContent,
   PulseError,
+  validateListResponse,
+  validateItemResponse,
 } from './types.js';
 
 import {
@@ -221,9 +223,13 @@ async function pullFromSource(
     let newCursor: string | undefined;
 
     if (options.id) {
-      // Single item mode
-      const response = await client.getContent(options.id);
-      items = [response.item];
+      // Single item mode - API returns content directly (not wrapped)
+      const content = await client.getContent(options.id);
+
+      // Validate response structure
+      validateItemResponse(content, options.id);
+
+      items = [content];
       newCursor = undefined; // Don't update cursor for single item pull
     } else {
       // List mode (incremental, since, or all)
@@ -241,9 +247,13 @@ async function pullFromSource(
           response = await client.listContent(cursor, limit);
         }
 
-        items.push(...response.items);
-        cursor = response.next_cursor || undefined;
-        hasMore = response.has_more === true && !!cursor;
+        // Validate response structure before using
+        validateListResponse(response);
+
+        // API v1.3.0: response.data contains items, response.meta contains pagination
+        items.push(...response.data);
+        cursor = response.meta.next_cursor || undefined;
+        hasMore = response.meta.has_more === true && !!cursor;
       }
       newCursor = cursor;
     }
@@ -261,10 +271,21 @@ async function pullFromSource(
     };
     return successResult;
   } catch (error) {
-    // Return failure result
-    const errorMessage = error instanceof PulseError ? error.message
-      : error instanceof Error ? error.message
-      : String(error);
+    // Build error message with context
+    let errorMessage: string;
+    if (error instanceof PulseError) {
+      // Include error code for better debugging
+      errorMessage = `${error.message} (code: ${error.code})`;
+      // Log full details for debugging
+      if (error.details) {
+        console.error(`[pulse] Error details for ${source.name}:`, error.details);
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
+
     const failureResult: PullSourceResultFailure = {
       source: source.name,
       success: false,

@@ -31,44 +31,95 @@ export interface PulseSourcesConfig {
 // ==================== API Types ====================
 
 /**
- * API content item from cyber-pulse
+ * Source tier levels (T0 = highest priority, T3 = lowest)
  */
-export interface PulseContent {
-  /** Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx) */
-  content_id: string;
-  /** Deduplication hash */
-  canonical_hash: string;
-  /** Normalized title */
-  normalized_title: string;
-  /** Normalized body content */
-  normalized_body: string;
-  /** First seen timestamp (ISO 8601) */
-  first_seen_at: string;
-  /** Last seen timestamp (ISO 8601) */
-  last_seen_at: string;
-  /** Number of sources */
-  source_count: number;
+export type SourceTier = 'T0' | 'T1' | 'T2' | 'T3';
+
+/**
+ * Source connector types
+ */
+export type SourceType = 'rss' | 'api' | 'web' | 'media';
+
+/**
+ * ISO 8601 timestamp string
+ */
+export type Timestamp = string;
+
+/**
+ * Quality score (0-100)
+ */
+export type QualityScore = number;
+
+/**
+ * Source information embedded in content
+ */
+export interface PulseSourceInfo {
+  /** Source ID */
+  id: string;
+  /** Source name */
+  name: string;
+  /** Source tier (T0-T3) */
+  tier: SourceTier;
+  /** Source type (rss, api, web, media) */
+  type: SourceType;
 }
 
 /**
- * API list response
+ * API content item from cyber-pulse v1.3.0
+ *
+ * Field mapping from API v1.3.0:
+ * - id → content_id (frontmatter)
+ * - title → Markdown 标题
+ * - content → Markdown 正文
+ * - fetched_at → first_seen_at (frontmatter)
+ */
+export interface PulseContent {
+  /** Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx) - maps to content_id */
+  id: string;
+  /** Title - used as Markdown heading */
+  title: string;
+  /** Markdown content - used as document body */
+  content: string;
+  /** HTML content (optional) */
+  content_html?: string;
+  /** Original URL */
+  url?: string;
+  /** Author (optional) */
+  author?: string;
+  /** Tags array */
+  tags?: string[];
+  /** Published timestamp (ISO 8601) */
+  published_at?: Timestamp;
+  /** Fetched timestamp (ISO 8601) - maps to first_seen_at */
+  fetched_at: Timestamp;
+  /** Source information */
+  source?: PulseSourceInfo;
+  /** Quality score (0-100) */
+  quality_score?: QualityScore;
+  /** Deduplication hash - maps to canonical_hash */
+  canonical_hash: string;
+}
+
+/**
+ * API list response (v1.3.0 format)
  */
 export interface PulseListResponse {
   /** List of content items */
-  items: PulseContent[];
-  /** Cursor for next page */
-  next_cursor: string | null;
-  /** Whether more items available */
-  has_more: boolean;
+  data: PulseContent[];
+  /** Pagination metadata */
+  meta: {
+    /** Cursor for next page */
+    next_cursor: string | null;
+    /** Whether more items available */
+    has_more: boolean;
+  };
 }
 
 /**
- * API single item response
+ * API single item response (v1.3.0 format)
+ * Returns content object directly, not wrapped
  */
-export interface PulseItemResponse {
-  /** Single content item */
-  item: PulseContent;
-}
+export type PulseItemResponse = PulseContent;
 
 /**
  * API error response
@@ -197,6 +248,7 @@ export type PulseErrorCode =
   | 'API_AUTH_FAILED'
   | 'API_TIMEOUT'
   | 'API_ERROR'
+  | 'API_INVALID_RESPONSE'
   | 'CONTENT_NOT_FOUND'
   | 'STATE_ERROR';
 
@@ -230,3 +282,96 @@ export const RETRY_COUNT = 1;
 
 /** Retry delay in milliseconds */
 export const RETRY_DELAY = 2000;
+
+// ==================== Validation Functions ====================
+
+/**
+ * Validate API list response structure
+ *
+ * @param response - Raw API response
+ * @returns True if valid, throws PulseError if invalid
+ */
+export function validateListResponse(response: unknown): response is PulseListResponse {
+  if (!response || typeof response !== 'object') {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      'API 返回无效响应: 响应为空或非对象',
+      { response }
+    );
+  }
+
+  const resp = response as Record<string, unknown>;
+
+  if (!Array.isArray(resp.data)) {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      `API 返回无效数据格式: data 应为数组，实际为 ${typeof resp.data}`,
+      { dataType: typeof resp.data, response }
+    );
+  }
+
+  if (!resp.meta || typeof resp.meta !== 'object') {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      'API 返回无效响应: 缺少 meta 字段',
+      { response }
+    );
+  }
+
+  const meta = resp.meta as Record<string, unknown>;
+
+  if (meta.next_cursor !== null && typeof meta.next_cursor !== 'string') {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      `API 返回无效 meta.next_cursor: 应为 string 或 null，实际为 ${typeof meta.next_cursor}`,
+      { nextCursorType: typeof meta.next_cursor, response }
+    );
+  }
+
+  if (typeof meta.has_more !== 'boolean') {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      `API 返回无效 meta.has_more: 应为 boolean，实际为 ${typeof meta.has_more}`,
+      { hasMoreType: typeof meta.has_more, response }
+    );
+  }
+
+  return true;
+}
+
+/**
+ * Validate API single item response
+ *
+ * @param response - Raw API response
+ * @param contentId - Requested content ID (for error messages)
+ * @returns True if valid, throws PulseError if invalid
+ */
+export function validateItemResponse(
+  response: unknown,
+  contentId?: string
+): response is PulseContent {
+  if (!response || typeof response !== 'object') {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      `API 返回无效内容${contentId ? `: ${contentId}` : ''}`,
+      { contentId, response }
+    );
+  }
+
+  const content = response as Record<string, unknown>;
+
+  const missingFields: string[] = [];
+  if (!content.id) missingFields.push('id');
+  if (!content.fetched_at) missingFields.push('fetched_at');
+  if (!content.canonical_hash) missingFields.push('canonical_hash');
+
+  if (missingFields.length > 0) {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      `API 返回内容缺少必需字段: ${missingFields.join(', ')}${contentId ? ` (${contentId})` : ''}`,
+      { contentId, missingFields, response }
+    );
+  }
+
+  return true;
+}

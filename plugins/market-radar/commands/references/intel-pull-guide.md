@@ -176,9 +176,15 @@ export CYBER_PULSE_LOCAL_KEY=cp_live_xxx
 content_id: "cnt_20260319143052_a1b2c3d4"
 canonical_hash: "abc123def456..."
 first_seen_at: "2026-03-19T14:30:52Z"
-last_seen_at: "2026-03-19T15:45:00Z"
-source_count: 3
 pulse_source: "local"
+url: "https://example.com/article"
+author: "Security Team"
+tags: ["vulnerability", "CVE"]
+published_at: "2026-03-19T14:00:00Z"
+quality_score: 85
+source_id: "src_a1b2c3d4"
+source_name: "安全客"
+source_tier: "T1"
 sourceHash: ""
 archivedSource: ""
 convertedFile: ""
