@@ -71,11 +71,18 @@ export function loadState(outputDir: string): Record<string, unknown> {
  * Migrate state to current version
  */
 function migrateState(state: Record<string, unknown>): Record<string, unknown> {
-  const version = state.version as string || '1.0';
+  // Safely extract version with proper type checking
+  const rawVersion = state.version;
+  const version = typeof rawVersion === 'string' ? rawVersion : '1.0';
 
   // Already at current version
   if (version === STATE_VERSION) {
     return state;
+  }
+
+  // Log migration for debugging
+  if (version !== STATE_VERSION) {
+    console.log(`[pulse] Migrating state from version ${version} to ${STATE_VERSION}`);
   }
 
   // Add pulse field if missing

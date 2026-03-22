@@ -13,6 +13,25 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { PulseContent } from './types.js';
 
+// ==================== YAML Utilities ====================
+
+/**
+ * Escape special characters for YAML double-quoted strings
+ *
+ * Handles: backslash, double quotes, newlines, tabs
+ *
+ * @param str - Raw string to escape
+ * @returns YAML-safe escaped string
+ */
+function escapeYamlString(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')    // Escape backslashes first
+    .replace(/"/g, '\\"')       // Escape double quotes
+    .replace(/\n/g, '\\n')      // Escape newlines
+    .replace(/\r/g, '\\r')      // Escape carriage returns
+    .replace(/\t/g, '\\t');     // Escape tabs
+}
+
 // ==================== Helper Functions ====================
 
 /**
@@ -23,21 +42,44 @@ import { PulseContent } from './types.js';
  *
  * @param content - PulseContent item
  * @returns Generated filename
+ * @throws Error if fetched_at or id format is invalid
  */
 export function generateFilename(content: PulseContent): string {
+  // Validate fetched_at exists
+  if (!content.fetched_at) {
+    throw new Error(
+      `Missing fetched_at field in content ${content.id || 'unknown'}. ` +
+      `Expected ISO 8601 format (e.g., 2026-03-19T14:30:52Z)`
+    );
+  }
+
   // Extract YYYYMMDD from fetched_at (ISO 8601 format: 2026-03-19T14:30:52Z)
   // Note: API field is fetched_at, maps to first_seen_at in frontmatter
   const dateMatch = content.fetched_at.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!dateMatch) {
-    throw new Error(`Invalid fetched_at format: ${content.fetched_at}`);
+    throw new Error(
+      `Invalid fetched_at format for content ${content.id}: "${content.fetched_at}". ` +
+      `Expected ISO 8601 format (e.g., 2026-03-19T14:30:52Z)`
+    );
   }
   const dateStr = `${dateMatch[1]}${dateMatch[2]}${dateMatch[3]}`;
+
+  // Validate id exists
+  if (!content.id) {
+    throw new Error(
+      `Missing id field in content. ` +
+      `Expected format: cnt_YYYYMMDDHHMMSS_xxxxxxxx`
+    );
+  }
 
   // Extract last 8 characters from id (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx)
   // Note: API field is id, maps to content_id in frontmatter
   const idParts = content.id.split('_');
   if (idParts.length < 3) {
-    throw new Error(`Invalid content id format: ${content.id}`);
+    throw new Error(
+      `Invalid content id format: "${content.id}". ` +
+      `Expected format: cnt_YYYYMMDDHHMMSS_xxxxxxxx (3 underscore-separated parts)`
+    );
   }
   const idSuffix = idParts[idParts.length - 1]; // Last 8 characters
 
@@ -54,33 +96,43 @@ export function generateFilename(content: PulseContent): string {
 function generateFrontmatter(content: PulseContent, sourceName: string): string {
   const lines: string[] = [
     '---',
-    // Core fields (mapped from API v1.3.0)
-    `content_id: "${content.id}"`,
-    `canonical_hash: "${content.canonical_hash}"`,
-    `first_seen_at: "${content.fetched_at}"`,
-    `pulse_source: "${sourceName}"`,
+    // Core fields (mapped from API v1.3.0) - use escaped strings
+    `content_id: "${escapeYamlString(content.id)}"`,
+    `canonical_hash: "${escapeYamlString(content.canonical_hash)}"`,
+    `first_seen_at: "${escapeYamlString(content.fetched_at)}"`,
+    `pulse_source: "${escapeYamlString(sourceName)}"`,
   ];
 
-  // Optional fields from API v1.3.0
+  // Optional fields from API v1.3.0 - use escaped strings
   if (content.url) {
-    lines.push(`url: "${content.url}"`);
+    lines.push(`url: "${escapeYamlString(content.url)}"`);
   }
   if (content.author) {
-    lines.push(`author: "${content.author}"`);
+    lines.push(`author: "${escapeYamlString(content.author)}"`);
   }
   if (content.tags && content.tags.length > 0) {
-    lines.push(`tags: ${JSON.stringify(content.tags)}`);
+    // Tags array: escape each tag and join
+    const escapedTags = content.tags.map(t => `"${escapeYamlString(t)}"`).join(', ');
+    lines.push(`tags: [${escapedTags}]`);
   }
   if (content.published_at) {
-    lines.push(`published_at: "${content.published_at}"`);
+    lines.push(`published_at: "${escapeYamlString(content.published_at)}"`);
   }
   if (content.quality_score !== undefined) {
     lines.push(`quality_score: ${content.quality_score}`);
   }
+
+  // Source info - validate each nested field before writing
   if (content.source) {
-    lines.push(`source_id: "${content.source.id}"`);
-    lines.push(`source_name: "${content.source.name}"`);
-    lines.push(`source_tier: "${content.source.tier}"`);
+    if (content.source.id) {
+      lines.push(`source_id: "${escapeYamlString(content.source.id)}"`);
+    }
+    if (content.source.name) {
+      lines.push(`source_name: "${escapeYamlString(content.source.name)}"`);
+    }
+    if (content.source.tier) {
+      lines.push(`source_tier: "${escapeYamlString(content.source.tier)}"`);
+    }
   }
 
   // Placeholder fields for intel-distill processing

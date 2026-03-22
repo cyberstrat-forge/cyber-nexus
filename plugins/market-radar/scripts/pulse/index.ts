@@ -28,6 +28,8 @@ import {
   PulseSourcesConfig,
   PulseContent,
   PulseError,
+  validateListResponse,
+  validateItemResponse,
 } from './types.js';
 
 import {
@@ -223,6 +225,10 @@ async function pullFromSource(
     if (options.id) {
       // Single item mode - API returns content directly (not wrapped)
       const content = await client.getContent(options.id);
+
+      // Validate response structure
+      validateItemResponse(content, options.id);
+
       items = [content];
       newCursor = undefined; // Don't update cursor for single item pull
     } else {
@@ -240,6 +246,9 @@ async function pullFromSource(
         } else {
           response = await client.listContent(cursor, limit);
         }
+
+        // Validate response structure before using
+        validateListResponse(response);
 
         // API v1.3.0: response.data contains items, response.meta contains pagination
         items.push(...response.data);
@@ -262,10 +271,21 @@ async function pullFromSource(
     };
     return successResult;
   } catch (error) {
-    // Return failure result
-    const errorMessage = error instanceof PulseError ? error.message
-      : error instanceof Error ? error.message
-      : String(error);
+    // Build error message with context
+    let errorMessage: string;
+    if (error instanceof PulseError) {
+      // Include error code for better debugging
+      errorMessage = `${error.message} (code: ${error.code})`;
+      // Log full details for debugging
+      if (error.details) {
+        console.error(`[pulse] Error details for ${source.name}:`, error.details);
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
+
     const failureResult: PullSourceResultFailure = {
       source: source.name,
       success: false,
