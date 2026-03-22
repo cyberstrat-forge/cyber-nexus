@@ -31,44 +31,75 @@ export interface PulseSourcesConfig {
 // ==================== API Types ====================
 
 /**
- * API content item from cyber-pulse
+ * Source information embedded in content
  */
-export interface PulseContent {
-  /** Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx) */
-  content_id: string;
-  /** Deduplication hash */
-  canonical_hash: string;
-  /** Normalized title */
-  normalized_title: string;
-  /** Normalized body content */
-  normalized_body: string;
-  /** First seen timestamp (ISO 8601) */
-  first_seen_at: string;
-  /** Last seen timestamp (ISO 8601) */
-  last_seen_at: string;
-  /** Number of sources */
-  source_count: number;
+export interface PulseSourceInfo {
+  /** Source ID */
+  id: string;
+  /** Source name */
+  name: string;
+  /** Source tier (T0-T3) */
+  tier: string;
+  /** Source type (rss, api, web, media) */
+  type: string;
 }
 
 /**
- * API list response
+ * API content item from cyber-pulse v1.3.0
+ *
+ * Field mapping from API v1.3.0:
+ * - id → content_id (frontmatter)
+ * - title → normalized_title (frontmatter)
+ * - content → normalized_body (markdown body)
+ * - fetched_at → first_seen_at (frontmatter)
+ */
+export interface PulseContent {
+  /** Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx) - maps to content_id */
+  id: string;
+  /** Title - maps to normalized_title */
+  title: string;
+  /** Markdown content - maps to normalized_body */
+  content: string;
+  /** HTML content (optional) */
+  content_html?: string;
+  /** Original URL */
+  url?: string;
+  /** Author (optional) */
+  author?: string;
+  /** Tags array */
+  tags?: string[];
+  /** Published timestamp (ISO 8601) */
+  published_at?: string;
+  /** Fetched timestamp (ISO 8601) - maps to first_seen_at */
+  fetched_at: string;
+  /** Source information */
+  source?: PulseSourceInfo;
+  /** Quality score (0-100) */
+  quality_score?: number;
+  /** Deduplication hash - maps to canonical_hash */
+  canonical_hash: string;
+}
+
+/**
+ * API list response (v1.3.0 format)
  */
 export interface PulseListResponse {
   /** List of content items */
-  items: PulseContent[];
-  /** Cursor for next page */
-  next_cursor: string | null;
-  /** Whether more items available */
-  has_more: boolean;
+  data: PulseContent[];
+  /** Pagination metadata */
+  meta: {
+    /** Cursor for next page */
+    next_cursor: string | null;
+    /** Whether more items available */
+    has_more: boolean;
+  };
 }
 
 /**
- * API single item response
+ * API single item response (v1.3.0 format)
+ * Returns content object directly, not wrapped
  */
-export interface PulseItemResponse {
-  /** Single content item */
-  item: PulseContent;
-}
+export type PulseItemResponse = PulseContent;
 
 /**
  * API error response

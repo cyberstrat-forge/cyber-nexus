@@ -25,17 +25,19 @@ import { PulseContent } from './types.js';
  * @returns Generated filename
  */
 export function generateFilename(content: PulseContent): string {
-  // Extract YYYYMMDD from first_seen_at (ISO 8601 format: 2026-03-19T14:30:52Z)
-  const dateMatch = content.first_seen_at.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  // Extract YYYYMMDD from fetched_at (ISO 8601 format: 2026-03-19T14:30:52Z)
+  // Note: API field is fetched_at, maps to first_seen_at in frontmatter
+  const dateMatch = content.fetched_at.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!dateMatch) {
-    throw new Error(`Invalid first_seen_at format: ${content.first_seen_at}`);
+    throw new Error(`Invalid fetched_at format: ${content.fetched_at}`);
   }
   const dateStr = `${dateMatch[1]}${dateMatch[2]}${dateMatch[3]}`;
 
-  // Extract last 8 characters from content_id (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx)
-  const idParts = content.content_id.split('_');
+  // Extract last 8 characters from id (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx)
+  // Note: API field is id, maps to content_id in frontmatter
+  const idParts = content.id.split('_');
   if (idParts.length < 3) {
-    throw new Error(`Invalid content_id format: ${content.content_id}`);
+    throw new Error(`Invalid content id format: ${content.id}`);
   }
   const idSuffix = idParts[idParts.length - 1]; // Last 8 characters
 
@@ -50,23 +52,43 @@ export function generateFilename(content: PulseContent): string {
  * @returns YAML frontmatter string
  */
 function generateFrontmatter(content: PulseContent, sourceName: string): string {
-  const lines = [
+  const lines: string[] = [
     '---',
-    `content_id: "${content.content_id}"`,
+    // Core fields (mapped from API v1.3.0)
+    `content_id: "${content.id}"`,
     `canonical_hash: "${content.canonical_hash}"`,
-    `first_seen_at: "${content.first_seen_at}"`,
-    `last_seen_at: "${content.last_seen_at}"`,
-    `source_count: ${content.source_count}`,
+    `first_seen_at: "${content.fetched_at}"`,
     `pulse_source: "${sourceName}"`,
-    // Placeholder fields for intel-distill processing
-    // sourceHash: content hash for deduplication (populated by intel-distill)
-    `sourceHash: ""`,
-    // archivedSource: path to archived source file (populated by intel-distill)
-    `archivedSource: ""`,
-    // convertedFile: path to converted markdown file (populated by intel-distill)
-    `convertedFile: ""`,
-    '---',
   ];
+
+  // Optional fields from API v1.3.0
+  if (content.url) {
+    lines.push(`url: "${content.url}"`);
+  }
+  if (content.author) {
+    lines.push(`author: "${content.author}"`);
+  }
+  if (content.tags && content.tags.length > 0) {
+    lines.push(`tags: ${JSON.stringify(content.tags)}`);
+  }
+  if (content.published_at) {
+    lines.push(`published_at: "${content.published_at}"`);
+  }
+  if (content.quality_score !== undefined) {
+    lines.push(`quality_score: ${content.quality_score}`);
+  }
+  if (content.source) {
+    lines.push(`source_id: "${content.source.id}"`);
+    lines.push(`source_name: "${content.source.name}"`);
+    lines.push(`source_tier: "${content.source.tier}"`);
+  }
+
+  // Placeholder fields for intel-distill processing
+  lines.push(`sourceHash: ""`);
+  lines.push(`archivedSource: ""`);
+  lines.push(`convertedFile: ""`);
+  lines.push('---');
+
   return lines.join('\n');
 }
 
@@ -79,8 +101,8 @@ function generateFrontmatter(content: PulseContent, sourceName: string): string 
  */
 function generateMarkdown(content: PulseContent, sourceName: string): string {
   const frontmatter = generateFrontmatter(content, sourceName);
-  const title = content.normalized_title || '(无标题)';
-  const body = content.normalized_body || '';
+  const title = content.title || '(无标题)';
+  const body = content.content || '';
 
   return `${frontmatter}
 

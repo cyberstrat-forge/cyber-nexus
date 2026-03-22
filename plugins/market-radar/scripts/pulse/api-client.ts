@@ -254,17 +254,17 @@ export class PulseClient {
   /**
    * List content items
    *
-   * GET /content?cursor={cursor}&limit={limit}
+   * GET /api/v1/contents?cursor={cursor}&limit={limit}
    *
    * @param cursor - Pagination cursor (optional)
    * @param limit - Number of items to return (default: 100)
-   * @returns List response with items and pagination info
+   * @returns List response with data and meta
    */
   async listContent(
     cursor?: string,
     limit: number = DEFAULT_LIMIT
   ): Promise<PulseListResponse> {
-    return this.makeRequest<PulseListResponse>('/content', {
+    return this.makeRequest<PulseListResponse>('/api/v1/contents', {
       cursor,
       limit,
     });
@@ -273,19 +273,19 @@ export class PulseClient {
   /**
    * List content items since a specific datetime
    *
-   * GET /content?since={since}&cursor={cursor}&limit={limit}
+   * GET /api/v1/contents?since={since}&cursor={cursor}&limit={limit}
    *
    * @param since - ISO 8601 datetime string
    * @param cursor - Pagination cursor (optional)
    * @param limit - Number of items to return (default: 100)
-   * @returns List response with items and pagination info
+   * @returns List response with data and meta
    */
   async listContentSince(
     since: string,
     cursor?: string,
     limit: number = DEFAULT_LIMIT
   ): Promise<PulseListResponse> {
-    return this.makeRequest<PulseListResponse>('/content', {
+    return this.makeRequest<PulseListResponse>('/api/v1/contents', {
       since,
       cursor,
       limit,
@@ -295,12 +295,12 @@ export class PulseClient {
   /**
    * Get a single content item by ID
    *
-   * GET /content/{contentId}
+   * GET /api/v1/contents/{contentId}
    *
    * @param contentId - Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx)
-   * @returns Single content item response
+   * @returns Single content item (returned directly, not wrapped)
    */
   async getContent(contentId: string): Promise<PulseItemResponse> {
-    return this.makeRequest<PulseItemResponse>(`/content/${contentId}`);
+    return this.makeRequest<PulseItemResponse>(`/api/v1/contents/${contentId}`);
   }
 }
