@@ -6,6 +6,24 @@
 
 ---
 
+## [1.0.16] - 2026-03-22
+
+### 插件更新
+
+#### market-radar v1.3.2
+
+**修复**
+- API 适配：适配 cyber-pulse API v1.3.0 规范变更
+  - 更新 API 路径：`/content` → `/api/v1/contents`
+  - 更新响应结构：`{ data, meta }` 替代 `{ items, next_cursor, has_more }`
+
+**变更**
+- 字段映射适配 API v1.3.0（`id` → `content_id`，`title`/`content`/`fetched_at` 重命名）
+- 新增字段支持：`url`, `author`, `tags`, `published_at`, `quality_score`, `source`
+- 移除已弃用字段：`last_seen_at`, `source_count`
+
+---
+
 ## [1.0.15] - 2026-03-20
 
 ### 插件更新

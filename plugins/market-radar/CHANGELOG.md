@@ -2,6 +2,25 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.3.2] - 2026-03-22
+
+### 修复
+
+- **API 适配**：适配 cyber-pulse API v1.3.0 规范变更
+  - 更新 API 路径：`/content` → `/api/v1/contents`
+  - 更新响应结构：`{ data, meta }` 替代 `{ items, next_cursor, has_more }`
+  - 单条拉取响应不再包装，直接返回内容对象
+
+### 变更
+
+- **字段映射**：适配 API v1.3.0 字段变更
+  - `id` → `content_id`（frontmatter）
+  - `title` → Markdown 标题
+  - `content` → Markdown 正文
+  - `fetched_at` → `first_seen_at`（frontmatter）
+- **新增字段支持**：`url`, `author`, `tags`, `published_at`, `quality_score`, `source`
+- **移除已弃用字段**：`last_seen_at`, `source_count`
+
 ## [1.3.1] - 2026-03-20
 
 ### 修复
