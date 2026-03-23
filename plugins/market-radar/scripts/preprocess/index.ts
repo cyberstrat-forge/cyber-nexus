@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Preprocessing entry point (v2.1)
  *
@@ -12,7 +12,7 @@
  * - Failed conversions generate .error.md in inbox/
  *
  * Usage:
- *   npx tsx index.ts --source <dir> [--force]
+ *   pnpm exec tsx index.ts --source <dir> [--force]
  */
 
 import * as fs from 'fs';
@@ -430,6 +430,7 @@ async function processFile(
       archivedPath: sourcePath, // Source remains in place
       convertedPath,
       isDuplicate: false,
+      warning: `Archive directory creation failed: ${message}`,
     };
   }
 
@@ -455,6 +456,7 @@ async function processFile(
             archivedPath: sourcePath,
             convertedPath,
             isDuplicate: false,
+            warning: `Source file archive failed: ${copyMessage}`,
           };
         }
       } else {
@@ -467,6 +469,7 @@ async function processFile(
           archivedPath: sourcePath,
           convertedPath,
           isDuplicate: false,
+          warning: `Source file move to archive failed: ${message}`,
         };
       }
     }
@@ -574,7 +577,7 @@ async function main() {
       force = true;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: npx tsx index.ts --source <dir> [--force]
+Usage: pnpm exec tsx index.ts --source <dir> [--force]
 
 Directory Structure (v2.1):
   {source_dir}/

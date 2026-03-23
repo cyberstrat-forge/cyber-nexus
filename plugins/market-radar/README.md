@@ -205,7 +205,7 @@ cp -r market-radar /path/to/your/project/.claude-plugin/
 
 ```bash
 # 安装校验依赖
-cd plugins/market-radar/scripts && npm install
+cd plugins/market-radar/scripts && pnpm install
 ```
 
 ### intel-pull 基本用法
@@ -438,7 +438,7 @@ cd plugins/market-radar/scripts && npm install
 ### 必需依赖
 
 - **Claude Code CLI**：已安装并配置
-- **Node.js 18+** 和 **npm**：用于 JSON Schema 校验
+- **Node.js 18+** 和 **pnpm**：用于 JSON Schema 校验
 
 ### 可选依赖
 

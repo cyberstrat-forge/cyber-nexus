@@ -46,6 +46,7 @@ export interface PreprocessResult {
   archivedPath?: string;     // Path to archived source file (v2.0)
   convertedPath?: string;    // Path to converted file (v2.0)
   isDuplicate?: boolean;     // Whether file is a duplicate (v2.0)
+  warning?: string;          // Warning message for partial success (e.g., archive failed)
 }
 
 /**

@@ -5,11 +5,11 @@
  * CLI tool for pulling intelligence content from cyber-pulse API
  *
  * Usage:
- *   npx tsx index.ts --source local
- *   npx tsx index.ts --all --output ./inbox
- *   npx tsx index.ts --since 2026-03-01T00:00:00Z
- *   npx tsx index.ts --id cnt_20260319143052_a1b2c3d4
- *   npx tsx index.ts --list-sources
+ *   pnpm exec tsx index.ts --source local
+ *   pnpm exec tsx index.ts --all --output ./inbox
+ *   pnpm exec tsx index.ts --since 2026-03-01T00:00:00Z
+ *   pnpm exec tsx index.ts --id cnt_20260319143052_a1b2c3d4
+ *   pnpm exec tsx index.ts --list-sources
  */
 
 import { Command } from 'commander';
@@ -74,7 +74,7 @@ function checkDependencies(): void {
     console.error('错误: 依赖未安装');
     console.error('');
     console.error('请先安装依赖:');
-    console.error('  cd plugins/market-radar && npm install');
+    console.error('  cd plugins/market-radar/scripts && pnpm install');
     console.error('');
     process.exit(1);
   }

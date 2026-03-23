@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Claude Code plugin collection for cybersecurity strategic planning",
   "private": true,
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "prepare": "husky"
   },

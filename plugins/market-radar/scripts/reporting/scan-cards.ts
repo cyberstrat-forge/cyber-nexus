@@ -2,7 +2,7 @@
 /**
  * 扫描情报卡片，筛选指定时间范围内的卡片
  *
- * Usage: npx tsx scan-cards.ts --period weekly --param "2026-W10" --output-dir ./intel
+ * Usage: pnpm exec tsx scan-cards.ts --period weekly --param "2026-W10" --output-dir ./intel
  */
 
 import { Command } from 'commander';
@@ -229,8 +229,13 @@ async function scanCards(
           });
         }
       }
-    } catch {
-      // 目录不存在，跳过
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      // 目录不存在是预期情况，静默跳过
+      if (err.code !== 'ENOENT') {
+        // 其他错误（权限、I/O等）打印警告
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${err.message}`);
+      }
     }
   }
 

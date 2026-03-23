@@ -31,10 +31,10 @@ Cyber Nexus 是一个 Claude Code 插件集合，致力于将 AI 能力融入网
 
 ```bash
 # 安装根目录依赖（Git Hooks: commitlint）
-npm install
+pnpm install
 
 # 安装插件脚本依赖
-cd plugins/market-radar/scripts && npm install
+cd plugins/market-radar/scripts && pnpm install
 ```
 
 ### 使用示例

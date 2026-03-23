@@ -133,7 +133,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-pull-guide.md
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --list-sources
+pnpm exec tsx pulse/index.ts --list-sources
 ```
 
 **输出示例**：
@@ -160,7 +160,7 @@ npx tsx pulse/index.ts --list-sources
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --add-source
+pnpm exec tsx pulse/index.ts --add-source
 ```
 
 **交互流程**：
@@ -182,7 +182,7 @@ API URL: https://pulse.example.com
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --remove-source {name}
+pnpm exec tsx pulse/index.ts --remove-source {name}
 ```
 
 **输出示例**：
@@ -197,7 +197,7 @@ npx tsx pulse/index.ts --remove-source {name}
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --set-default {name}
+pnpm exec tsx pulse/index.ts --set-default {name}
 ```
 
 **输出示例**：
@@ -224,7 +224,7 @@ npx tsx pulse/index.ts --set-default {name}
 ⚠️  脚本依赖未安装
 
 请先安装依赖：
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
 
 安装完成后重新执行命令。
 ```
@@ -268,7 +268,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts [--source {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -288,7 +288,7 @@ npx tsx pulse/index.ts [--source {name}] [--output {dir}]
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --since "{datetime}" [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --since "{datetime}" [--source {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -306,7 +306,7 @@ npx tsx pulse/index.ts --since "{datetime}" [--source {name}] [--output {dir}]
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --all [--output {dir}]
+pnpm exec tsx pulse/index.ts --all [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -325,7 +325,7 @@ npx tsx pulse/index.ts --all [--output {dir}]
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：

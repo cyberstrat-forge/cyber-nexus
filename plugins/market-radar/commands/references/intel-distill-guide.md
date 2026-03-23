@@ -225,10 +225,10 @@ ls ./docs/intelligence/
 
 ### 必需依赖
 
-- **Node.js 18+** 和 **npm**：用于 JSON Schema 校验
+- **Node.js 18+** 和 **pnpm**：用于 JSON Schema 校验
   ```bash
   # 首次使用前安装校验依赖
-  cd plugins/market-radar/scripts && npm install
+  cd plugins/market-radar/scripts && pnpm install
   ```
 
 ### 可选依赖

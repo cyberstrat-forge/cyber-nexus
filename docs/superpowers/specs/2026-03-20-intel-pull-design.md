@@ -283,7 +283,7 @@ convertedFile: ""
 ⚠️  脚本依赖未安装
 
 请先安装依赖：
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
 
 安装完成后重新执行命令。
 ```
