@@ -430,6 +430,7 @@ async function processFile(
       archivedPath: sourcePath, // Source remains in place
       convertedPath,
       isDuplicate: false,
+      warning: `Archive directory creation failed: ${message}`,
     };
   }
 
@@ -455,6 +456,7 @@ async function processFile(
             archivedPath: sourcePath,
             convertedPath,
             isDuplicate: false,
+            warning: `Source file archive failed: ${copyMessage}`,
           };
         }
       } else {
@@ -467,6 +469,7 @@ async function processFile(
           archivedPath: sourcePath,
           convertedPath,
           isDuplicate: false,
+          warning: `Source file move to archive failed: ${message}`,
         };
       }
     }

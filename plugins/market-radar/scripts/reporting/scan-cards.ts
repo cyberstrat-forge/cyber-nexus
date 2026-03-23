@@ -229,8 +229,13 @@ async function scanCards(
           });
         }
       }
-    } catch {
-      // 目录不存在，跳过
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      // 目录不存在是预期情况，静默跳过
+      if (err.code !== 'ENOENT') {
+        // 其他错误（权限、I/O等）打印警告
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${err.message}`);
+      }
     }
   }
 

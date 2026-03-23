@@ -53,9 +53,23 @@ function validateJson(schemaName: string, jsonPath: string): ValidationResult {
     return { valid: false, errors: [`JSON file not found: ${jsonPath}`] };
   }
 
-  // Load schema and data
-  const schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
-  const data = JSON.parse(readFileSync(resolve(jsonPath), 'utf-8'));
+  // Load schema and data with proper error handling
+  let schema: object;
+  let data: object;
+
+  try {
+    schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { valid: false, errors: [`Invalid JSON in schema file: ${message}`] };
+  }
+
+  try {
+    data = JSON.parse(readFileSync(resolve(jsonPath), 'utf-8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { valid: false, errors: [`Invalid JSON in data file: ${message}`] };
+  }
 
   // Configure Ajv
   const ajv = new Ajv({ allErrors: true, strict: false });
