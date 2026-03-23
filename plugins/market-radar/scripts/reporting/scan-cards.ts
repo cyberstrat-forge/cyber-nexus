@@ -2,7 +2,7 @@
 /**
  * 扫描情报卡片，筛选指定时间范围内的卡片
  *
- * Usage: npx tsx scan-cards.ts --period weekly --param "2026-W10" --output-dir ./intel
+ * Usage: pnpm exec tsx scan-cards.ts --period weekly --param "2026-W10" --output-dir ./intel
  */
 
 import { Command } from 'commander';

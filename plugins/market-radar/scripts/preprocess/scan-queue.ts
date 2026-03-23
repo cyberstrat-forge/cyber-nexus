@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Scan converted files and build processing queue
  *
@@ -6,7 +6,7 @@
  * and compares with state.json to determine which files need processing.
  *
  * Usage:
- *   npx tsx scan-queue.ts --source <dir> [--state <file>] [--output json|text]
+ *   pnpm exec tsx scan-queue.ts --source <dir> [--state <file>] [--output json|text]
  *
  * Output (JSON format):
  * {
@@ -358,7 +358,7 @@ function main() {
       i++;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: npx tsx scan-queue.ts --source <dir> [--state <file>] [--output json|text]
+Usage: pnpm exec tsx scan-queue.ts --source <dir> [--state <file>] [--output json|text]
 
 Scan converted files and build processing queue for intel-distill.
 

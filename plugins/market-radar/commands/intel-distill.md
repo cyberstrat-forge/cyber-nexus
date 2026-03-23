@@ -302,7 +302,7 @@ state_file = intel_dir/state.json
 ⚠️  脚本依赖未安装
 
 请先安装依赖：
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
 
 安装完成后重新执行命令。
 ```
@@ -322,7 +322,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx preprocess/index.ts --source {source_dir}
+pnpm exec tsx preprocess/index.ts --source {source_dir}
 ```
 
 **输出位置**：
@@ -405,7 +405,7 @@ glob pattern: {source_dir}/converted/**/*.md
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx preprocess/scan-queue.ts \
+pnpm exec tsx preprocess/scan-queue.ts \
   --source {source_dir} \
   --state {source_dir}/.intel/state.json \
   --output json
@@ -715,7 +715,7 @@ if (needs_processing + pending_review >= 50) {
 ⚠️  脚本依赖未安装
 
 请先安装依赖：
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
 
 安装完成后重新执行命令。
 ```
@@ -724,7 +724,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && npm install
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx reporting/scan-cards.ts \
+pnpm exec tsx reporting/scan-cards.ts \
   --period {report_type} \
   --param "{period_param}" \
   --output-dir {output}
@@ -932,10 +932,10 @@ npx tsx reporting/scan-cards.ts \
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
 
 # 校验 Agent 返回结果
-npx tsx validate-json.ts agent-result ./temp/result.json
+pnpm exec tsx validate-json.ts agent-result ./temp/result.json
 
 # 校验状态文件
-npx tsx validate-json.ts state ./.intel/state.json
+pnpm exec tsx validate-json.ts state ./.intel/state.json
 ```
 
 **校验时机**：

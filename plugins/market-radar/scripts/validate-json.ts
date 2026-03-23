@@ -2,11 +2,11 @@
 /**
  * JSON Schema Validation Script
  *
- * Usage: npx tsx validate-json.ts <schema-name> <json-file>
+ * Usage: pnpm exec tsx validate-json.ts <schema-name> <json-file>
  *
  * Examples:
- *   npx tsx validate-json.ts agent-result ./temp/result.json
- *   npx tsx validate-json.ts state ./.intel/state.json
+ *   pnpm exec tsx validate-json.ts agent-result ./temp/result.json
+ *   pnpm exec tsx validate-json.ts state ./.intel/state.json
  */
 
 import Ajv from 'ajv';
@@ -80,14 +80,14 @@ function validateJson(schemaName: string, jsonPath: string): ValidationResult {
 const args = process.argv.slice(2);
 
 if (args.length < 2) {
-  console.log('Usage: npx tsx validate-json.ts <schema-name> <json-file>');
+  console.log('Usage: pnpm exec tsx validate-json.ts <schema-name> <json-file>');
   console.log('');
   console.log('Available schemas:');
   Object.keys(SCHEMA_FILES).forEach(name => console.log(`  ${name}`));
   console.log('');
   console.log('Examples:');
-  console.log('  npx tsx validate-json.ts agent-result ./temp/result.json');
-  console.log('  npx tsx validate-json.ts state ./.intel/state.json');
+  console.log('  pnpm exec tsx validate-json.ts agent-result ./temp/result.json');
+  console.log('  pnpm exec tsx validate-json.ts state ./.intel/state.json');
   process.exit(1);
 }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Preprocessing entry point (v2.1)
  *
@@ -12,7 +12,7 @@
  * - Failed conversions generate .error.md in inbox/
  *
  * Usage:
- *   npx tsx index.ts --source <dir> [--force]
+ *   pnpm exec tsx index.ts --source <dir> [--force]
  */
 
 import * as fs from 'fs';
@@ -574,7 +574,7 @@ async function main() {
       force = true;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: npx tsx index.ts --source <dir> [--force]
+Usage: pnpm exec tsx index.ts --source <dir> [--force]
 
 Directory Structure (v2.1):
   {source_dir}/

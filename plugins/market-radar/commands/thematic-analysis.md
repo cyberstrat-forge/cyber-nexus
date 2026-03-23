@@ -154,7 +154,7 @@ themes:
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-npx tsx thematic/scan-cards.ts --source {source_dir} --state {state_file} [--incremental]
+pnpm exec tsx thematic/scan-cards.ts --source {source_dir} --state {state_file} [--incremental]
 ```
 
 **脚本输出 JSON**：

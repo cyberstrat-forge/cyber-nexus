@@ -227,10 +227,10 @@ ls ./docs/intelligence/
 
 ### 必需依赖
 
-- **Node.js 18+** 和 **npm**：用于脚本执行
+- **Node.js 18+** 和 **pnpm**：用于脚本执行
   ```bash
   # 首次使用前安装依赖
-  cd plugins/market-radar/scripts && npm install
+  cd plugins/market-radar/scripts && pnpm install
   ```
 
 ### 网络要求

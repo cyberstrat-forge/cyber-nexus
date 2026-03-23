@@ -1,5 +1,9 @@
 {
   "permissions": {
     "allow": []
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "plugin-dev@claude-plugins-official": true
   }
 }
