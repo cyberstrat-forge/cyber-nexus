@@ -419,7 +419,7 @@ function processCyberPulseFile(
     };
   }
 
-  // Calculate content_hash from the entire file content
+  // Calculate content_hash from the markdown body (excluding frontmatter)
   // Extract the markdown content after frontmatter
   const frontmatterMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
   const markdownContent = frontmatterMatch ? content.slice(frontmatterMatch[0].length) : content;
