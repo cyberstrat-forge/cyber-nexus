@@ -15,7 +15,9 @@ export type PreprocessErrorCode =
   | 'CONVERSION_FAILED'  // PDF/DOCX conversion failed
   | 'CLEAN_FAILED'       // Content cleaning failed
   | 'DEPENDENCY_MISSING' // Required dependency (e.g., pandoc) not installed
-  | 'ARCHIVE_FAILED';    // Failed to archive source file
+  | 'ARCHIVE_FAILED'     // Failed to archive source file
+  | 'INVALID_PULSE_FORMAT' // cyber-pulse file missing required fields
+  | 'WRITE_FAILED';      // Failed to write output file
 
 /**
  * Error information for failed preprocessing
