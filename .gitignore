@@ -94,3 +94,9 @@ temp/
 # Debug
 # ----------------------------------------
 .debug/
+
+# ----------------------------------------
+# Development
+# ----------------------------------------
+# Git worktrees for isolated development
+.worktrees/
