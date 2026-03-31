@@ -22,6 +22,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { createHash } from 'crypto';
 import {
   PreprocessResult,
   PreprocessOptions,
@@ -134,9 +135,13 @@ function collectKnownFiles(sourceDir: string): Set<string> {
         continue;
       }
 
-      // Add filenames to known set (for cyber-pulse dedup)
+      // Add filenames to known set (only cyber-pulse files for dedup)
       for (const mdFile of files) {
-        knownFiles.add(mdFile);
+        const mdPath = path.join(monthDir, mdFile);
+        // Only add if file has source_type: cyber-pulse in frontmatter
+        if (isCyberPulseFile(mdPath)) {
+          knownFiles.add(mdFile);
+        }
       }
     }
   }
@@ -414,11 +419,11 @@ function processCyberPulseFile(
     };
   }
 
-  // Calculate content_hash from the content (excluding frontmatter)
+  // Calculate content_hash from the entire file content
   // Extract the markdown content after frontmatter
   const frontmatterMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
   const markdownContent = frontmatterMatch ? content.slice(frontmatterMatch[0].length) : content;
-  const contentHash = calculateHash(sourcePath, 'utf-8');
+  const contentHash = createHash('md5').update(markdownContent).digest('hex');
 
   // Update frontmatter with content_hash
   const updatedFrontmatter: Record<string, string> = {
