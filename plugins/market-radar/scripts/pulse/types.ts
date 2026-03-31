@@ -14,8 +14,8 @@ export interface PulseSource {
   name: string;
   /** API base URL */
   url: string;
-  /** Environment variable name for API key */
-  key_ref: string;
+  /** API key for authentication (stored directly) */
+  api_key: string;
 }
 
 /**
@@ -36,52 +36,42 @@ export interface PulseSourcesConfig {
 export type SourceTier = 'T0' | 'T1' | 'T2' | 'T3';
 
 /**
- * Source connector types
- */
-export type SourceType = 'rss' | 'api' | 'web' | 'media';
-
-/**
  * ISO 8601 timestamp string
  */
 export type Timestamp = string;
 
 /**
- * Quality score (0-100)
- */
-export type QualityScore = number;
-
-/**
- * Source information embedded in content
+ * Source information embedded in content (API v1)
  */
 export interface PulseSourceInfo {
   /** Source ID */
-  id: string;
+  source_id: string;
   /** Source name */
-  name: string;
+  source_name: string;
+  /** Source URL */
+  source_url?: string;
   /** Source tier (T0-T3) */
-  tier: SourceTier;
-  /** Source type (rss, api, web, media) */
-  type: SourceType;
+  source_tier: SourceTier;
+  /** Source score (0-100) */
+  source_score?: number;
 }
 
 /**
- * API content item from cyber-pulse v1.3.0
+ * API content item from cyber-pulse API v1
  *
- * Field mapping from API v1.3.0:
- * - id → content_id (frontmatter)
+ * Field mapping from API v1:
+ * - id → content_id (frontmatter) - format: item_{8位hex}
  * - title → Markdown 标题
- * - content → Markdown 正文
+ * - body → Markdown 正文
  * - fetched_at → first_seen_at (frontmatter)
  */
 export interface PulseContent {
-  /** Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx) - maps to content_id */
+  /** Item ID (format: item_{8位hex}) */
   id: string;
   /** Title - used as Markdown heading */
   title: string;
-  /** Markdown content - used as document body */
-  content: string;
-  /** HTML content (optional) */
-  content_html?: string;
+  /** Markdown content */
+  body: string;
   /** Original URL */
   url?: string;
   /** Author (optional) */
@@ -94,32 +84,27 @@ export interface PulseContent {
   fetched_at: Timestamp;
   /** Source information */
   source?: PulseSourceInfo;
-  /** Quality score (0-100) */
-  quality_score?: QualityScore;
-  /** Deduplication hash - maps to canonical_hash */
-  canonical_hash: string;
+  /** Completeness score (0-1) */
+  completeness_score?: number;
+  /** Word count */
+  word_count?: number;
 }
 
 /**
- * API list response (v1.3.0 format)
+ * API list response (v1 format)
  */
 export interface PulseListResponse {
   /** List of content items */
   data: PulseContent[];
-  /** Pagination metadata */
-  meta: {
-    /** Cursor for next page */
-    next_cursor: string | null;
-    /** Whether more items available */
-    has_more: boolean;
-  };
+  /** Cursor for next page */
+  next_cursor: string | null;
+  /** Whether more items available */
+  has_more: boolean;
+  /** Number of items in current response */
+  count: number;
+  /** Server timestamp (ISO 8601) */
+  server_timestamp: string;
 }
-
-/**
- * API single item response (v1.3.0 format)
- * Returns content object directly, not wrapped
- */
-export type PulseItemResponse = PulseContent;
 
 /**
  * API error response
@@ -137,7 +122,7 @@ export interface PulseErrorResponse {
  * Cursor tracking for a single source
  */
 export interface PulseCursorState {
-  /** Current cursor (content_id) */
+  /** Current cursor (item_id) */
   cursor: string | null;
   /** Last pull timestamp (ISO 8601) */
   last_pull: string | null;
@@ -197,7 +182,7 @@ export type PullSourceResult = PullSourceResultSuccess | PullSourceResultFailure
  */
 export interface PullResult {
   /** Pull mode used */
-  mode: 'incremental' | 'since' | 'single' | 'all';
+  mode: 'incremental' | 'init' | 'since' | 'preview' | 'all';
   /** Output directory */
   output_dir: string;
   /** Results per source */
@@ -220,10 +205,14 @@ export interface PullOptions {
   all: boolean;
   /** Output directory */
   output: string;
+  /** Initialize mode - pull all and reset cursor */
+  init: boolean;
   /** Pull items since datetime */
   since?: string;
-  /** Pull single item by ID */
-  id?: string;
+  /** Pull items until datetime */
+  until?: string;
+  /** Preview mode - show items without writing */
+  preview: boolean;
   /** List sources mode */
   listSources: boolean;
   /** Add source mode */
@@ -242,15 +231,14 @@ export interface PullOptions {
 export type PulseErrorCode =
   | 'CONFIG_NOT_FOUND'
   | 'CONFIG_PARSE_ERROR'
-  | 'ENV_VAR_NOT_SET'
+  | 'API_KEY_NOT_SET'
   | 'SOURCE_NOT_FOUND'
   | 'API_CONNECTION_FAILED'
   | 'API_AUTH_FAILED'
   | 'API_TIMEOUT'
   | 'API_ERROR'
   | 'API_INVALID_RESPONSE'
-  | 'CONTENT_NOT_FOUND'
-  | 'STATE_ERROR';
+  | 'INVALID_OPTIONS';
 
 /**
  * Pulse error with code
@@ -286,7 +274,7 @@ export const RETRY_DELAY = 2000;
 // ==================== Validation Functions ====================
 
 /**
- * Validate API list response structure
+ * Validate API list response structure (v1 format)
  *
  * @param response - Raw API response
  * @returns True if valid, throws PulseError if invalid
@@ -310,66 +298,36 @@ export function validateListResponse(response: unknown): response is PulseListRe
     );
   }
 
-  if (!resp.meta || typeof resp.meta !== 'object') {
+  // v1: next_cursor and has_more at top level (not in meta)
+  if (resp.next_cursor !== null && typeof resp.next_cursor !== 'string') {
     throw new PulseError(
       'API_INVALID_RESPONSE',
-      'API 返回无效响应: 缺少 meta 字段',
-      { response }
+      `API 返回无效 next_cursor: 应为 string 或 null，实际为 ${typeof resp.next_cursor}`,
+      { nextCursorType: typeof resp.next_cursor, response }
     );
   }
 
-  const meta = resp.meta as Record<string, unknown>;
-
-  if (meta.next_cursor !== null && typeof meta.next_cursor !== 'string') {
+  if (typeof resp.has_more !== 'boolean') {
     throw new PulseError(
       'API_INVALID_RESPONSE',
-      `API 返回无效 meta.next_cursor: 应为 string 或 null，实际为 ${typeof meta.next_cursor}`,
-      { nextCursorType: typeof meta.next_cursor, response }
+      `API 返回无效 has_more: 应为 boolean，实际为 ${typeof resp.has_more}`,
+      { hasMoreType: typeof resp.has_more, response }
     );
   }
 
-  if (typeof meta.has_more !== 'boolean') {
+  if (typeof resp.count !== 'number') {
     throw new PulseError(
       'API_INVALID_RESPONSE',
-      `API 返回无效 meta.has_more: 应为 boolean，实际为 ${typeof meta.has_more}`,
-      { hasMoreType: typeof meta.has_more, response }
+      `API 返回无效 count: 应为 number，实际为 ${typeof resp.count}`,
+      { countType: typeof resp.count, response }
     );
   }
 
-  return true;
-}
-
-/**
- * Validate API single item response
- *
- * @param response - Raw API response
- * @param contentId - Requested content ID (for error messages)
- * @returns True if valid, throws PulseError if invalid
- */
-export function validateItemResponse(
-  response: unknown,
-  contentId?: string
-): response is PulseContent {
-  if (!response || typeof response !== 'object') {
+  if (typeof resp.server_timestamp !== 'string') {
     throw new PulseError(
       'API_INVALID_RESPONSE',
-      `API 返回无效内容${contentId ? `: ${contentId}` : ''}`,
-      { contentId, response }
-    );
-  }
-
-  const content = response as Record<string, unknown>;
-
-  const missingFields: string[] = [];
-  if (!content.id) missingFields.push('id');
-  if (!content.fetched_at) missingFields.push('fetched_at');
-  if (!content.canonical_hash) missingFields.push('canonical_hash');
-
-  if (missingFields.length > 0) {
-    throw new PulseError(
-      'API_INVALID_RESPONSE',
-      `API 返回内容缺少必需字段: ${missingFields.join(', ')}${contentId ? ` (${contentId})` : ''}`,
-      { contentId, missingFields, response }
+      `API 返回无效 server_timestamp: 应为 string，实际为 ${typeof resp.server_timestamp}`,
+      { serverTimestampType: typeof resp.server_timestamp, response }
     );
   }
 
