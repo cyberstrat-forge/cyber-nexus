@@ -185,7 +185,7 @@ archived_path: ""
 | `--init` | 首次同步/重新同步（`from=beginning`，清空 cursor） |
 | `--since <datetime>` | 时间起点 |
 | `--until <datetime>` | 时间终点 |
-| `--preview` | 预览最新（不更新状态文件） |
+| `--preview` | 预览最新一页（仅 50 条，不更新状态文件） |
 | `--source <name>` | 指定源（默认使用 default_source） |
 | `--all` | 拉取所有源 |
 | `--output <dir>` | 输出目录（默认 `./inbox/`） |
@@ -193,16 +193,17 @@ archived_path: ""
 | `--add-source` | 交互式添加情报源 |
 | `--remove-source <name>` | 删除指定情报源 |
 | `--set-default <name>` | 设置默认情报源 |
+| `--help` | 显示帮助信息 |
 
 ### 参数组合规则
 
-| 命令 | API 调用 | cursor 行为 |
-|------|----------|-------------|
-| `/intel-pull` | `cursor={saved}` | 读取 + 更新 |
-| `/intel-pull --init` | `from=beginning` | 清空 + 重建 |
-| `/intel-pull --since "2026-03-01"` | `since=...` | 不更新 |
-| `/intel-pull --since "..." --until "..."` | `since=...&until=...` | 不更新 |
-| `/intel-pull --preview` | 无参数 | 不更新 |
+| 命令 | 首次请求 | 分页请求 | cursor 行为 |
+|------|----------|----------|-------------|
+| `/intel-pull` | `cursor={saved}` | `cursor={next_cursor}` | 读取 + 更新 |
+| `/intel-pull --init` | `from=beginning` | `cursor={next_cursor}` | 清空 + 重建 |
+| `/intel-pull --since "..."` | `since=...` | `since=...&cursor={next_cursor}` | 不更新 |
+| `/intel-pull --since "..." --until "..."` | `since=...&until=...` | `since=...&until=...&cursor={next_cursor}` | 不更新 |
+| `/intel-pull --preview` | 无参数 | 无分页（仅一页） | 不更新 |
 
 ### 多源管理
 
@@ -323,12 +324,16 @@ cyber-pulse 文件通过文件名去重（文件名包含唯一 `item_id`）：
 
 ### cursor 更新规则
 
-| 模式 | cursor 操作 |
-|------|-------------|
-| 增量（默认） | 读取 → 更新 |
-| `--init` | 清空 → 重建 |
-| `--since` | 不更新 |
-| `--preview` | 不更新 |
+| 模式 | 首次请求参数 | 分页请求参数 | cursor 操作 |
+|------|-------------|-------------|-------------|
+| 增量（默认） | `cursor={saved}` | `cursor={next_cursor}` | 读取 → 更新 |
+| `--init` | `from=beginning` | `cursor={next_cursor}` | 清空 → 重建 |
+| `--since` | `since=...` | `since=...&cursor={next_cursor}` | 不更新 |
+| `--preview` | 无参数 | 无分页 | 不更新 |
+
+**说明**：
+- `--since` 模式：首次请求使用 `since` 参数，后续分页使用返回的 `next_cursor`，但最终不更新状态文件中的 cursor
+- `--preview` 模式：仅拉取一页（默认 50 条），不执行分页
 
 ---
 
