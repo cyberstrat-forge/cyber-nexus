@@ -4,12 +4,16 @@
  *
  * Manages cursor tracking in state.json (shared with intel-distill).
  *
+ * Cursor format (v1):
+ * - Old: cnt_YYYYMMDDHHMMSS_xxxxxxxx
+ * - New: item_{8位hex}
+ *
  * Field ownership in state.json:
  * - pulse.cursors: managed by intel-pull (this module)
  * - queue, review, processed, stats: managed by intel-distill
  *
  * Usage:
- *   import { loadState, saveState, getCursor, setCursor } from './state';
+ *   import { loadState, saveState, getCursor, setCursor, clearCursor } from './state';
  */
 
 import * as fs from 'fs';
@@ -17,7 +21,7 @@ import * as path from 'path';
 import { PulseState, PulseCursorState, PulseError } from './types';
 
 /** Current state file version */
-const STATE_VERSION = '2.2.0';
+const STATE_VERSION = '2.3.0';
 
 /** Default pulse state structure */
 const DEFAULT_PULSE_STATE: PulseState = {
@@ -143,6 +147,29 @@ export function setCursor(
           last_pull: new Date().toISOString(),
         },
       },
+    },
+  };
+}
+
+/**
+ * Clear cursor for a source (used by --init mode)
+ */
+export function clearCursor(
+  state: Record<string, unknown>,
+  sourceName: string
+): Record<string, unknown> {
+  const pulseState = getPulseState(state);
+
+  const newCursors = { ...pulseState.cursors };
+  delete newCursors[sourceName];
+
+  return {
+    ...state,
+    version: STATE_VERSION,
+    updated_at: new Date().toISOString(),
+    pulse: {
+      ...pulseState,
+      cursors: newCursors,
     },
   };
 }

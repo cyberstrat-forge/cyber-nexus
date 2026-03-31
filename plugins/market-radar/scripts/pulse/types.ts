@@ -238,7 +238,8 @@ export type PulseErrorCode =
   | 'API_TIMEOUT'
   | 'API_ERROR'
   | 'API_INVALID_RESPONSE'
-  | 'INVALID_OPTIONS';
+  | 'INVALID_OPTIONS'
+  | 'STATE_ERROR';
 
 /**
  * Pulse error with code
