@@ -1,7 +1,7 @@
 ---
 name: intel-pull
 description: Pull intelligence content from cyber-pulse API and save as Markdown files
-argument-hint: "[--source <name>] [--all] [--output <dir>] [--since <datetime>] [--id <content_id>] [--list-sources] [--add-source] [--remove-source <name>] [--set-default <name>]"
+argument-hint: "[--source <name>] [--all] [--output <dir>] [--since <datetime>] [--until <datetime>] [--init] [--preview] [--list-sources] [--add-source] [--remove-source <name>] [--set-default <name>]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -30,8 +30,10 @@ intelligence/ (情报卡片)
 | `--source <name>` | 否 | 指定情报源名称（默认使用 default_source） |
 | `--all` | 否 | 顺序拉取所有配置的情报源 |
 | `--output <dir>` | 否 | 输出目录（默认 `inbox/`） |
-| `--since <datetime>` | 否 | 拉取指定时间后的数据（ISO 8601 格式） |
-| `--id <content_id>` | 否 | 拉取单条指定情报 |
+| `--since <datetime>` | 否 | 拉取指定发布时间起点后的数据（ISO 8601 格式） |
+| `--until <datetime>` | 否 | 拉取指定发布时间终点前的数据（ISO 8601 格式） |
+| `--init` | 否 | 首次同步/重新同步，从开头遍历历史数据 |
+| `--preview` | 否 | 预览最新一页（仅 50 条，不更新状态文件） |
 | `--list-sources` | 否 | 列出所有已配置的情报源 |
 | `--add-source` | 否 | 交互式添加情报源 |
 | `--remove-source <name>` | 否 | 删除指定情报源 |
@@ -41,7 +43,7 @@ intelligence/ (情报卡片)
 ```bash
 # === 增量拉取模式 ===
 
-# 增量拉取（默认源）
+# 增量拉取（默认源，使用状态文件中的 cursor）
 /intel-pull
 
 # 指定源拉取
@@ -50,18 +52,28 @@ intelligence/ (情报卡片)
 # 拉取所有源
 /intel-pull --all
 
+# === 首次/重新同步模式 ===
+
+# 首次同步（从头遍历历史数据）
+/intel-pull --init
+
 # === 时间范围拉取模式 ===
 
-# 时间范围拉取
+# 时间范围拉取（仅指定起点）
 /intel-pull --since "2026-03-01"
+
+# 时间范围拉取（指定起点和终点）
+/intel-pull --since "2026-03-01" --until "2026-03-31"
+
+# === 预览模式 ===
+
+# 预览最新一页数据（不更新状态文件）
+/intel-pull --preview
+
+# === 其他选项 ===
 
 # 指定输出目录
 /intel-pull --output ./docs/inbox
-
-# === 单条拉取模式 ===
-
-# 单条拉取
-/intel-pull --id "cnt_20260319143052_a1b2c3d4"
 
 # === 源管理模式 ===
 
@@ -106,8 +118,9 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-pull-guide.md
 | `--add-source` | 添加源模式 | 执行交互式添加（步骤 A1-A3） |
 | `--remove-source <name>` | 删除源模式 | 执行源删除（步骤 D1-D2） |
 | `--set-default <name>` | 设置默认源模式 | 执行默认源设置（步骤 S1-S2） |
-| `--id <content_id>` | 单条拉取模式 | 执行单条拉取（步骤 P5-P6） |
-| `--since <datetime>` | 时间范围拉取模式 | 执行时间范围拉取（步骤 P3-P4） |
+| `--preview` | 预览模式 | 执行预览拉取（步骤 P5） |
+| `--init` | 首次同步模式 | 执行首次同步（步骤 P4） |
+| `--since` 或 `--until` | 时间范围拉取模式 | 执行时间范围拉取（步骤 P3） |
 | 默认 | 增量拉取模式 | 执行增量拉取（步骤 P1-P2） |
 
 ```
@@ -121,6 +134,13 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-pull-guide.md
         │          │          │          │          │
         ↓          ↓          ↓          ↓          ↓
     列出源模式  添加源模式  删除源模式  设置默认源  拉取模式
+                                                   │
+                                   ┌───────┬───────┼───────┬───────┐
+                                   ↓       ↓       ↓       ↓       ↓
+                               --preview --init  --since  --until  默认增量
+                                   │       │       │       │       │
+                                   ↓       ↓       ↓       ↓       ↓
+                               预览模式 首次同步 时间范围 时间范围 增量拉取
 ```
 
 ---
@@ -141,17 +161,13 @@ pnpm exec tsx pulse/index.ts --list-sources
 ```
 📡 已配置的情报源
 
-┌────────┬─────────────────────────┬──────────┐
-│ 名称   │ URL                     │ API Key  │
-├────────┼─────────────────────────┼──────────┤
-│ local* │ http://localhost:8000   │ ✅ 已设置 │
-│ cloud  │ https://pulse.example.com │ ❌ 未设置 │
-└────────┴─────────────────────────┴──────────┘
+┌─────────────┬─────────────────────────┬──────────┐
+│ 名称        │ URL                     │ API Key  │
+├─────────────┼─────────────────────────┼──────────┤
+│ cyber-pulse*│ https://pulse.example.com│ ✅ 已设置 │
+│ local       │ http://localhost:8000   │ ❌ 未设置 │
+└─────────────┴─────────────────────────┴──────────┘
 * 默认源
-
-环境变量：
-  CYBER_PULSE_LOCAL_KEY=cp_live_***（已设置）
-  CYBER_PULSE_CLOUD_KEY=（未设置）
 ```
 
 ### 步骤 A1-A3：添加源（`--add-source`）
@@ -166,14 +182,14 @@ pnpm exec tsx pulse/index.ts --add-source
 **交互流程**：
 
 ```
-📦 添加情报源
+添加新的情报源
+----------------
 
-源名称: cloud
-API URL: https://pulse.example.com
-环境变量名 [CYBER_PULSE_CLOUD_KEY]:
+源名称 (如: cyber-pulse): my-source
+API URL (如: https://api.example.com): https://pulse.example.com
+API Key: cp_live_a1b2c3d4e5f6789012345678abcdef01
 
-✅ 已添加源 "cloud"
-⚠️  请设置环境变量: export CYBER_PULSE_CLOUD_KEY=cp_live_xxx
+成功添加源: my-source
 ```
 
 ### 步骤 D1-D2：删除源（`--remove-source <name>`）
@@ -242,22 +258,18 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
 
 配置文件位置：plugins/market-radar/.claude-plugin/pulse-sources.json
 
-请创建配置文件并设置环境变量：
+请创建配置文件：
 
-1. 创建配置文件：
-   {
-     "sources": [
-       {
-         "name": "local",
-         "url": "http://localhost:8000",
-         "key_ref": "CYBER_PULSE_LOCAL_KEY"
-       }
-     ],
-     "default_source": "local"
-   }
-
-2. 设置环境变量：
-   export CYBER_PULSE_LOCAL_KEY=cp_live_xxx
+{
+  "sources": [
+    {
+      "name": "cyber-pulse",
+      "url": "https://pulse.example.com",
+      "api_key": "cp_live_xxx"
+    }
+  ],
+  "default_source": "cyber-pulse"
+}
 
 完成后重新执行命令。
 ```
@@ -275,32 +287,70 @@ pnpm exec tsx pulse/index.ts [--source {name}] [--output {dir}]
 
 1. 加载状态文件（不存在则创建默认结构）
 2. 获取对应源的 cursor
-3. 调用 API：`GET /api/v1/contents?cursor={cursor}&limit=100`
-4. 解析响应：`response.data` 为内容列表，`response.meta` 包含分页信息
+3. 调用 API：`GET /api/v1/items?cursor={cursor}&limit=50`
+4. 解析响应：`response.data` 为内容列表，`response.next_cursor` 包含下一页游标
 5. 遍历返回数据，写入 Markdown 文件
 6. 更新状态文件 cursor
-7. 如果 `meta.has_more=true`，重复步骤 3-5
+7. 如果 `has_more=true`，使用 `next_cursor` 重复步骤 3-5
 8. 输出拉取统计报告
 
-### 步骤 P3：时间范围拉取（`--since`）
+### 步骤 P3：时间范围拉取（`--since` / `--until`）
 
 调用脚本执行时间范围拉取：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --since "{datetime}" [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --since "{datetime}" [--until "{datetime}"] [--source {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：
 
-1. 调用 API：`GET /api/v1/contents?since={since}&limit=100`
-2. 解析响应：`response.data` 为内容列表，`response.meta` 包含分页信息
+1. 构建请求参数：`since=...&until=...`
+2. 调用 API：`GET /api/v1/items?since={since}&until={until}&limit=50`
+3. 解析响应：`response.data` 为内容列表，`response.next_cursor` 包含下一页游标
+4. 遍历返回数据，写入 Markdown 文件
+5. 如果 `has_more=true`，使用 `next_cursor` 继续请求（保留时间参数）
+6. 不更新本地 cursor（cursor 仅用于增量模式）
+7. 输出拉取统计报告
+
+### 步骤 P4：首次同步（`--init`）
+
+调用脚本执行首次同步：
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+pnpm exec tsx pulse/index.ts --init [--source {name}] [--output {dir}]
+```
+
+**脚本执行逻辑**：
+
+1. 清空状态文件中的 cursor
+2. 调用 API：`GET /api/v1/items?from=beginning&limit=50`
+3. 解析响应：`response.data` 为内容列表，`response.next_cursor` 包含下一页游标
+4. 遍历返回数据，写入 Markdown 文件
+5. 更新状态文件 cursor
+6. 如果 `has_more=true`，使用 `next_cursor` 重复步骤 3-5
+7. 输出拉取统计报告
+
+### 步骤 P5：预览拉取（`--preview`）
+
+调用脚本执行预览拉取：
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+pnpm exec tsx pulse/index.ts --preview [--source {name}] [--output {dir}]
+```
+
+**脚本执行逻辑**：
+
+1. 调用 API：`GET /api/v1/items?limit=50`（不传 cursor 或 from 参数）
+2. 解析响应：获取最新一页数据
 3. 遍历返回数据，写入 Markdown 文件
-4. 如果 `meta.has_more=true`，使用返回的 `meta.next_cursor` 继续请求
-5. 不更新本地 cursor（cursor 仅用于增量模式）
+4. 不执行分页（仅一页）
+5. 不更新状态文件 cursor
 6. 输出拉取统计报告
 
-### 步骤 P4：`--all` 多源拉取
+### 步骤 P6：`--all` 多源拉取
 
 调用脚本执行多源拉取：
 
@@ -319,23 +369,7 @@ pnpm exec tsx pulse/index.ts --all [--output {dir}]
 6. 一个源失败不影响其他源继续
 7. 输出汇总报告
 
-### 步骤 P5：单条拉取（`--id`）
-
-调用脚本执行单条拉取：
-
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {dir}]
-```
-
-**脚本执行逻辑**：
-
-1. 调用 API：`GET /api/v1/contents/{content_id}`
-2. API 直接返回内容对象（不包装）
-3. 写入 Markdown 文件
-4. 输出结果
-
-### 步骤 P6：输出拉取报告
+### 步骤 P7：输出拉取报告
 
 **增量拉取报告**：
 
@@ -344,7 +378,7 @@ pnpm exec tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {di
 📡 情报拉取报告
 ════════════════════════════════════════════════════════
 
-源: local (http://localhost:8000)
+源: cyber-pulse (https://pulse.example.com)
 模式: 增量拉取
 
 【拉取统计】
@@ -352,8 +386,8 @@ pnpm exec tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {di
 • 写入位置: ./inbox/
 
 【状态更新】
-• cursor: cnt_20260320150000_xxx
-• 更新时间: 2026-03-20T15:30:00Z
+• cursor: item_b2c3d4e5
+• 更新时间: 2026-03-30T15:30:00Z
 
 💡 提示: 使用 /intel-distill 处理情报
 
@@ -367,10 +401,10 @@ pnpm exec tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {di
 📡 情报拉取报告
 ════════════════════════════════════════════════════════
 
-【local】✅ 成功
+【cyber-pulse】✅ 成功
 • 新增情报: 15 条
 
-【cloud】❌ 失败
+【local】❌ 失败
 • 错误: API 连接超时
 
 【汇总】
@@ -392,29 +426,27 @@ pnpm exec tsx pulse/index.ts --id "{content_id}" [--source {name}] [--output {di
 {
   "sources": [
     {
-      "name": "local",
-      "url": "http://localhost:8000",
-      "key_ref": "CYBER_PULSE_LOCAL_KEY"
+      "name": "cyber-pulse",
+      "url": "https://pulse.example.com",
+      "api_key": "cp_live_a1b2c3d4e5f6789012345678abcdef01"
     },
     {
-      "name": "cloud",
-      "url": "https://pulse.example.com",
-      "key_ref": "CYBER_PULSE_CLOUD_KEY"
+      "name": "local",
+      "url": "http://localhost:8000",
+      "api_key": "cp_live_xxx"
     }
   ],
-  "default_source": "local"
+  "default_source": "cyber-pulse"
 }
 ```
 
-### 环境变量
+### API Key 管理
 
-API Key 通过环境变量存储，确保安全性：
+API Key 直接存储在配置文件中，简化用户配置流程：
 
-```bash
-# .bashrc / .zshrc
-export CYBER_PULSE_LOCAL_KEY=cp_live_xxx
-export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
-```
+- 配置文件位于插件目录，属于项目级配置
+- 可通过 `--add-source` 交互式添加源时输入 API Key
+- 支持多个情报源配置，每个源独立管理
 
 ---
 
@@ -424,21 +456,23 @@ export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
 
 **位置**：`{output_dir}/.intel/state.json`
 
-与 `intel-distill` 共享同一状态文件，在现有结构中新增 `pulse` 字段：
+与 `intel-distill` 共享同一状态文件，在现有结构中维护 `pulse` 字段：
 
 ```json
 {
   "version": "2.2.0",
-  "updated_at": "2026-03-20T15:30:00+08:00",
+  "updated_at": "2026-03-30T15:30:00+08:00",
 
   "pulse": {
     "cursors": {
-      "local": "cnt_20260319143052_a1b2c3d4",
-      "cloud": "cnt_20260318120000_xyz789"
-    },
-    "last_pull": {
-      "local": "2026-03-20T10:00:00Z",
-      "cloud": "2026-03-20T09:30:00Z"
+      "cyber-pulse": {
+        "cursor": "item_b2c3d4e5",
+        "last_pull": "2026-03-30T10:00:00Z"
+      },
+      "local": {
+        "cursor": "item_a1b2c3d4",
+        "last_pull": "2026-03-30T09:30:00Z"
+      }
     }
   },
 
@@ -453,13 +487,23 @@ export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `pulse.cursors` | object | 各情报源的游标（content_id） |
-| `pulse.last_pull` | object | 各情报源的最后拉取时间 |
+| `pulse.cursors.{source}` | object | 各情报源的游标状态 |
+| `pulse.cursors.{source}.cursor` | string | 游标位置（格式 `item_{8位hex}`） |
+| `pulse.cursors.{source}.last_pull` | string | 最后拉取时间（ISO 8601） |
+
+### cursor 更新规则
+
+| 模式 | 首次请求参数 | 分页请求参数 | cursor 操作 |
+|------|-------------|-------------|-------------|
+| 增量（默认） | `cursor={saved}` | `cursor={next_cursor}` | 读取 → 更新 |
+| `--init` | `from=beginning` | `cursor={next_cursor}` | 清空 → 重建 |
+| `--since` | `since=...` | `since=...&cursor={next_cursor}` | 不更新 |
+| `--preview` | 无参数 | 无分页 | 不更新 |
 
 **设计说明**：
 - 复用 `.intel/state.json`，避免多个状态文件
 - `pulse` 字段独立，不影响 intel-distill 现有字段
-- 版本号升级为 `2.2.0`（新增 pulse 字段）
+- cursor 格式为 `item_{8位hex}`（如 `item_a1b2c3d4`）
 
 ### 去重策略
 
@@ -474,64 +518,88 @@ export CYBER_PULSE_CLOUD_KEY=cp_live_yyy
 
 ### 文件命名
 
-**格式**：`{YYYYMMDD}-{content_id后8位}.md`
+**格式**：`{YYYYMMDD}-{item_id}.md`
 
-**示例**：`20260319-a1b2c3d4.md`
+**示例**：`20260330-item_a1b2c3d4.md`
 
-- `YYYYMMDD`：从 `first_seen_at` 提取
-- `content_id后8位`：如 `cnt_20260319143052_a1b2c3d4` → `a1b2c3d4`
+- `YYYYMMDD`：从 `published_at` 提取（若无则使用 `first_seen_at`）
+- `item_id`：API 返回的 ID，格式 `item_{8位hex}`
 
 ### 文件内容
 
 ```markdown
 ---
-content_id: "cnt_20260319143052_a1b2c3d4"
-canonical_hash: "abc123def456..."
-first_seen_at: "2026-03-19T14:30:52Z"
-pulse_source: "local"
+# ============================================
+# 第一组：核心标识（必须填写）
+# ============================================
+item_id: "item_a1b2c3d4"
+source_type: "cyber-pulse"
+first_seen_at: "2026-03-30T09:00:00Z"
+
+# ============================================
+# 第二组：内容元数据
+# ============================================
+title: "某APT组织近期攻击活动分析"
 url: "https://example.com/article"
-author: "Security Team"
-tags: ["vulnerability", "CVE"]
-published_at: "2026-03-19T14:00:00Z"
-quality_score: 85
-source_id: "src_a1b2c3d4"
-source_name: "安全客"
+author: "安全研究员"
+tags: ["APT", "威胁情报"]
+published_at: "2026-03-30T08:00:00Z"
+
+# ============================================
+# 第三组：来源信息
+# ============================================
+source_id: "src_abc12345"
+source_name: "Security Weekly"
+source_url: "https://example.com/feed.xml"
 source_tier: "T1"
-sourceHash: ""
-archivedSource: ""
-convertedFile: ""
+source_score: 75.0
+
+# ============================================
+# 第四组：质量指标
+# ============================================
+completeness_score: 0.85
+word_count: 1500
+
+# ============================================
+# 第五组：处理追溯（预处理脚本填充）
+# ============================================
+content_hash: ""
+archived_path: ""
 ---
 
 # {title}
 
-{content}
+{body}
 ```
 
 ### Frontmatter 字段说明
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `content_id` | string | cyber-pulse 内容 ID（来自 API `id` 字段） |
-| `canonical_hash` | string | 去重哈希值 |
-| `first_seen_at` | string | 采集时间（来自 API `fetched_at` 字段） |
-| `pulse_source` | string | 拉取源名称 |
-| `url` | string | 原始 URL（可选） |
-| `author` | string | 作者（可选） |
-| `tags` | array | 标签列表（可选） |
-| `published_at` | string | 发布时间（可选） |
-| `quality_score` | number | 质量评分 0-100（可选） |
-| `source_id` | string | 情报源 ID（可选） |
-| `source_name` | string | 情报源名称（可选） |
-| `source_tier` | string | 情报源等级 T0-T3（可选） |
-| `sourceHash` | string | 留空（驼峰命名，兼容 intel-distill） |
-| `archivedSource` | string | 留空（驼峰命名，兼容 intel-distill） |
-| `convertedFile` | string | 留空（驼峰命名，兼容 intel-distill） |
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `item_id` | string | ✅ | 唯一标识符（格式 `item_{8位hex}`） |
+| `source_type` | string | ✅ | 来源类型，固定为 `cyber-pulse` |
+| `first_seen_at` | datetime | ✅ | 采集时间（来自 API `fetched_at` 字段） |
+| `title` | string | ✅ | 文档标题 |
+| `url` | string | ❌ | 原文链接 |
+| `author` | string | ❌ | 作者 |
+| `tags` | array | ❌ | 标签列表 |
+| `published_at` | datetime | ❌ | 原文发布时间 |
+| `source_id` | string | ❌ | 情报源 ID（来自 `source.source_id`） |
+| `source_name` | string | ❌ | 情报源名称（来自 `source.source_name`） |
+| `source_url` | string | ❌ | 情报源 URL（来自 `source.source_url`） |
+| `source_tier` | string | ❌ | 情报源等级 T0-T3（来自 `source.source_tier`） |
+| `source_score` | number | ❌ | 情报源评分 0-100（来自 `source.source_score`） |
+| `completeness_score` | number | ❌ | 内容完整度 0-1 |
+| `word_count` | number | ❌ | 正文字数 |
+| `content_hash` | string | ✅ | 正文 MD5 哈希（预处理脚本填充） |
+| `archived_path` | string | ❌ | 归档路径（cyber-pulse 文件为空） |
 
-**字段映射说明**（API v1.3.0 → frontmatter）：
-- `id` → `content_id`
-- `title` → Markdown 标题
-- `content` → Markdown 正文
+**字段映射说明**（API v1 → frontmatter）：
+- `id` → `item_id`
+- `title` → Markdown 标题 + `title` 字段
+- `body` → Markdown 正文
 - `fetched_at` → `first_seen_at`
+- `source.*` → 对应 `source_*` 字段
 
 ---
 
@@ -541,13 +609,13 @@ convertedFile: ""
 |----------|----------|
 | 配置文件不存在 | 显示配置示例和设置步骤，退出 |
 | 配置文件格式错误 | 显示具体错误位置，退出 |
-| 环境变量未设置 | 显示需要设置的环境变量名，退出 |
+| API Key 未配置 | 提示用户配置 API Key，退出 |
 | API 连接失败 | 显示错误信息，建议检查网络/URL |
-| API 认证失败 | 提示 API Key 无效，建议检查环境变量 |
+| API 认证失败 | 提示 API Key 无效，建议检查配置 |
 | API 请求超时 | 重试 1 次（间隔 2 秒）；仍失败则记录错误，继续处理下一个源（`--all` 模式）或退出 |
+| cursor 无效（404） | 清空 cursor，提示用户执行 `--init` |
 | 响应数据过大 | 分批写入，避免内存溢出 |
 | 源名称不存在 | 显示可用源列表，退出 |
-| 单条拉取 404 | 提示 content_id 不存在，退出 |
 
 ### 网络请求配置
 
@@ -564,31 +632,35 @@ convertedFile: ""
 
 | intel-pull 参数 | cyber-pulse API |
 |------------------|-----------------|
-| 默认（增量） | `GET /api/v1/contents?cursor={cursor}&limit=100` |
-| `--since` | `GET /api/v1/contents?since={since}&limit=100` |
-| `--id` | `GET /api/v1/contents/{content_id}` |
+| 默认（增量） | `GET /api/v1/items?cursor={cursor}&limit=50` |
+| `--init` | `GET /api/v1/items?from=beginning&limit=50` |
+| `--since` | `GET /api/v1/items?since={since}&limit=50` |
+| `--since --until` | `GET /api/v1/items?since={since}&until={until}&limit=50` |
+| `--preview` | `GET /api/v1/items?limit=50` |
 
-**API 响应格式（v1.3.0）**：
+**API 响应格式（v1）**：
 
-列表响应：
 ```json
 {
-  "data": [ /* PulseContent 数组 */ ],
-  "meta": {
-    "next_cursor": "cnt_xxx",
-    "has_more": true
-  }
+  "data": [ /* PulseItem 数组 */ ],
+  "next_cursor": "item_b2c3d4e5",
+  "has_more": true,
+  "count": 50,
+  "server_timestamp": "2026-03-30T10:00:00Z"
 }
 ```
 
-单条响应：直接返回 `PulseContent` 对象（不包装）
+**API 参数约束**：
+- `cursor` 和 `from` 不能同时使用
+- `cursor` 格式为 `item_{8位hex}`
 
 ---
 
 ## 注意事项
 
-- 配置文件存储在插件目录，API Key 通过环境变量管理
+- 配置文件存储在插件目录，API Key 直接配置在文件中
 - 状态文件与 intel-distill 共享，位于输出目录的 `.intel/` 下
-- 输出文件兼容 intel-distill 的 frontmatter 格式
+- 输出文件采用统一 frontmatter 格式，兼容 intel-distill
 - 建议将 `.intel/` 添加到 `.gitignore`
 - 使用 `/intel-distill` 处理拉取后的情报文件
+- cursor 格式为 `item_{8位hex}`（如 `item_a1b2c3d4`）
