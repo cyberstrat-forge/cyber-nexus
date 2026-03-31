@@ -547,6 +547,11 @@ program
         process.exit(1);
       }
 
+      if (options.until && !options.since) {
+        console.error('错误: --until 必须与 --since 配合使用');
+        process.exit(1);
+      }
+
       // Execute pull
       const result = await executePull(options);
       console.log(generateReport(result));
