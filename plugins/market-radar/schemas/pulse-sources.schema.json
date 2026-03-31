@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "pulse-sources.schema.json",
   "title": "Pulse Sources Configuration Schema",
-  "description": "JSON Schema for pulse-sources.json validation",
+  "description": "JSON Schema for pulse-sources.json validation (API v1)",
   "type": "object",
   "required": ["sources", "default_source"],
   "additionalProperties": false,
@@ -12,7 +12,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["name", "url", "key_ref"],
+        "required": ["name", "url", "api_key"],
         "additionalProperties": false,
         "properties": {
           "name": {
@@ -26,11 +26,10 @@
             "format": "uri",
             "description": "API base URL"
           },
-          "key_ref": {
+          "api_key": {
             "type": "string",
             "minLength": 1,
-            "pattern": "^[A-Z][A-Z0-9_]*$",
-            "description": "Environment variable name for API key"
+            "description": "API key for authentication"
           }
         }
       }
