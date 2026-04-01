@@ -15,14 +15,45 @@
 
 ## 文件变更清单
 
+### 需要修改的文件
+
 | 文件 | 变更类型 | 说明 |
 |------|---------|------|
-| `scripts/pulse/types.ts` | 修改 | 更新 API 响应类型、状态类型 |
-| `scripts/pulse/api-client.ts` | 修改 | 适配 `since` + `cursor` 参数 |
-| `scripts/pulse/state.ts` | 修改 | 使用新状态字段，添加迁移逻辑 |
+| `scripts/pulse/types.ts` | 修改 | 更新 API 响应类型、状态类型、CLI 参数类型 |
+| `scripts/pulse/api-client.ts` | 修改 | 适配 `since` + `cursor` 参数，删除废弃方法 |
+| `scripts/pulse/state.ts` | 修改 | 使用新状态字段，删除旧函数，添加迁移逻辑 |
 | `scripts/pulse/index.ts` | 修改 | 移除废弃参数，更新同步逻辑 |
 | `commands/intel-pull.md` | 修改 | 更新命令文档 |
 | `commands/references/intel-pull-guide.md` | 修改 | 更新帮助文档 |
+
+### 需要删除的代码
+
+| 文件 | 删除内容 |
+|------|---------|
+| `types.ts` | `PulseListResponse.next_cursor` 字段 |
+| `types.ts` | `PulseListResponse.server_timestamp` 字段 |
+| `types.ts` | `PulseCursorState.cursor` 字段 |
+| `types.ts` | `PullOptions.since` 字段 |
+| `types.ts` | `PullOptions.until` 字段 |
+| `types.ts` | `PullOptions.preview` 字段 |
+| `types.ts` | `validateListResponse` 中 `next_cursor` 验证 |
+| `types.ts` | `validateListResponse` 中 `server_timestamp` 验证 |
+| `api-client.ts` | `ListQueryParams.from` 字段 |
+| `api-client.ts` | `ListQueryParams.since`（时间范围）字段 |
+| `api-client.ts` | `ListQueryParams.until` 字段 |
+| `api-client.ts` | `listContentRange()` 方法 |
+| `api-client.ts` | `makeRequest` 中 `from` 参数处理 |
+| `api-client.ts` | `makeRequest` 中 `since`（时间范围）参数处理 |
+| `api-client.ts` | `makeRequest` 中 `until` 参数处理 |
+| `state.ts` | `getCursor()` 函数 |
+| `state.ts` | `setCursor()` 函数 |
+| `state.ts` | `clearCursor()` 函数 |
+| `index.ts` | `--preview` CLI 参数定义 |
+| `index.ts` | `--since` CLI 参数定义 |
+| `index.ts` | `--until` CLI 参数定义 |
+| `index.ts` | `determinePullMode` 中 `preview` 分支 |
+| `index.ts` | `determinePullMode` 中 `since` 分支 |
+| `index.ts` | 废弃参数冲突验证逻辑 |
 
 ---
 
@@ -475,9 +506,18 @@ function migrateState(state: Record<string, unknown>): Record<string, unknown> {
 }
 ```
 
-- [ ] **Step 7: 移除旧的 setCursor 函数，保留向后兼容的 getCursor**
+- [ ] **Step 7: 删除旧的 getCursor 和 setCursor 函数**
 
-更新原有的 `getCursor` 和 `setCursor` 函数以保持向后兼容（可标记为 deprecated）或直接替换为新函数。
+删除以下旧函数（state.ts 中约第 119-152 行）：
+
+```typescript
+// 删除以下函数：
+// - getCursor(state, sourceName) → 使用 getCursorState(state, sourceName)
+// - setCursor(state, sourceName, cursor) → 使用 setCursorState(state, sourceName, lastFetchedAt, lastItemId, syncedCount)
+// - clearCursor(state, sourceName) → 使用 clearCursorState(state, sourceName)
+```
+
+这些函数已被新的 `getCursorState`、`setCursorState`、`clearCursorState` 替代。
 
 - [ ] **Step 8: 更新模块导出**
 
@@ -1086,6 +1126,7 @@ git commit -m "chore(market-radar): bump version to 1.5.0 for incremental sync"
 | 废弃 `--since`（时间范围） | Task 2, Task 5 |
 | 废弃 `--until` | Task 2, Task 5 |
 | 删除 `listContentRange()` | Task 3 |
+| 删除旧函数 `getCursor`/`setCursor`/`clearCursor` | Task 4 |
 | 更新 `PullOptions` 类型 | Task 2 |
 | 更新 `PullResult.mode` 类型 | Task 2 |
 | 更新命令文档 | Task 7 |
@@ -1109,3 +1150,23 @@ git commit -m "chore(market-radar): bump version to 1.5.0 for incremental sync"
 - `generateReport` 使用 `getCursorState` 读取状态，不再引用不存在的字段 ✓
 - `pullFromSource` 返回值包含 `lastFetchedAt` 和 `lastItemId` ✓
 - `executePull` 正确调用 `setCursorState` 更新状态 ✓
+- 旧函数 `getCursor`/`setCursor`/`clearCursor` 已删除，统一使用新函数 ✓
+
+### 5. 代码删除清单
+
+| 删除项 | 文件 | Task |
+|--------|------|------|
+| `next_cursor` 字段 | types.ts | Task 1 |
+| `server_timestamp` 字段 | types.ts | Task 1 |
+| `PulseCursorState.cursor` 字段 | types.ts | Task 2 |
+| `PullOptions.since` 字段 | types.ts | Task 2 |
+| `PullOptions.until` 字段 | types.ts | Task 2 |
+| `PullOptions.preview` 字段 | types.ts | Task 2 |
+| `listContentRange()` 方法 | api-client.ts | Task 3 |
+| `getCursor()` 函数 | state.ts | Task 4 |
+| `setCursor()` 函数 | state.ts | Task 4 |
+| `clearCursor()` 函数 | state.ts | Task 4 |
+| `--preview` CLI 参数 | index.ts | Task 5 |
+| `--since` CLI 参数 | index.ts | Task 5 |
+| `--until` CLI 参数 | index.ts | Task 5 |
+| 废弃参数验证逻辑 | index.ts | Task 5 |
