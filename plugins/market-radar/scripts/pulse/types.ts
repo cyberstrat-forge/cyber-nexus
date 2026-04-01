@@ -91,19 +91,19 @@ export interface PulseContent {
 }
 
 /**
- * API list response (v1 format)
+ * API list response (v1 format with incremental sync support)
  */
 export interface PulseListResponse {
   /** List of content items */
   data: PulseContent[];
-  /** Cursor for next page */
-  next_cursor: string | null;
+  /** Last item ID in current page, used for cursor pagination */
+  last_item_id: string | null;
+  /** Last item's fetched_at timestamp, used for incremental sync */
+  last_fetched_at: string | null;
   /** Whether more items available */
   has_more: boolean;
   /** Number of items in current response */
   count: number;
-  /** Server timestamp (ISO 8601) */
-  server_timestamp: string;
 }
 
 /**
@@ -119,13 +119,17 @@ export interface PulseErrorResponse {
 // ==================== State Types ====================
 
 /**
- * Cursor tracking for a single source
+ * Cursor tracking for a single source (v3.0.0 format)
  */
 export interface PulseCursorState {
-  /** Current cursor (item_id) */
-  cursor: string | null;
-  /** Last pull timestamp (ISO 8601) */
+  /** Last item's fetched_at timestamp, used for since parameter */
+  last_fetched_at: string | null;
+  /** Last item ID, used for cursor parameter */
+  last_item_id: string | null;
+  /** Last pull completion timestamp (ISO 8601) */
   last_pull: string | null;
+  /** Total synced count (statistics) */
+  total_synced: number;
 }
 
 /**
@@ -182,7 +186,7 @@ export type PullSourceResult = PullSourceResultSuccess | PullSourceResultFailure
  */
 export interface PullResult {
   /** Pull mode used */
-  mode: 'incremental' | 'init' | 'since' | 'preview' | 'all';
+  mode: 'init' | 'incremental' | 'all';
   /** Output directory */
   output_dir: string;
   /** Results per source */
@@ -196,7 +200,7 @@ export interface PullResult {
 // ==================== CLI Types ====================
 
 /**
- * Parsed CLI arguments
+ * Parsed CLI arguments (simplified)
  */
 export interface PullOptions {
   /** Source name to pull from */
@@ -205,14 +209,8 @@ export interface PullOptions {
   all: boolean;
   /** Output directory */
   output: string;
-  /** Initialize mode - pull all and reset cursor */
+  /** Initialize mode - full sync from beginning */
   init: boolean;
-  /** Pull items since datetime */
-  since?: string;
-  /** Pull items until datetime */
-  until?: string;
-  /** Preview mode - show items without writing */
-  preview: boolean;
   /** List sources mode */
   listSources: boolean;
   /** Add source mode */
@@ -258,7 +256,7 @@ export class PulseError extends Error {
 // ==================== Constants ====================
 
 /** Default limit for API requests */
-export const DEFAULT_LIMIT = 100;
+export const DEFAULT_LIMIT = 50;
 
 /** Connection timeout in milliseconds */
 export const CONNECT_TIMEOUT = 10000;
@@ -299,12 +297,21 @@ export function validateListResponse(response: unknown): response is PulseListRe
     );
   }
 
-  // v1: next_cursor and has_more at top level (not in meta)
-  if (resp.next_cursor !== null && typeof resp.next_cursor !== 'string') {
+  // Validate last_item_id (string or null)
+  if (resp.last_item_id !== null && typeof resp.last_item_id !== 'string') {
     throw new PulseError(
       'API_INVALID_RESPONSE',
-      `API 返回无效 next_cursor: 应为 string 或 null，实际为 ${typeof resp.next_cursor}`,
-      { nextCursorType: typeof resp.next_cursor, response }
+      `API 返回无效 last_item_id: 应为 string 或 null，实际为 ${typeof resp.last_item_id}`,
+      { lastItemIdType: typeof resp.last_item_id, response }
+    );
+  }
+
+  // Validate last_fetched_at (string or null)
+  if (resp.last_fetched_at !== null && typeof resp.last_fetched_at !== 'string') {
+    throw new PulseError(
+      'API_INVALID_RESPONSE',
+      `API 返回无效 last_fetched_at: 应为 string 或 null，实际为 ${typeof resp.last_fetched_at}`,
+      { lastFetchedAtType: typeof resp.last_fetched_at, response }
     );
   }
 
@@ -321,14 +328,6 @@ export function validateListResponse(response: unknown): response is PulseListRe
       'API_INVALID_RESPONSE',
       `API 返回无效 count: 应为 number，实际为 ${typeof resp.count}`,
       { countType: typeof resp.count, response }
-    );
-  }
-
-  if (typeof resp.server_timestamp !== 'string') {
-    throw new PulseError(
-      'API_INVALID_RESPONSE',
-      `API 返回无效 server_timestamp: 应为 string，实际为 ${typeof resp.server_timestamp}`,
-      { serverTimestampType: typeof resp.server_timestamp, response }
     );
   }
 

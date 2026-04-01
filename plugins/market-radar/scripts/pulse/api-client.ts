@@ -24,14 +24,15 @@ import {
 // ==================== Types ====================
 
 /**
- * Query parameters for list content API
+ * Query parameters for list content API (v1 with incremental sync)
  */
 interface ListQueryParams {
-  cursor?: string;
-  from?: 'latest' | 'beginning';
-  limit?: number;
+  /** Start point: 'beginning' or ISO 8601 timestamp */
   since?: string;
-  until?: string;
+  /** Pagination cursor (item_id), must be used with since */
+  cursor?: string;
+  /** Items per page (1-100) */
+  limit?: number;
 }
 
 // ==================== Helper Functions ====================
@@ -84,20 +85,14 @@ export class PulseClient {
     // Build URL with query parameters
     const url = new URL(`${this.baseUrl}${path}`);
     if (query) {
-      if (query.cursor) {
-        url.searchParams.set('cursor', query.cursor);
-      }
-      if (query.from) {
-        url.searchParams.set('from', query.from);
-      }
-      if (query.limit !== undefined) {
-        url.searchParams.set('limit', String(query.limit));
-      }
       if (query.since) {
         url.searchParams.set('since', query.since);
       }
-      if (query.until) {
-        url.searchParams.set('until', query.until);
+      if (query.cursor) {
+        url.searchParams.set('cursor', query.cursor);
+      }
+      if (query.limit !== undefined) {
+        url.searchParams.set('limit', String(query.limit));
       }
     }
 
@@ -259,19 +254,22 @@ export class PulseClient {
   // ==================== API Methods ====================
 
   /**
-   * List content items (incremental mode)
+   * List content items with since and cursor parameters
    *
-   * GET /api/v1/items?cursor={cursor}&limit={limit}
+   * GET /api/v1/items?since={since}&cursor={cursor}&limit={limit}
    *
-   * @param cursor - Pagination cursor (optional)
-   * @param limit - Number of items to return (default: 100)
+   * @param since - 'beginning' or ISO 8601 timestamp (optional)
+   * @param cursor - Pagination cursor, must be used with since (optional)
+   * @param limit - Number of items to return (default: 50)
    * @returns List response with data and pagination info
    */
   async listContent(
+    since?: string,
     cursor?: string,
     limit: number = DEFAULT_LIMIT
   ): Promise<PulseListResponse> {
     return this.makeRequest<PulseListResponse>('/api/v1/items', {
+      since,
       cursor,
       limit,
     });
@@ -280,45 +278,14 @@ export class PulseClient {
   /**
    * List content items from beginning (init mode)
    *
-   * GET /api/v1/items?from=beginning&limit={limit}
+   * GET /api/v1/items?since=beginning&limit={limit}
    *
-   * @param limit - Number of items to return (default: 100)
+   * @param limit - Number of items to return (default: 50)
    * @returns List response with data and pagination info
    */
   async listContentFromBeginning(
     limit: number = DEFAULT_LIMIT
   ): Promise<PulseListResponse> {
-    return this.makeRequest<PulseListResponse>('/api/v1/items', {
-      from: 'beginning',
-      limit,
-    });
-  }
-
-  /**
-   * List content items within a time range (since mode)
-   *
-   * GET /api/v1/items?since={since}&until={until}&cursor={cursor}&limit={limit}
-   *
-   * @param since - ISO 8601 datetime string (inclusive)
-   * @param until - ISO 8601 datetime string (exclusive, optional)
-   * @param cursor - Pagination cursor (optional)
-   * @param limit - Number of items to return (default: 100)
-   * @returns List response with data and pagination info
-   */
-  async listContentRange(
-    since: string,
-    until?: string,
-    cursor?: string,
-    limit: number = DEFAULT_LIMIT
-  ): Promise<PulseListResponse> {
-    const params: ListQueryParams = {
-      since,
-      cursor,
-      limit,
-    };
-    if (until) {
-      params.until = until;
-    }
-    return this.makeRequest<PulseListResponse>('/api/v1/items', params);
+    return this.listContent('beginning', undefined, limit);
   }
 }

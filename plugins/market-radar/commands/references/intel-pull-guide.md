@@ -11,13 +11,11 @@
 | `--source <name>` | 否 | 指定情报源名称 | default_source |
 | `--all` | 否 | 顺序拉取所有配置的情报源 | - |
 | `--output <dir>` | 否 | 输出目录 | `inbox/` |
-| `--since <datetime>` | 否 | 拉取指定时间后的数据（ISO 8601 格式） | - |
-| `--id <content_id>` | 否 | 拉取单条指定情报 | - |
+| `--init` | 否 | 全量同步（从头开始，忽略 cursor） | - |
 | `--list-sources` | 否 | 列出所有已配置的情报源 | - |
 | `--add-source` | 否 | 交互式添加情报源 | - |
 | `--remove-source <name>` | 否 | 删除指定情报源 | - |
 | `--set-default <name>` | 否 | 设置默认情报源 | - |
-| `--help` | 否 | 显示此帮助信息 | - |
 
 ---
 
@@ -73,7 +71,22 @@ export CYBER_PULSE_LOCAL_KEY=cp_live_xxx
 
 ## 使用场景
 
-### 场景 1：增量拉取（推荐）
+### 场景 1：首次全量同步
+
+```bash
+# 使用 --init 参数进行全量同步
+/intel-pull --init
+
+# 指定源全量同步
+/intel-pull --source cloud --init
+```
+
+`--init` 参数会忽略已保存的 cursor，从头开始拉取所有数据。适用于：
+- 首次使用
+- 数据迁移
+- 重建本地数据
+
+### 场景 2：日常增量同步（推荐）
 
 ```bash
 # 使用默认源增量拉取
@@ -83,25 +96,18 @@ export CYBER_PULSE_LOCAL_KEY=cp_live_xxx
 /intel-pull --source cloud
 ```
 
-增量拉取会记住上次拉取位置（cursor），只获取新数据。
+增量拉取会记住上次拉取位置（cursor），只获取新数据。这是最高效的日常使用方式。
 
-### 场景 2：时间范围拉取
+### 场景 3：状态丢失处理
 
-```bash
-# 拉取指定日期后的数据
-/intel-pull --since "2026-03-01"
-
-# 拉取最近一周的数据
-/intel-pull --since "2026-03-13T00:00:00Z"
-```
-
-**注意**：时间范围拉取不会更新 cursor。
-
-### 场景 3：单条拉取
+如果 cursor 状态丢失或需要重新同步，可以使用 `--init` 参数：
 
 ```bash
-# 拉取指定 ID 的情报
-/intel-pull --id "cnt_20260319143052_a1b2c3d4"
+# 重新全量同步
+/intel-pull --init
+
+# 然后正常增量同步
+/intel-pull
 ```
 
 ### 场景 4：多源拉取
@@ -258,12 +264,34 @@ ls ./docs/intelligence/
 3. API Key 是否有效
 4. 环境变量是否设置
 
+### Q: 增量同步和全量同步的区别？
+
+| 模式 | 参数 | 说明 |
+|------|------|------|
+| 增量同步 | 无特殊参数 | 只拉取 cursor 之后的新数据 |
+| 全量同步 | `--init` | 从头拉取所有数据，重置 cursor |
+
+日常使用推荐增量同步，效率更高。
+
+### Q: cursor 存储在哪里？
+
+cursor 存储在每个情报源的配置中（`pulse-sources.json`），格式为：
+
+```json
+{
+  "name": "local",
+  "url": "http://localhost:8000",
+  "key_ref": "CYBER_PULSE_LOCAL_KEY",
+  "cursor": "cnt_20260319143052_abc123"
+}
+```
+
 ### Q: 如何重新拉取所有数据？
 
-时间范围拉取模式不更新 cursor，可以指定起始时间：
+使用 `--init` 参数进行全量同步：
 
 ```bash
-/intel-pull --since "2026-01-01"
+/intel-pull --init
 ```
 
 ### Q: 输出目录不存在会自动创建吗？

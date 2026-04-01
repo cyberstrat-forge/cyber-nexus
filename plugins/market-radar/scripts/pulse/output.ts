@@ -223,11 +223,12 @@ export async function writeContentFile(
  *
  * Creates the output directory if it doesn't exist.
  * Processes items sequentially to avoid file system conflicts.
+ * Skips files that already exist (deduplication for incremental pulls).
  *
  * @param items - Array of PulseContent items to write
  * @param outputDir - Output directory path
  * @param sourceName - Source name for pulse_source field
- * @returns Array of absolute paths to written files
+ * @returns Array of absolute paths to written files (excludes skipped files)
  */
 export async function writeContentFiles(
   items: PulseContent[],
@@ -235,10 +236,36 @@ export async function writeContentFiles(
   sourceName: string
 ): Promise<string[]> {
   const filePaths: string[] = [];
+  let skippedCount = 0;
 
   for (const item of items) {
-    const filePath = await writeContentFile(item, outputDir, sourceName);
-    filePaths.push(filePath);
+    const filename = generateFilename(item);
+    const filePath = path.resolve(outputDir, filename);
+
+    // Check if file already exists (deduplication)
+    try {
+      await fs.access(filePath);
+      // File exists, skip it
+      skippedCount++;
+      continue;
+    } catch (error) {
+      // Only proceed if file doesn't exist (ENOENT)
+      // Log unexpected errors for debugging
+      if (error instanceof Error && 'code' in error) {
+        const nodeError = error as Error & { code: string };
+        if (nodeError.code !== 'ENOENT') {
+          console.error(`[pulse] 警告: 无法检查文件 ${filePath}: ${nodeError.message} (${nodeError.code})`);
+        }
+      }
+      // File doesn't exist, proceed to write
+    }
+
+    const writtenPath = await writeContentFile(item, outputDir, sourceName);
+    filePaths.push(writtenPath);
+  }
+
+  if (skippedCount > 0) {
+    console.log(`[pulse] 跳过 ${skippedCount} 个已存在的文件`);
   }
 
   return filePaths;
