@@ -4,16 +4,18 @@
  *
  * Manages cursor tracking in state.json (shared with intel-distill).
  *
- * Cursor format (v1):
- * - Old: cnt_YYYYMMDDHHMMSS_xxxxxxxx
- * - New: item_{8位hex}
+ * Cursor format (v3.0.0):
+ * - last_fetched_at: timestamp for incremental sync (since parameter)
+ * - last_item_id: ID for cursor pagination
+ * - last_pull: last pull completion timestamp
+ * - total_synced: cumulative sync count
  *
  * Field ownership in state.json:
  * - pulse.cursors: managed by intel-pull (this module)
  * - queue, review, processed, stats: managed by intel-distill
  *
  * Usage:
- *   import { loadState, saveState, getCursor, setCursor, clearCursor } from './state';
+ *   import { loadState, saveState, getCursorState, setCursorState, clearCursorState } from './state';
  */
 
 import * as fs from 'fs';
@@ -21,11 +23,19 @@ import * as path from 'path';
 import { PulseState, PulseCursorState, PulseError } from './types';
 
 /** Current state file version */
-const STATE_VERSION = '2.3.0';
+const STATE_VERSION = '3.0.0';
 
 /** Default pulse state structure */
 const DEFAULT_PULSE_STATE: PulseState = {
   cursors: {},
+};
+
+/** Default cursor state for a single source */
+const DEFAULT_CURSOR_STATE: PulseCursorState = {
+  last_fetched_at: null,
+  last_item_id: null,
+  last_pull: null,
+  total_synced: 0,
 };
 
 /**
@@ -75,28 +85,35 @@ export function loadState(outputDir: string): Record<string, unknown> {
  * Migrate state to current version
  */
 function migrateState(state: Record<string, unknown>): Record<string, unknown> {
-  // Safely extract version with proper type checking
   const rawVersion = state.version;
   const version = typeof rawVersion === 'string' ? rawVersion : '1.0';
 
-  // Already at current version
   if (version === STATE_VERSION) {
     return state;
   }
 
-  // Log migration for debugging
-  if (version !== STATE_VERSION) {
-    console.log(`[pulse] Migrating state from version ${version} to ${STATE_VERSION}`);
-  }
+  console.log(`[pulse] Migrating state from version ${version} to ${STATE_VERSION}`);
 
   // Add pulse field if missing
   if (!state.pulse) {
     state.pulse = DEFAULT_PULSE_STATE;
   }
 
-  // Update version
-  state.version = STATE_VERSION;
+  // Check for old cursor format and reset
+  const pulseState = state.pulse as Record<string, unknown>;
+  if (pulseState.cursors && typeof pulseState.cursors === 'object') {
+    const cursors = pulseState.cursors as Record<string, unknown>;
+    for (const sourceName of Object.keys(cursors)) {
+      const cursor = cursors[sourceName] as Record<string, unknown>;
+      // Old format has 'cursor' field, new format has 'last_fetched_at'
+      if ('cursor' in cursor && !('last_fetched_at' in cursor)) {
+        console.log(`[pulse] Old cursor format detected for ${sourceName}, resetting`);
+        cursors[sourceName] = DEFAULT_CURSOR_STATE;
+      }
+    }
+  }
 
+  state.version = STATE_VERSION;
   return state;
 }
 
@@ -114,25 +131,41 @@ export function getPulseState(state: Record<string, unknown>): PulseState {
 }
 
 /**
- * Get cursor for a source
+ * Get cursor state for a source
  */
-export function getCursor(
+export function getCursorState(
   state: Record<string, unknown>,
   sourceName: string
 ): PulseCursorState {
   const pulseState = getPulseState(state);
-  return pulseState.cursors[sourceName] || { cursor: null, last_pull: null };
+  const cursorState = pulseState.cursors[sourceName];
+
+  if (cursorState && typeof cursorState === 'object') {
+    // Check for new format (has last_fetched_at)
+    if ('last_fetched_at' in cursorState) {
+      return cursorState as PulseCursorState;
+    }
+    // Old format detected (has cursor but no last_fetched_at)
+    console.log(`[pulse] Old cursor format detected for ${sourceName}, migration required`);
+    return DEFAULT_CURSOR_STATE;
+  }
+
+  return DEFAULT_CURSOR_STATE;
 }
 
 /**
- * Set cursor for a source
+ * Set cursor state for a source after successful sync
  */
-export function setCursor(
+export function setCursorState(
   state: Record<string, unknown>,
   sourceName: string,
-  cursor: string
+  lastFetchedAt: string,
+  lastItemId: string,
+  syncedCount: number
 ): Record<string, unknown> {
   const pulseState = getPulseState(state);
+  const prevCursor = pulseState.cursors[sourceName] || DEFAULT_CURSOR_STATE;
+  const prevTotal = prevCursor.total_synced || 0;
 
   return {
     ...state,
@@ -143,8 +176,10 @@ export function setCursor(
       cursors: {
         ...pulseState.cursors,
         [sourceName]: {
-          cursor,
+          last_fetched_at: lastFetchedAt,
+          last_item_id: lastItemId,
           last_pull: new Date().toISOString(),
+          total_synced: prevTotal + syncedCount,
         },
       },
     },
@@ -152,9 +187,9 @@ export function setCursor(
 }
 
 /**
- * Clear cursor for a source (used by --init mode)
+ * Clear cursor state for a source (used by --init mode)
  */
-export function clearCursor(
+export function clearCursorState(
   state: Record<string, unknown>,
   sourceName: string
 ): Record<string, unknown> {
