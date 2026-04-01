@@ -23,7 +23,7 @@ description: |
 
 model: inherit
 color: cyan
-tools: Read, Grep, Glob, Write, Bash
+tools: ["Read", "Grep", "Glob", "Write", "Bash"]
 skills:
   - clustering-methodology
   - cybersecurity-domain-knowledge
