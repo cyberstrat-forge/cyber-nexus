@@ -410,32 +410,47 @@ function generateReport(result: PullResult): string {
   // Report each source
   const config = loadConfig(); // Load config once outside the loop
   for (const sourceResult of result.sources) {
-    const source = getSource(config, sourceResult.source);
+    try {
+      const source = getSource(config, sourceResult.source);
 
-    lines.push(`源: ${source.name} (${source.url})`);
-    lines.push(`模式: ${modeDescriptions[result.mode]}`);
-    lines.push('');
-
-    if (sourceResult.success) {
-      lines.push('【拉取统计】');
-      lines.push(`• 新增情报: ${sourceResult.count} 条`);
-      lines.push(`• 写入位置: ${result.output_dir}`);
+      lines.push(`源: ${source.name} (${source.url})`);
+      lines.push(`模式: ${modeDescriptions[result.mode]}`);
       lines.push('');
 
-      // Read state to show cursor info
-      const state = loadState(result.output_dir);
-      const cursorState = getCursorState(state, source.name);
-      if (cursorState.last_fetched_at && cursorState.last_item_id) {
-        lines.push('【状态更新】');
-        lines.push(`• last_fetched_at: ${cursorState.last_fetched_at}`);
-        lines.push(`• last_item_id: ${cursorState.last_item_id}`);
-        lines.push(`• 更新时间: ${result.pulled_at}`);
+      if (sourceResult.success) {
+        lines.push('【拉取统计】');
+        lines.push(`• 新增情报: ${sourceResult.count} 条`);
+        lines.push(`• 写入位置: ${result.output_dir}`);
+        lines.push('');
+
+        // Read state to show cursor info
+        const state = loadState(result.output_dir);
+        const cursorState = getCursorState(state, source.name);
+        if (cursorState.last_fetched_at && cursorState.last_item_id) {
+          lines.push('【状态更新】');
+          lines.push(`• last_fetched_at: ${cursorState.last_fetched_at}`);
+          lines.push(`• last_item_id: ${cursorState.last_item_id}`);
+          lines.push(`• 更新时间: ${result.pulled_at}`);
+          lines.push('');
+        }
+      } else {
+        lines.push('【拉取失败】');
+        lines.push(`• 错误: ${sourceResult.error}`);
         lines.push('');
       }
-    } else {
-      lines.push('【拉取失败】');
-      lines.push(`• 错误: ${sourceResult.error}`);
+    } catch {
+      // Source might have been deleted from config
+      lines.push(`源: ${sourceResult.source} (配置已删除)`);
       lines.push('');
+      if (sourceResult.success) {
+        lines.push('【拉取统计】');
+        lines.push(`• 新增情报: ${sourceResult.count} 条`);
+        lines.push('');
+      } else {
+        lines.push('【拉取失败】');
+        lines.push(`• 错误: ${sourceResult.error}`);
+        lines.push('');
+      }
     }
   }
 
