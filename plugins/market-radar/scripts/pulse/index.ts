@@ -8,8 +8,6 @@
  *   pnpm exec tsx index.ts --source local
  *   pnpm exec tsx index.ts --all --output ./inbox
  *   pnpm exec tsx index.ts --init
- *   pnpm exec tsx index.ts --since 2026-03-01T00:00:00Z --until 2026-03-31T00:00:00Z
- *   pnpm exec tsx index.ts --preview
  *   pnpm exec tsx index.ts --list-sources
  */
 
@@ -30,6 +28,7 @@ import {
   PulseContent,
   PulseError,
   validateListResponse,
+  DEFAULT_LIMIT,
 } from './types.js';
 
 import {
@@ -46,9 +45,9 @@ import {
 import {
   loadState,
   saveState,
-  getCursor,
-  setCursor,
-  clearCursor,
+  getCursorState,
+  setCursorState,
+  clearCursorState,
   ensureStateDir,
 } from './state.js';
 
@@ -182,17 +181,11 @@ async function interactiveAddSource(): Promise<void> {
  * Determine pull mode based on CLI options
  *
  * @param options - Parsed CLI arguments
- * @returns The determined pull mode: 'incremental', 'init', 'since', 'preview', or 'all'
+ * @returns The determined pull mode: 'init', 'incremental', or 'all'
  */
-function determinePullMode(options: PullOptions): 'incremental' | 'init' | 'since' | 'preview' | 'all' {
-  if (options.preview) {
-    return 'preview';
-  }
+function determinePullMode(options: { init: boolean; all: boolean }): 'init' | 'incremental' | 'all' {
   if (options.init) {
     return 'init';
-  }
-  if (options.since) {
-    return 'since';
   }
   if (options.all) {
     return 'all';
@@ -203,123 +196,77 @@ function determinePullMode(options: PullOptions): 'incremental' | 'init' | 'sinc
 /**
  * Pull content from a single source
  *
- * Fetches content from the specified source using the appropriate mode.
+ * Fetches content from the specified source using since+cursor pagination.
  * Handles pagination automatically when has_more is true.
  *
  * @param source - The pulse source configuration
  * @param options - Parsed CLI arguments
  * @param state - Current state object for cursor tracking
- * @returns Result object with success status, count, and optional cursor/files
+ * @returns Result object with success status, count, and state info
  */
 async function pullFromSource(
   source: PulseSource,
-  options: PullOptions,
+  options: { init: boolean; output: string },
   state: Record<string, unknown>
-): Promise<PullSourceResult> {
+): Promise<{
+  success: boolean;
+  count: number;
+  lastFetchedAt: string | null;
+  lastItemId: string | null;
+  files?: string[];
+  error?: string;
+}> {
   try {
     const apiKey = getApiKey(source);
     const client = new PulseClient(source.url, apiKey);
 
+    const mode = options.init ? 'init' : 'incremental';
     let items: PulseContent[] = [];
-    let newCursor: string | undefined;
-    const mode = determinePullMode(options);
+    let lastItemId: string | null = null;
+    let lastFetchedAt: string | null = null;
 
-    // Determine limit based on mode
-    const limit = mode === 'preview' ? 50 : 100;
+    // Get or initialize sync state
+    const cursorState = getCursorState(state, source.name);
 
-    // Handle different pull modes
-    if (mode === 'preview') {
-      // Preview mode: only pull one page, don't use cursor
-      const response = await client.listContent(undefined, limit);
-      validateListResponse(response);
+    // For incremental mode, check if we have last_fetched_at
+    if (mode === 'incremental' && !cursorState.last_fetched_at) {
+      return {
+        success: false,
+        count: 0,
+        lastFetchedAt: null,
+        lastItemId: null,
+        error: `未找到同步状态，请先执行 --init`,
+      };
+    }
 
-      items = response.data;
-      newCursor = response.next_cursor || undefined;
-      // Don't update cursor for preview mode
-    } else if (mode === 'init') {
-      // Init mode: start from beginning, paginate through all
-      let response = await client.listContentFromBeginning(limit);
-      validateListResponse(response);
+    // Determine since parameter (convert null to undefined)
+    const since = mode === 'init' ? 'beginning' : (cursorState.last_fetched_at ?? undefined);
+    let cursor: string | undefined = undefined;
+    let hasMore = true;
 
-      items.push(...response.data);
-      let cursor = response.next_cursor || undefined;
-      let hasMore = response.has_more && cursor;
-
-      while (hasMore) {
-        response = await client.listContent(cursor, limit);
-        validateListResponse(response);
-
-        items.push(...response.data);
-        cursor = response.next_cursor || undefined;
-        hasMore = response.has_more && cursor;
-      }
-
-      newCursor = cursor;
-    } else if (mode === 'since') {
-      // Since mode: pull items within time range
-      let response = await client.listContentRange(
-        options.since!,
-        options.until,
-        undefined,
-        limit
-      );
+    while (hasMore) {
+      const response = await client.listContent(since, cursor, DEFAULT_LIMIT);
       validateListResponse(response);
 
       items.push(...response.data);
-      let cursor = response.next_cursor || undefined;
-      let hasMore = response.has_more && cursor;
+      lastItemId = response.last_item_id;
+      lastFetchedAt = response.last_fetched_at;
 
-      while (hasMore) {
-        response = await client.listContentRange(
-          options.since!,
-          options.until,
-          cursor,
-          limit
-        );
-        validateListResponse(response);
-
-        items.push(...response.data);
-        cursor = response.next_cursor || undefined;
-        hasMore = response.has_more && cursor;
-      }
-
-      newCursor = cursor;
-      // Don't update cursor for since mode
-    } else {
-      // Incremental or all mode: use saved cursor
-      const cursorValue = getCursor(state, source.name).cursor;
-      let cursor: string | undefined = cursorValue ?? undefined;
-      let response = await client.listContent(cursor, limit);
-      validateListResponse(response);
-
-      items.push(...response.data);
-      cursor = response.next_cursor || undefined;
-      let hasMore = response.has_more && cursor;
-
-      while (hasMore) {
-        response = await client.listContent(cursor, limit);
-        validateListResponse(response);
-
-        items.push(...response.data);
-        cursor = response.next_cursor || undefined;
-        hasMore = response.has_more && cursor;
-      }
-
-      newCursor = cursor;
+      // Next page uses cursor
+      cursor = response.has_more ? (response.last_item_id ?? undefined) : undefined;
+      hasMore = response.has_more && cursor !== undefined;
     }
 
     // Write files
     const files = await writeContentFiles(items, options.output, source.name);
 
-    // Return success result
-    const successResult: PullSourceResultSuccess = {
-      source: source.name,
+    return {
       success: true,
       count: items.length,
+      lastFetchedAt,
+      lastItemId,
       files,
-      new_cursor: newCursor,
     };
-    return successResult;
   } catch (error) {
     // Build error message with context
     let errorMessage: string;
@@ -336,13 +283,13 @@ async function pullFromSource(
       errorMessage = String(error);
     }
 
-    const failureResult: PullSourceResultFailure = {
-      source: source.name,
+    return {
       success: false,
       count: 0,
+      lastFetchedAt: null,
+      lastItemId: null,
       error: errorMessage,
     };
-    return failureResult;
   }
 }
 
@@ -358,7 +305,7 @@ async function pullFromSource(
 async function executePull(options: PullOptions): Promise<PullResult> {
   const mode = determinePullMode(options);
   const result: PullResult = {
-    mode,
+    mode: mode === 'all' ? 'incremental' : mode,
     output_dir: path.resolve(options.output),
     sources: [],
     total_count: 0,
@@ -369,12 +316,9 @@ async function executePull(options: PullOptions): Promise<PullResult> {
   const config = loadConfig();
 
   // Determine sources to pull
-  const sources: PulseSource[] = [];
-  if (options.all) {
-    sources.push(...config.sources);
-  } else {
-    sources.push(getSource(config, options.source));
-  }
+  const sources: PulseSource[] = options.all
+    ? config.sources
+    : [getSource(config, options.source)];
 
   // Ensure state directory exists
   ensureStateDir(options.output);
@@ -384,20 +328,41 @@ async function executePull(options: PullOptions): Promise<PullResult> {
 
   // Pull from each source
   for (const source of sources) {
-    // Clear cursor before pulling in init mode
-    if (mode === 'init') {
-      state = clearCursor(state, source.name);
+    // Clear cursor state for init mode
+    if (options.init) {
+      state = clearCursorState(state, source.name);
     }
 
     const sourceResult = await pullFromSource(source, options, state);
-    result.sources.push(sourceResult);
-    result.total_count += sourceResult.count;
 
-    // Update cursor in incremental and init modes
-    if (sourceResult.success && sourceResult.new_cursor) {
-      if (mode === 'incremental' || mode === 'init') {
-        state = setCursor(state, source.name, sourceResult.new_cursor);
+    if (sourceResult.success) {
+      const successResult: PullSourceResultSuccess = {
+        source: source.name,
+        success: true,
+        count: sourceResult.count,
+        files: sourceResult.files,
+      };
+      result.sources.push(successResult);
+      result.total_count += sourceResult.count;
+
+      // Update cursor state
+      if (sourceResult.lastFetchedAt && sourceResult.lastItemId) {
+        state = setCursorState(
+          state,
+          source.name,
+          sourceResult.lastFetchedAt,
+          sourceResult.lastItemId,
+          sourceResult.count
+        );
       }
+    } else {
+      const failureResult: PullSourceResultFailure = {
+        source: source.name,
+        success: false,
+        count: 0,
+        error: sourceResult.error!,
+      };
+      result.sources.push(failureResult);
     }
   }
 
@@ -429,15 +394,13 @@ function generateReport(result: PullResult): string {
 
   // Mode description
   const modeDescriptions: Record<string, string> = {
-    incremental: '增量拉取',
-    init: '首次同步',
-    since: '时间范围拉取',
-    preview: '预览模式',
-    all: '全量拉取',
+    incremental: '增量同步',
+    init: '全量同步',
+    all: '多源同步',
   };
 
   // Report each source
-  const config = loadConfig();  // Load config once outside the loop
+  const config = loadConfig(); // Load config once outside the loop
   for (const sourceResult of result.sources) {
     const source = getSource(config, sourceResult.source);
 
@@ -451,9 +414,13 @@ function generateReport(result: PullResult): string {
       lines.push(`• 写入位置: ${result.output_dir}`);
       lines.push('');
 
-      if (sourceResult.new_cursor) {
+      // Read state to show cursor info
+      const state = loadState(result.output_dir);
+      const cursorState = getCursorState(state, source.name);
+      if (cursorState.last_fetched_at && cursorState.last_item_id) {
         lines.push('【状态更新】');
-        lines.push(`• cursor: ${sourceResult.new_cursor}`);
+        lines.push(`• last_fetched_at: ${cursorState.last_fetched_at}`);
+        lines.push(`• last_item_id: ${cursorState.last_item_id}`);
         lines.push(`• 更新时间: ${result.pulled_at}`);
         lines.push('');
       }
@@ -483,14 +450,11 @@ const program = new Command();
 program
   .name('pulse')
   .description('从 cyber-pulse API 拉取情报内容')
-  .version('1.0.0')
+  .version('2.0.0')
   .option('-s, --source <name>', '指定情报源名称')
   .option('-a, --all', '拉取所有配置的情报源')
   .option('-o, --output <dir>', '输出目录', DEFAULT_OUTPUT_DIR)
-  .option('--init', '首次同步/重新同步（从最开始遍历）')
-  .option('--since <datetime>', '拉取指定时间后的数据 (ISO 8601)')
-  .option('--until <datetime>', '拉取指定时间前的数据 (ISO 8601)')
-  .option('--preview', '预览最新一页（50条，不更新状态）')
+  .option('--init', '全量同步（从头开始）')
   .option('--list-sources', '列出所有已配置的情报源')
   .option('--add-source', '交互式添加情报源')
   .option('--remove-source <name>', '删除指定情报源')
@@ -532,23 +496,8 @@ program
       // options.source remains undefined, which triggers default behavior in getSource()
 
       // Validate conflicting options
-      if (options.init && options.since) {
-        console.error('错误: --init 和 --since 不能同时使用');
-        process.exit(1);
-      }
-
-      if (options.preview && (options.init || options.since || options.until)) {
-        console.error('错误: --preview 不能与其他拉取选项同时使用');
-        process.exit(1);
-      }
-
       if (options.source && options.all) {
         console.error('错误: --source 和 --all 不能同时使用');
-        process.exit(1);
-      }
-
-      if (options.until && !options.since) {
-        console.error('错误: --until 必须与 --since 配合使用');
         process.exit(1);
       }
 
