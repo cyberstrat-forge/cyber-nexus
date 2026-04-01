@@ -32,7 +32,7 @@ description: |
 
 model: inherit
 color: blue
-tools: Read, Write
+tools: ["Read", "Write"]
 skills:
   - cybersecurity-domain-knowledge
 ---

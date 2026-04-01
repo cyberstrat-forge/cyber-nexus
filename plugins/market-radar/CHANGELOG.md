@@ -2,6 +2,16 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.4.1] - 2026-04-01
+
+### 修复
+
+- **Agent tools 字段格式修复**
+  - 修正 YAML frontmatter 中 `tools` 字段格式：从逗号分隔字符串改为 YAML 数组格式
+  - 格式变更：`tools: Read, Write` → `tools: ["Read", "Write"]`
+  - 修复 Agent 无法获取 Write 工具权限导致情报卡片写入失败的问题
+  - 受影响文件：`intelligence-analyzer.md`, `intelligence-briefing-writer.md`, `intelligence-cluster.md`, `panorama-synthesizer.md`, `theme-analyzer.md`
+
 ## [1.4.0] - 2026-04-01
 
 ### 新增
@@ -440,6 +450,7 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.4.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.3...v1.4.0
 [1.3.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.1...v1.3.2
