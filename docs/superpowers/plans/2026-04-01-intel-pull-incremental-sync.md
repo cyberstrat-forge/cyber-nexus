@@ -156,11 +156,61 @@ export interface PulseCursorState {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: 更新 PullOptions 类型**
+
+移除废弃字段：
+
+```typescript
+/**
+ * Parsed CLI arguments (simplified)
+ */
+export interface PullOptions {
+  /** Source name to pull from */
+  source?: string;
+  /** Pull from all sources */
+  all: boolean;
+  /** Output directory */
+  output: string;
+  /** Initialize mode - full sync from beginning */
+  init: boolean;
+  /** List sources mode */
+  listSources: boolean;
+  /** Add source mode */
+  addSource: boolean;
+  /** Remove source by name */
+  removeSource?: string;
+  /** Set default source */
+  setDefault?: string;
+}
+```
+
+- [ ] **Step 3: 更新 PullResult 类型**
+
+简化 mode 类型：
+
+```typescript
+/**
+ * Overall pull result
+ */
+export interface PullResult {
+  /** Pull mode used */
+  mode: 'init' | 'incremental' | 'all';
+  /** Output directory */
+  output_dir: string;
+  /** Results per source */
+  sources: PullSourceResult[];
+  /** Total items pulled */
+  total_count: number;
+  /** Pull timestamp */
+  pulled_at: string;
+}
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add plugins/market-radar/scripts/pulse/types.ts
-git commit -m "refactor(market-radar): update PulseCursorState with new fields"
+git commit -m "refactor(market-radar): update types for incremental sync"
 ```
 
 ---
@@ -483,18 +533,10 @@ program
 
 - [ ] **Step 3: 更新 PullOptions 类型**
 
-移除废弃字段：
+移除废弃字段（已在 Task 2 Step 2 完成）：
 
 ```typescript
-// In action handler, options will now only have:
-// - source?: string
-// - all: boolean
-// - output: string
-// - init: boolean
-// - listSources: boolean
-// - addSource: boolean
-// - removeSource?: string
-// - setDefault?: string
+// PullOptions 类型已在 Task 2 更新，此处无需重复修改
 ```
 
 - [ ] **Step 4: 更新 determinePullMode 函数**
@@ -680,18 +722,60 @@ async function executePull(options: { init: boolean; all: boolean; output: strin
 
 ```typescript
 function generateReport(result: PullResult): string {
-  // ... existing code ...
-  
-  // Update to show last_fetched_at and last_item_id instead of cursor
-  if (sourceResult.success && sourceResult.new_cursor) {
-    lines.push('【状态更新】');
-    lines.push(`• last_fetched_at: ${sourceResult.last_fetched_at}`);
-    lines.push(`• last_item_id: ${sourceResult.last_item_id}`);
-    lines.push(`• 更新时间: ${result.pulled_at}`);
+  const lines: string[] = [
+    '',
+    '════════════════════════════════════════════════════════',
+    '📡 情报拉取报告',
+    '════════════════════════════════════════════════════════',
+    '',
+  ];
+
+  const modeDescriptions: Record<string, string> = {
+    incremental: '增量同步',
+    init: '全量同步',
+    all: '多源同步',
+  };
+
+  const config = loadConfig();
+  for (const sourceResult of result.sources) {
+    const source = getSource(config, sourceResult.source);
+
+    lines.push(`源: ${source.name} (${source.url})`);
+    lines.push(`模式: ${modeDescriptions[result.mode]}`);
     lines.push('');
+
+    if (sourceResult.success) {
+      lines.push('【拉取统计】');
+      lines.push(`• 新增情报: ${sourceResult.count} 条`);
+      lines.push(`• 写入位置: ${result.output_dir}`);
+      lines.push('');
+
+      // 读取状态显示
+      const state = loadState(result.output_dir);
+      const cursorState = getCursorState(state, source.name);
+      if (cursorState.last_fetched_at && cursorState.last_item_id) {
+        lines.push('【状态更新】');
+        lines.push(`• last_fetched_at: ${cursorState.last_fetched_at}`);
+        lines.push(`• last_item_id: ${cursorState.last_item_id}`);
+        lines.push(`• 更新时间: ${result.pulled_at}`);
+        lines.push('');
+      }
+    } else {
+      lines.push('【拉取失败】');
+      lines.push(`• 错误: ${sourceResult.error}`);
+      lines.push('');
+    }
   }
-  
-  // ... rest of function ...
+
+  if (result.total_count > 0) {
+    lines.push('💡 提示: 使用 /intel-distill 处理情报');
+  }
+
+  lines.push('');
+  lines.push('════════════════════════════════════════════════════════');
+  lines.push('');
+
+  return lines.join('\n');
 }
 ```
 
@@ -998,10 +1082,12 @@ git commit -m "chore(market-radar): bump version to 1.5.0 for incremental sync"
 | 响应字段 `last_item_id` + `last_fetched_at` | Task 1 |
 | 状态字段 `last_fetched_at` + `last_item_id` + `total_synced` | Task 2, Task 4 |
 | 状态迁移策略 | Task 4 |
-| 废弃 `--preview` | Task 5 |
-| 废弃 `--since`（时间范围） | Task 5 |
-| 废弃 `--until` | Task 5 |
+| 废弃 `--preview` | Task 2, Task 5 |
+| 废弃 `--since`（时间范围） | Task 2, Task 5 |
+| 废弃 `--until` | Task 2, Task 5 |
 | 删除 `listContentRange()` | Task 3 |
+| 更新 `PullOptions` 类型 | Task 2 |
+| 更新 `PullResult.mode` 类型 | Task 2 |
 | 更新命令文档 | Task 7 |
 | 更新帮助文档 | Task 8 |
 
@@ -1014,4 +1100,12 @@ git commit -m "chore(market-radar): bump version to 1.5.0 for incremental sync"
 
 - `PulseListResponse` 在 Task 1 定义，Task 3 使用 ✓
 - `PulseCursorState` 在 Task 2 定义，Task 4 使用 ✓
+- `PullOptions` 在 Task 2 定义，Task 5 使用 ✓
+- `PullResult.mode` 在 Task 2 定义，Task 5 使用 ✓
 - 函数名一致性：`getCursorState`、`setCursorState`、`clearCursorState` ✓
+
+### 4. Code Correctness
+
+- `generateReport` 使用 `getCursorState` 读取状态，不再引用不存在的字段 ✓
+- `pullFromSource` 返回值包含 `lastFetchedAt` 和 `lastItemId` ✓
+- `executePull` 正确调用 `setCursorState` 更新状态 ✓
