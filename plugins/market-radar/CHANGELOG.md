@@ -2,6 +2,54 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.4.0] - 2026-04-01
+
+### 新增
+
+- **intel-pull 适配 cyber-pulse API v1**
+  - 新增 `--init` 参数：首次同步/重新同步，从最开始遍历所有数据
+  - 新增 `--until` 参数：时间范围终点，配合 `--since` 使用
+  - 新增 `--preview` 参数：预览最新一页（50条），不更新状态文件
+  - 移除 `--id` 参数：单条获取端点已从 API v1 移除
+
+- **配置简化**
+  - `key_ref` → `api_key`：直接存储 API Key，不再通过环境变量
+  - 更新 JSON Schema 验证
+
+- **输出格式统一**
+  - 文件名：`{YYYYMMDD}-{item_id}.md`（使用新 ID 格式 `item_{8位hex}`）
+  - Frontmatter：5组结构化字段（核心标识、内容元数据、来源信息、质量指标、处理追溯）
+  - 新增 `source_type: "cyber-pulse"` 标识数据来源
+
+- **预处理脚本增强**
+  - 添加 cyber-pulse 文件检测和处理分支
+  - 按 filename 去重（cyber-pulse）或 hash 去重（本地文件）
+  - 自动计算 `content_hash` 并更新 frontmatter
+
+### 变更
+
+- **API 端点更新**
+  - 端点路径：`/api/v1/contents` → `/api/v1/items`
+  - 响应结构扁平化：`next_cursor`、`has_more`、`count`、`server_timestamp` 在顶层
+
+- **字段映射更新**
+  - `source.id` → `source.source_id`
+  - `source.name` → `source.source_name`
+  - `source.tier` → `source.source_tier`
+  - `content` → `body`
+  - `quality_score` → `completeness_score`
+
+- **Cursor 格式更新**
+  - 旧格式：`cnt_YYYYMMDDHHMMSS_xxxxxxxx`
+  - 新格式：`item_{8位hex}`
+
+### 移除
+
+- 单条获取端点及相关代码
+- `--id` CLI 参数
+- `single` 拉取模式
+- 错误码：`ENV_VAR_NOT_SET`、`CONTENT_NOT_FOUND`
+
 ## [1.3.3] - 2026-03-22
 
 ### 修复
@@ -392,6 +440,9 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.4.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.3...v1.4.0
+[1.3.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.2...v1.3.3
+[1.3.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.7...v1.3.0
 [1.2.7]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.2.6...v1.2.7

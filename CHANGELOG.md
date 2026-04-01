@@ -6,6 +6,33 @@
 
 ---
 
+## [1.0.18] - 2026-04-01
+
+### 插件更新
+
+#### market-radar v1.4.0
+
+**新增**
+- intel-pull 适配 cyber-pulse API v1
+  - 新增 `--init` 参数：首次同步/重新同步
+  - 新增 `--until` 参数：时间范围终点
+  - 新增 `--preview` 参数：预览模式（不更新状态）
+- 配置简化：`key_ref` → `api_key`（直接存储 API Key）
+- 输出格式统一：5组结构化 frontmatter
+- 预处理脚本：添加 cyber-pulse 文件处理分支
+
+**变更**
+- API 端点：`/api/v1/contents` → `/api/v1/items`
+- 响应结构扁平化
+- Cursor 格式：`item_{8位hex}`
+- 字段映射：`source.id` → `source.source_id` 等
+
+**移除**
+- `--id` 参数和单条获取功能
+- 错误码：`ENV_VAR_NOT_SET`、`CONTENT_NOT_FOUND`
+
+---
+
 ## [1.0.17] - 2026-03-22
 
 ### 插件更新
@@ -278,6 +305,8 @@
 
 ---
 
+[1.0.18]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.17...v1.0.18
+[1.0.17]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.16...v1.0.17
 [1.0.15]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.14...v1.0.15
 [1.0.14]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.13...v1.0.14
 [1.0.13]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.12...v1.0.13
