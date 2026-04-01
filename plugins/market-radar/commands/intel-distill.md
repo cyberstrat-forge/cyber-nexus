@@ -510,6 +510,14 @@ if (needs_processing + pending_review >= 50) {
 
 **并行执行时**：在单个消息中发起多个 Agent 调用，由 Claude Code 自动管理并发
 
+> ⚠️ **禁止使用 `run_in_background=true`**
+>
+> 后台 Agent 运行在独立上下文中，**无法继承父会话的工具权限**（包括 Write）。
+> 这会导致情报卡片写入失败，返回 `Permission to use Write has been denied` 错误。
+>
+> **正确做法**：在单消息中发起多个 Agent 调用（不设置 `run_in_background`），
+> Claude Code 会自动并行执行，同时保持权限继承。
+
 **Agent 工具权限**：
 - Read: 读取转换后的 Markdown 文件
 - Grep: 搜索文档中的关键信息
