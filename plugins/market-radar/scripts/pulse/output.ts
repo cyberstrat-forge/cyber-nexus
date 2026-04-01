@@ -248,7 +248,15 @@ export async function writeContentFiles(
       // File exists, skip it
       skippedCount++;
       continue;
-    } catch {
+    } catch (error) {
+      // Only proceed if file doesn't exist (ENOENT)
+      // Log unexpected errors for debugging
+      if (error instanceof Error && 'code' in error) {
+        const nodeError = error as Error & { code: string };
+        if (nodeError.code !== 'ENOENT') {
+          console.error(`[pulse] 警告: 无法检查文件 ${filePath}: ${nodeError.message} (${nodeError.code})`);
+        }
+      }
       // File doesn't exist, proceed to write
     }
 
