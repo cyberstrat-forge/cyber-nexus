@@ -7,8 +7,9 @@
  * Usage:
  *   pnpm exec tsx index.ts --source local
  *   pnpm exec tsx index.ts --all --output ./inbox
- *   pnpm exec tsx index.ts --since 2026-03-01T00:00:00Z
- *   pnpm exec tsx index.ts --id cnt_20260319143052_a1b2c3d4
+ *   pnpm exec tsx index.ts --init
+ *   pnpm exec tsx index.ts --since 2026-03-01T00:00:00Z --until 2026-03-31T00:00:00Z
+ *   pnpm exec tsx index.ts --preview
  *   pnpm exec tsx index.ts --list-sources
  */
 
@@ -29,7 +30,6 @@ import {
   PulseContent,
   PulseError,
   validateListResponse,
-  validateItemResponse,
 } from './types.js';
 
 import {
@@ -48,6 +48,7 @@ import {
   saveState,
   getCursor,
   setCursor,
+  clearCursor,
   ensureStateDir,
 } from './state.js';
 
@@ -127,9 +128,9 @@ async function interactiveAddSource(): Promise<void> {
       return;
     }
 
-    const keyRef = await prompt(rl, 'API Key 环境变量名 (如: CYBER_PULSE_API_KEY): ');
-    if (!keyRef) {
-      console.error('错误: 环境变量名不能为空');
+    const apiKey = await prompt(rl, 'API Key (直接输入密钥): ');
+    if (!apiKey) {
+      console.error('错误: API Key 不能为空');
       return;
     }
 
@@ -151,7 +152,7 @@ async function interactiveAddSource(): Promise<void> {
     }
 
     // Add new source
-    const newSource: PulseSource = { name, url, key_ref: keyRef };
+    const newSource: PulseSource = { name, url, api_key: apiKey };
     try {
       addSource(config, newSource);
 
@@ -163,9 +164,6 @@ async function interactiveAddSource(): Promise<void> {
       saveConfig(config);
       console.log('');
       console.log(`成功添加源: ${name}`);
-      console.log('');
-      console.log(`提示: 请设置环境变量 ${keyRef}`);
-      console.log(`  export ${keyRef}="your-api-key"`);
     } catch (error) {
       if (error instanceof PulseError) {
         console.error(`错误: ${error.message}`);
@@ -184,11 +182,14 @@ async function interactiveAddSource(): Promise<void> {
  * Determine pull mode based on CLI options
  *
  * @param options - Parsed CLI arguments
- * @returns The determined pull mode: 'incremental', 'since', 'single', or 'all'
+ * @returns The determined pull mode: 'incremental', 'init', 'since', 'preview', or 'all'
  */
-function determinePullMode(options: PullOptions): 'incremental' | 'since' | 'single' | 'all' {
-  if (options.id) {
-    return 'single';
+function determinePullMode(options: PullOptions): 'incremental' | 'init' | 'since' | 'preview' | 'all' {
+  if (options.preview) {
+    return 'preview';
+  }
+  if (options.init) {
+    return 'init';
   }
   if (options.since) {
     return 'since';
@@ -221,40 +222,89 @@ async function pullFromSource(
 
     let items: PulseContent[] = [];
     let newCursor: string | undefined;
+    const mode = determinePullMode(options);
 
-    if (options.id) {
-      // Single item mode - API returns content directly (not wrapped)
-      const content = await client.getContent(options.id);
+    // Determine limit based on mode
+    const limit = mode === 'preview' ? 50 : 100;
 
-      // Validate response structure
-      validateItemResponse(content, options.id);
+    // Handle different pull modes
+    if (mode === 'preview') {
+      // Preview mode: only pull one page, don't use cursor
+      const response = await client.listContent(undefined, limit);
+      validateListResponse(response);
 
-      items = [content];
-      newCursor = undefined; // Don't update cursor for single item pull
-    } else {
-      // List mode (incremental, since, or all)
-      const cursorValue = options.since ? undefined : getCursor(state, source.name).cursor;
-      let cursor: string | undefined = cursorValue ?? undefined; // Convert null to undefined
-      const limit = 100;
+      items = response.data;
+      newCursor = response.next_cursor || undefined;
+      // Don't update cursor for preview mode
+    } else if (mode === 'init') {
+      // Init mode: start from beginning, paginate through all
+      let response = await client.listContentFromBeginning(limit);
+      validateListResponse(response);
 
-      // Paginate through all results when has_more is true
-      let hasMore = true;
+      items.push(...response.data);
+      let cursor = response.next_cursor || undefined;
+      let hasMore = response.has_more && cursor;
+
       while (hasMore) {
-        let response;
-        if (options.since) {
-          response = await client.listContentSince(options.since, cursor, limit);
-        } else {
-          response = await client.listContent(cursor, limit);
-        }
-
-        // Validate response structure before using
+        response = await client.listContent(cursor, limit);
         validateListResponse(response);
 
-        // API v1.3.0: response.data contains items, response.meta contains pagination
         items.push(...response.data);
-        cursor = response.meta.next_cursor || undefined;
-        hasMore = response.meta.has_more === true && !!cursor;
+        cursor = response.next_cursor || undefined;
+        hasMore = response.has_more && cursor;
       }
+
+      newCursor = cursor;
+    } else if (mode === 'since') {
+      // Since mode: pull items within time range
+      let response = await client.listContentRange(
+        options.since!,
+        options.until,
+        undefined,
+        limit
+      );
+      validateListResponse(response);
+
+      items.push(...response.data);
+      let cursor = response.next_cursor || undefined;
+      let hasMore = response.has_more && cursor;
+
+      while (hasMore) {
+        response = await client.listContentRange(
+          options.since!,
+          options.until,
+          cursor,
+          limit
+        );
+        validateListResponse(response);
+
+        items.push(...response.data);
+        cursor = response.next_cursor || undefined;
+        hasMore = response.has_more && cursor;
+      }
+
+      newCursor = cursor;
+      // Don't update cursor for since mode
+    } else {
+      // Incremental or all mode: use saved cursor
+      const cursorValue = getCursor(state, source.name).cursor;
+      let cursor: string | undefined = cursorValue ?? undefined;
+      let response = await client.listContent(cursor, limit);
+      validateListResponse(response);
+
+      items.push(...response.data);
+      cursor = response.next_cursor || undefined;
+      let hasMore = response.has_more && cursor;
+
+      while (hasMore) {
+        response = await client.listContent(cursor, limit);
+        validateListResponse(response);
+
+        items.push(...response.data);
+        cursor = response.next_cursor || undefined;
+        hasMore = response.has_more && cursor;
+      }
+
       newCursor = cursor;
     }
 
@@ -334,13 +384,20 @@ async function executePull(options: PullOptions): Promise<PullResult> {
 
   // Pull from each source
   for (const source of sources) {
+    // Clear cursor before pulling in init mode
+    if (mode === 'init') {
+      state = clearCursor(state, source.name);
+    }
+
     const sourceResult = await pullFromSource(source, options, state);
     result.sources.push(sourceResult);
     result.total_count += sourceResult.count;
 
-    // Update cursor only in incremental mode (spec requirement)
-    if (sourceResult.success && sourceResult.new_cursor && mode === 'incremental') {
-      state = setCursor(state, source.name, sourceResult.new_cursor);
+    // Update cursor in incremental and init modes
+    if (sourceResult.success && sourceResult.new_cursor) {
+      if (mode === 'incremental' || mode === 'init') {
+        state = setCursor(state, source.name, sourceResult.new_cursor);
+      }
     }
   }
 
@@ -373,8 +430,9 @@ function generateReport(result: PullResult): string {
   // Mode description
   const modeDescriptions: Record<string, string> = {
     incremental: '增量拉取',
-    since: '指定时间拉取',
-    single: '单条拉取',
+    init: '首次同步',
+    since: '时间范围拉取',
+    preview: '预览模式',
     all: '全量拉取',
   };
 
@@ -429,8 +487,10 @@ program
   .option('-s, --source <name>', '指定情报源名称')
   .option('-a, --all', '拉取所有配置的情报源')
   .option('-o, --output <dir>', '输出目录', DEFAULT_OUTPUT_DIR)
+  .option('--init', '首次同步/重新同步（从最开始遍历）')
   .option('--since <datetime>', '拉取指定时间后的数据 (ISO 8601)')
-  .option('--id <content_id>', '拉取单条指定情报')
+  .option('--until <datetime>', '拉取指定时间前的数据 (ISO 8601)')
+  .option('--preview', '预览最新一页（50条，不更新状态）')
   .option('--list-sources', '列出所有已配置的情报源')
   .option('--add-source', '交互式添加情报源')
   .option('--remove-source <name>', '删除指定情报源')
@@ -472,13 +532,23 @@ program
       // options.source remains undefined, which triggers default behavior in getSource()
 
       // Validate conflicting options
+      if (options.init && options.since) {
+        console.error('错误: --init 和 --since 不能同时使用');
+        process.exit(1);
+      }
+
+      if (options.preview && (options.init || options.since || options.until)) {
+        console.error('错误: --preview 不能与其他拉取选项同时使用');
+        process.exit(1);
+      }
+
       if (options.source && options.all) {
         console.error('错误: --source 和 --all 不能同时使用');
         process.exit(1);
       }
 
-      if (options.id && (options.source || options.all || options.since)) {
-        console.error('错误: --id 不能与其他拉取选项同时使用');
+      if (options.until && !options.since) {
+        console.error('错误: --until 必须与 --since 配合使用');
         process.exit(1);
       }
 

@@ -84,7 +84,7 @@ export function generateConfigNotFoundMessage(configPath: string): string {
     {
       "name": "cyber-pulse",
       "url": "https://api.example.com",
-      "key_ref": "CYBER_PULSE_API_KEY"
+      "api_key": "your-api-key-here"
     }
   ],
   "default_source": "cyber-pulse"
@@ -196,31 +196,22 @@ export function getSource(config: PulseSourcesConfig, name?: string): PulseSourc
 }
 
 /**
- * Get API key from environment variable
+ * Get API key from source configuration
  *
  * @param source - Source configuration
  * @returns API key value
- * @throws {PulseError} If environment variable not set
+ * @throws {PulseError} If API key not configured
  */
 export function getApiKey(source: PulseSource): string {
-  const apiKey = process.env[source.key_ref];
-
-  if (!apiKey) {
+  if (!source.api_key) {
     throw new PulseError(
-      'ENV_VAR_NOT_SET',
-      `环境变量 "${source.key_ref}" 未设置。
-
-设置方法:
-  export ${source.key_ref}="your-api-key"
-
-或在 ~/.zshrc 或 ~/.bashrc 中添加:
-  ${source.key_ref}="your-api-key"
-`,
-      { key_ref: source.key_ref, source: source.name }
+      'API_KEY_NOT_SET',
+      `源 "${source.name}" 未配置 API Key`,
+      { source: source.name }
     );
   }
 
-  return apiKey;
+  return source.api_key;
 }
 
 /**
@@ -230,7 +221,7 @@ export function getApiKey(source: PulseSource): string {
  * @returns true if API key is set, false otherwise
  */
 export function hasApiKey(source: PulseSource): boolean {
-  return Boolean(process.env[source.key_ref]);
+  return Boolean(source.api_key && source.api_key.length > 0);
 }
 
 // ==================== Config Modification ====================
@@ -341,10 +332,11 @@ export function formatSourcesList(config: PulseSourcesConfig): string {
     const hasKey = hasApiKey(source);
     const marker = isDefault ? ' *' : '  ';
     const keyStatus = hasKey ? '[已配置 API Key]' : '[未配置 API Key]';
+    const keyDisplay = hasKey ? `${source.api_key!.substring(0, 8)}...` : '未设置';
 
     lines.push(`${marker} ${source.name}`);
     lines.push(`    URL: ${source.url}`);
-    lines.push(`    API Key: ${source.key_ref} ${keyStatus}`);
+    lines.push(`    API Key: ${keyDisplay} ${keyStatus}`);
     lines.push('');
   }
 

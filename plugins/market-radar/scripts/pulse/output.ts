@@ -37,8 +37,8 @@ function escapeYamlString(str: string): string {
 /**
  * Generate filename from PulseContent
  *
- * Format: {YYYYMMDD}-{content_id后8位}.md
- * Example: 20260319-a1b2c3d4.md
+ * Format: {YYYYMMDD}-{content_id}.md
+ * Example: 20260319-item_a1b2c3d4.md
  *
  * @param content - PulseContent item
  * @returns Generated filename
@@ -68,42 +68,44 @@ export function generateFilename(content: PulseContent): string {
   if (!content.id) {
     throw new Error(
       `Missing id field in content. ` +
-      `Expected format: cnt_YYYYMMDDHHMMSS_xxxxxxxx`
+      `Expected format: item_{8位hex}`
     );
   }
 
-  // Extract last 8 characters from id (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx)
-  // Note: API field is id, maps to content_id in frontmatter
-  const idParts = content.id.split('_');
-  if (idParts.length < 3) {
-    throw new Error(
-      `Invalid content id format: "${content.id}". ` +
-      `Expected format: cnt_YYYYMMDDHHMMSS_xxxxxxxx (3 underscore-separated parts)`
-    );
-  }
-  const idSuffix = idParts[idParts.length - 1]; // Last 8 characters
-
-  return `${dateStr}-${idSuffix}.md`;
+  // New ID format: item_{8位hex}, use directly
+  return `${dateStr}-${content.id}.md`;
 }
 
 /**
  * Generate frontmatter YAML string
  *
+ * Uses 5-group structured format for better organization:
+ * 1. Core identity (required)
+ * 2. Content metadata
+ * 3. Source info
+ * 4. Quality indicators
+ * 5. Processing trace (placeholder for preprocess script)
+ *
  * @param content - PulseContent item
- * @param sourceName - Source name for pulse_source field
+ * @param sourceName - Source name (unused in new format)
  * @returns YAML frontmatter string
  */
 function generateFrontmatter(content: PulseContent, sourceName: string): string {
   const lines: string[] = [
     '---',
-    // Core fields (mapped from API v1.3.0) - use escaped strings
-    `content_id: "${escapeYamlString(content.id)}"`,
-    `canonical_hash: "${escapeYamlString(content.canonical_hash)}"`,
+    '# ============================================',
+    '# 第一组：核心标识（必须填写）',
+    '# ============================================',
+    `item_id: "${escapeYamlString(content.id)}"`,
+    `source_type: "cyber-pulse"`,
     `first_seen_at: "${escapeYamlString(content.fetched_at)}"`,
-    `pulse_source: "${escapeYamlString(sourceName)}"`,
+    '',
+    '# ============================================',
+    '# 第二组：内容元数据',
+    '# ============================================',
+    `title: "${escapeYamlString(content.title || '')}"`,
   ];
 
-  // Optional fields from API v1.3.0 - use escaped strings
   if (content.url) {
     lines.push(`url: "${escapeYamlString(content.url)}"`);
   }
@@ -111,34 +113,54 @@ function generateFrontmatter(content: PulseContent, sourceName: string): string 
     lines.push(`author: "${escapeYamlString(content.author)}"`);
   }
   if (content.tags && content.tags.length > 0) {
-    // Tags array: escape each tag and join
     const escapedTags = content.tags.map(t => `"${escapeYamlString(t)}"`).join(', ');
     lines.push(`tags: [${escapedTags}]`);
   }
   if (content.published_at) {
     lines.push(`published_at: "${escapeYamlString(content.published_at)}"`);
   }
-  if (content.quality_score !== undefined) {
-    lines.push(`quality_score: ${content.quality_score}`);
-  }
 
-  // Source info - validate each nested field before writing
+  lines.push('');
+  lines.push('# ============================================');
+  lines.push('# 第三组：来源信息');
+  lines.push('# ============================================');
+
   if (content.source) {
-    if (content.source.id) {
-      lines.push(`source_id: "${escapeYamlString(content.source.id)}"`);
+    if (content.source.source_id) {
+      lines.push(`source_id: "${escapeYamlString(content.source.source_id)}"`);
     }
-    if (content.source.name) {
-      lines.push(`source_name: "${escapeYamlString(content.source.name)}"`);
+    if (content.source.source_name) {
+      lines.push(`source_name: "${escapeYamlString(content.source.source_name)}"`);
     }
-    if (content.source.tier) {
-      lines.push(`source_tier: "${escapeYamlString(content.source.tier)}"`);
+    if (content.source.source_url) {
+      lines.push(`source_url: "${escapeYamlString(content.source.source_url)}"`);
+    }
+    if (content.source.source_tier) {
+      lines.push(`source_tier: "${escapeYamlString(content.source.source_tier)}"`);
+    }
+    if (content.source.source_score !== undefined) {
+      lines.push(`source_score: ${content.source.source_score}`);
     }
   }
 
-  // Placeholder fields for intel-distill processing
-  lines.push(`sourceHash: ""`);
-  lines.push(`archivedSource: ""`);
-  lines.push(`convertedFile: ""`);
+  lines.push('');
+  lines.push('# ============================================');
+  lines.push('# 第四组：质量指标');
+  lines.push('# ============================================');
+
+  if (content.completeness_score !== undefined) {
+    lines.push(`completeness_score: ${content.completeness_score}`);
+  }
+  if (content.word_count !== undefined) {
+    lines.push(`word_count: ${content.word_count}`);
+  }
+
+  lines.push('');
+  lines.push('# ============================================');
+  lines.push('# 第五组：处理追溯（预处理脚本填充）');
+  lines.push('# ============================================');
+  lines.push('content_hash: ""');
+  lines.push('archived_path: ""');
   lines.push('---');
 
   return lines.join('\n');
@@ -154,7 +176,7 @@ function generateFrontmatter(content: PulseContent, sourceName: string): string 
 function generateMarkdown(content: PulseContent, sourceName: string): string {
   const frontmatter = generateFrontmatter(content, sourceName);
   const title = content.title || '(无标题)';
-  const body = content.content || '';
+  const body = content.body || '';
 
   return `${frontmatter}
 

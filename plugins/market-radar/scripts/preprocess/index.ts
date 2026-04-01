@@ -1,11 +1,16 @@
 #!/usr/bin/env tsx
 /**
- * Preprocessing entry point (v2.1)
+ * Preprocessing entry point (v2.2)
  *
  * Supports inbox/archive/converted directory structure:
  * - inbox/ - User drops new files here
  * - archive/YYYY/MM/ - Archived source files
  * - converted/YYYY/MM/ - Converted markdown files with frontmatter metadata
+ *
+ * v2.2 Changes:
+ * - Add cyber-pulse file handling (source_type: cyber-pulse in frontmatter)
+ * - cyber-pulse files skip conversion/cleaning, just move to converted/
+ * - Deduplication: local files by hash, cyber-pulse files by filename (item_id)
  *
  * v2.1 Changes:
  * - Metadata is written to converted file frontmatter (not separate .meta file)
@@ -17,6 +22,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { createHash } from 'crypto';
 import {
   PreprocessResult,
   PreprocessOptions,
@@ -28,10 +34,120 @@ import { convertToMarkdown, isSupportedFormat, isPandocAvailable, getAvailablePd
 import { cleanMarkdown } from './clean';
 import { calculateStats } from './cleaners/types';
 import { calculateHash } from '../utils/hash';
-import { parseFrontmatter } from '../utils/frontmatter';
+import { parseFrontmatter, generateFrontmatter as generateYamlFrontmatter } from '../utils/frontmatter';
 
 // Current preprocessor version - increment when cleaning rules change
-const PREPROCESSOR_VERSION = '2.1.0';
+const PREPROCESSOR_VERSION = '2.2.0';
+
+/**
+ * Required fields for cyber-pulse files
+ */
+const CYBER_PULSE_REQUIRED_FIELDS = ['item_id', 'source_type', 'first_seen_at', 'title'];
+
+/**
+ * Check if a markdown file is a cyber-pulse output file
+ * Detects by frontmatter containing source_type: cyber-pulse
+ */
+function isCyberPulseFile(filePath: string): boolean {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const frontmatter = parseFrontmatter(content);
+    return frontmatter?.source_type === 'cyber-pulse';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate cyber-pulse file has required fields
+ * Returns error message if validation fails, null if valid
+ */
+function validateCyberPulseFile(filePath: string): string | null {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const frontmatter = parseFrontmatter(content);
+
+    if (!frontmatter) {
+      return 'Missing frontmatter';
+    }
+
+    const missingFields = CYBER_PULSE_REQUIRED_FIELDS.filter(
+      field => !frontmatter[field]
+    );
+
+    if (missingFields.length > 0) {
+      return `Missing required fields: ${missingFields.join(', ')}`;
+    }
+
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `Failed to read file: ${message}`;
+  }
+}
+
+/**
+ * Collect known filenames from converted directory for cyber-pulse deduplication
+ * cyber-pulse files use filename (item_id) for dedup, not hash
+ */
+function collectKnownFiles(sourceDir: string): Set<string> {
+  const knownFiles = new Set<string>();
+  const convertedBase = path.join(sourceDir, 'converted');
+
+  if (!fs.existsSync(convertedBase)) {
+    return knownFiles;
+  }
+
+  // Walk through converted/YYYY/MM/ directories
+  let years: string[];
+  try {
+    years = fs.readdirSync(convertedBase, { withFileTypes: true })
+      .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
+      .map(e => e.name);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot read converted directory ${convertedBase}: ${errMsg}`);
+    return knownFiles;
+  }
+
+  for (const year of years) {
+    let months: string[];
+    try {
+      months = fs.readdirSync(path.join(convertedBase, year), { withFileTypes: true })
+        .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
+        .map(e => e.name);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read year directory ${year}: ${errMsg}`);
+      continue;
+    }
+
+    for (const month of months) {
+      const monthDir = path.join(convertedBase, year, month);
+      let files: string[];
+      try {
+        files = fs.readdirSync(monthDir, { withFileTypes: true })
+          .filter(e => e.isFile() && e.name.endsWith('.md'))
+          .map(e => e.name);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Cannot read month directory ${monthDir}: ${errMsg}`);
+        continue;
+      }
+
+      // Add filenames to known set (only cyber-pulse files for dedup)
+      for (const mdFile of files) {
+        const mdPath = path.join(monthDir, mdFile);
+        // Only add if file has source_type: cyber-pulse in frontmatter
+        if (isCyberPulseFile(mdPath)) {
+          knownFiles.add(mdFile);
+        }
+      }
+    }
+  }
+
+  return knownFiles;
+}
 
 /**
  * Generate frontmatter for converted file
@@ -85,6 +201,16 @@ function generateErrorLog(
       '检查输出目录权限',
       '确认磁盘空间充足',
       '检查 converted/ 目录是否可写',
+    ],
+    INVALID_PULSE_FORMAT: [
+      '检查文件是否为有效的 cyber-pulse 输出文件',
+      '确认 frontmatter 包含必需字段: item_id, source_type, first_seen_at, title',
+      '重新运行 intel-pull 命令获取正确格式',
+    ],
+    WRITE_FAILED: [
+      '检查输出目录权限',
+      '确认磁盘空间充足',
+      '检查文件名是否有效',
     ],
   };
 
@@ -236,6 +362,129 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
   }
 
   return knownHashes;
+}
+
+/**
+ * Process a cyber-pulse file
+ * - Skip format conversion (already Markdown)
+ * - Skip content cleaning (already processed)
+ * - Calculate content_hash and update frontmatter
+ * - Move to converted/YYYY/MM/
+ */
+function processCyberPulseFile(
+  sourcePath: string,
+  convertedDir: string,
+  sourceDir: string,
+  knownFiles: Set<string>,
+  dateRef: Date
+): PreprocessResult {
+  const filename = path.basename(sourcePath);
+
+  // Check for duplicate by filename (item_id)
+  if (knownFiles.has(filename)) {
+    return {
+      success: true,
+      isDuplicate: true,
+      convertedPath: path.join(convertedDir, filename),
+    };
+  }
+
+  // Validate required fields
+  const validationError = validateCyberPulseFile(sourcePath);
+  if (validationError) {
+    return {
+      success: false,
+      error: { code: 'INVALID_PULSE_FORMAT', message: validationError },
+    };
+  }
+
+  // Read file content
+  let content: string;
+  try {
+    content = fs.readFileSync(sourcePath, 'utf-8');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: { code: 'READ_FAILED', message },
+    };
+  }
+
+  // Parse frontmatter
+  const frontmatter = parseFrontmatter(content);
+  if (!frontmatter) {
+    return {
+      success: false,
+      error: { code: 'INVALID_PULSE_FORMAT', message: 'Missing frontmatter' },
+    };
+  }
+
+  // Calculate content_hash from the markdown body (excluding frontmatter)
+  // Extract the markdown content after frontmatter
+  const frontmatterMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+  const markdownContent = frontmatterMatch ? content.slice(frontmatterMatch[0].length) : content;
+  const contentHash = createHash('md5').update(markdownContent).digest('hex');
+
+  // Update frontmatter with content_hash
+  const updatedFrontmatter: Record<string, string> = {
+    ...frontmatter,
+    content_hash: contentHash,
+  };
+
+  // Generate new frontmatter
+  const newFrontmatterStr = generateYamlFrontmatter(updatedFrontmatter);
+  const newContent = newFrontmatterStr + markdownContent;
+
+  // Ensure converted directory exists
+  try {
+    if (!fs.existsSync(convertedDir)) {
+      fs.mkdirSync(convertedDir, { recursive: true });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: { code: 'WRITE_FAILED', message: `Failed to create converted directory: ${message}` },
+    };
+  }
+
+  // Write to converted directory
+  const convertedPath = path.join(convertedDir, filename);
+  try {
+    fs.writeFileSync(convertedPath, newContent, 'utf-8');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: { code: 'WRITE_FAILED', message: `Failed to write converted file: ${message}` },
+    };
+  }
+
+  // Delete source file (cyber-pulse files don't need archiving)
+  try {
+    if (fs.existsSync(sourcePath)) {
+      fs.unlinkSync(sourcePath);
+    }
+  } catch (error) {
+    // Log warning but don't fail - converted file was written successfully
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Failed to delete source cyber-pulse file: ${message}`);
+    // Return success with warning
+    return {
+      success: true,
+      markdown: markdownContent,
+      convertedPath,
+      isDuplicate: false,
+      warning: `Source file deletion failed: ${message}`,
+    };
+  }
+
+  return {
+    success: true,
+    markdown: markdownContent,
+    convertedPath,
+    isDuplicate: false,
+  };
 }
 
 /**
@@ -498,8 +747,11 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
     dateRef = new Date(),
   } = options;
 
-  // Collect known hashes for deduplication
+  // Collect known hashes for local file deduplication
   const knownHashes = force ? new Map<string, string>() : collectKnownHashes(sourceDir);
+
+  // Collect known filenames for cyber-pulse file deduplication
+  const knownFiles = force ? new Set<string>() : collectKnownFiles(sourceDir);
 
   // Scan for files
   const files = scanDirectory(sourceDir);
@@ -510,41 +762,83 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
   let failed = 0;
 
   for (const sourcePath of files) {
-    const sourceHash = calculateHash(sourcePath);
+    // Check if this is a cyber-pulse file
+    const isPulseFile = isCyberPulseFile(sourcePath);
 
-    // Check if already processed (unless force)
-    if (!force && knownHashes.has(sourceHash)) {
-      duplicates++;
-      results.set(sourcePath, {
-        success: true,
-        isDuplicate: true,
-        archivedPath: knownHashes.get(sourceHash),
-      });
-      continue;
-    }
+    if (isPulseFile) {
+      // Handle cyber-pulse files
+      const filename = path.basename(sourcePath);
 
-    // Process file
-    const result = await processFile(
-      sourcePath,
-      archiveDir,
-      convertedDir,
-      sourceDir,
-      preprocessorVersion,
-      knownHashes,
-      dateRef
-    );
+      // Check for duplicate by filename (unless force)
+      if (!force && knownFiles.has(filename)) {
+        duplicates++;
+        results.set(sourcePath, {
+          success: true,
+          isDuplicate: true,
+          convertedPath: path.join(convertedDir, filename),
+        });
+        continue;
+      }
 
-    results.set(sourcePath, result);
+      // Process cyber-pulse file
+      const result = processCyberPulseFile(
+        sourcePath,
+        convertedDir,
+        sourceDir,
+        knownFiles,
+        dateRef
+      );
 
-    if (result.isDuplicate) {
-      duplicates++;
-    } else if (result.success) {
-      processed++;
-      // Add to known hashes to avoid re-processing in same batch
-      knownHashes.set(sourceHash, result.archivedPath || '');
+      results.set(sourcePath, result);
+
+      if (result.isDuplicate) {
+        duplicates++;
+      } else if (result.success) {
+        processed++;
+        // Add to known files to avoid re-processing in same batch
+        knownFiles.add(filename);
+      } else {
+        failed++;
+        console.error(`Failed: ${sourcePath} - ${result.error?.message}`);
+      }
     } else {
-      failed++;
-      console.error(`Failed: ${sourcePath} - ${result.error?.message}`);
+      // Handle local files (existing logic)
+      const sourceHash = calculateHash(sourcePath);
+
+      // Check if already processed (unless force)
+      if (!force && knownHashes.has(sourceHash)) {
+        duplicates++;
+        results.set(sourcePath, {
+          success: true,
+          isDuplicate: true,
+          archivedPath: knownHashes.get(sourceHash),
+        });
+        continue;
+      }
+
+      // Process file
+      const result = await processFile(
+        sourcePath,
+        archiveDir,
+        convertedDir,
+        sourceDir,
+        preprocessorVersion,
+        knownHashes,
+        dateRef
+      );
+
+      results.set(sourcePath, result);
+
+      if (result.isDuplicate) {
+        duplicates++;
+      } else if (result.success) {
+        processed++;
+        // Add to known hashes to avoid re-processing in same batch
+        knownHashes.set(sourceHash, result.archivedPath || '');
+      } else {
+        failed++;
+        console.error(`Failed: ${sourcePath} - ${result.error?.message}`);
+      }
     }
   }
 
@@ -579,14 +873,23 @@ async function main() {
       console.log(`
 Usage: pnpm exec tsx index.ts --source <dir> [--force]
 
-Directory Structure (v2.1):
+Directory Structure (v2.2):
   {source_dir}/
   ├── inbox/              # Drop new files here (recommended)
   ├── archive/YYYY/MM/    # Archived source files
   └── converted/YYYY/MM/  # Converted markdown files (with frontmatter)
 
+Supported file types:
+  - Local files: .md, .txt, .pdf, .docx (converted and cleaned)
+  - cyber-pulse files: .md with source_type: cyber-pulse (moved directly)
+
 Frontmatter fields in converted files:
-  sourceHash, originalPath, archivedAt, archivedSource
+  - Local files: sourceHash, originalPath, archivedAt, archivedSource
+  - cyber-pulse files: item_id, source_type, first_seen_at, title, content_hash
+
+Deduplication:
+  - Local files: by content hash (sourceHash)
+  - cyber-pulse files: by filename (item_id)
 
 Options:
   --source <dir>  Source directory (default: current directory)
@@ -698,8 +1001,12 @@ if (process.argv[1]?.endsWith('preprocess/index.ts') || process.argv[1]?.endsWit
 export {
   batchProcess,
   processFile,
+  processCyberPulseFile,
   getArchiveDir,
   getConvertedDir,
   collectKnownHashes,
+  collectKnownFiles,
+  isCyberPulseFile,
+  validateCyberPulseFile,
   PREPROCESSOR_VERSION,
 };

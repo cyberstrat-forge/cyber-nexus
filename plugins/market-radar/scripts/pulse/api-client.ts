@@ -13,7 +13,6 @@
 import { request, errors } from 'undici';
 import {
   PulseListResponse,
-  PulseItemResponse,
   PulseError,
   DEFAULT_LIMIT,
   CONNECT_TIMEOUT,
@@ -29,8 +28,10 @@ import {
  */
 interface ListQueryParams {
   cursor?: string;
+  from?: 'latest' | 'beginning';
   limit?: number;
   since?: string;
+  until?: string;
 }
 
 // ==================== Helper Functions ====================
@@ -86,11 +87,17 @@ export class PulseClient {
       if (query.cursor) {
         url.searchParams.set('cursor', query.cursor);
       }
+      if (query.from) {
+        url.searchParams.set('from', query.from);
+      }
       if (query.limit !== undefined) {
         url.searchParams.set('limit', String(query.limit));
       }
       if (query.since) {
         url.searchParams.set('since', query.since);
+      }
+      if (query.until) {
+        url.searchParams.set('until', query.until);
       }
     }
 
@@ -120,8 +127,8 @@ export class PulseClient {
 
         if (response.statusCode === 404) {
           throw new PulseError(
-            'CONTENT_NOT_FOUND',
-            '内容不存在',
+            'API_ERROR',
+            'API 资源不存在',
             { statusCode: 404, url: url.toString() }
           );
         }
@@ -252,55 +259,66 @@ export class PulseClient {
   // ==================== API Methods ====================
 
   /**
-   * List content items
+   * List content items (incremental mode)
    *
-   * GET /api/v1/contents?cursor={cursor}&limit={limit}
+   * GET /api/v1/items?cursor={cursor}&limit={limit}
    *
    * @param cursor - Pagination cursor (optional)
    * @param limit - Number of items to return (default: 100)
-   * @returns List response with data and meta
+   * @returns List response with data and pagination info
    */
   async listContent(
     cursor?: string,
     limit: number = DEFAULT_LIMIT
   ): Promise<PulseListResponse> {
-    return this.makeRequest<PulseListResponse>('/api/v1/contents', {
+    return this.makeRequest<PulseListResponse>('/api/v1/items', {
       cursor,
       limit,
     });
   }
 
   /**
-   * List content items since a specific datetime
+   * List content items from beginning (init mode)
    *
-   * GET /api/v1/contents?since={since}&cursor={cursor}&limit={limit}
+   * GET /api/v1/items?from=beginning&limit={limit}
    *
-   * @param since - ISO 8601 datetime string
+   * @param limit - Number of items to return (default: 100)
+   * @returns List response with data and pagination info
+   */
+  async listContentFromBeginning(
+    limit: number = DEFAULT_LIMIT
+  ): Promise<PulseListResponse> {
+    return this.makeRequest<PulseListResponse>('/api/v1/items', {
+      from: 'beginning',
+      limit,
+    });
+  }
+
+  /**
+   * List content items within a time range (since mode)
+   *
+   * GET /api/v1/items?since={since}&until={until}&cursor={cursor}&limit={limit}
+   *
+   * @param since - ISO 8601 datetime string (inclusive)
+   * @param until - ISO 8601 datetime string (exclusive, optional)
    * @param cursor - Pagination cursor (optional)
    * @param limit - Number of items to return (default: 100)
-   * @returns List response with data and meta
+   * @returns List response with data and pagination info
    */
-  async listContentSince(
+  async listContentRange(
     since: string,
+    until?: string,
     cursor?: string,
     limit: number = DEFAULT_LIMIT
   ): Promise<PulseListResponse> {
-    return this.makeRequest<PulseListResponse>('/api/v1/contents', {
+    const params: ListQueryParams = {
       since,
       cursor,
       limit,
-    });
-  }
-
-  /**
-   * Get a single content item by ID
-   *
-   * GET /api/v1/contents/{contentId}
-   *
-   * @param contentId - Content ID (format: cnt_YYYYMMDDHHMMSS_xxxxxxxx)
-   * @returns Single content item (returned directly, not wrapped)
-   */
-  async getContent(contentId: string): Promise<PulseItemResponse> {
-    return this.makeRequest<PulseItemResponse>(`/api/v1/contents/${contentId}`);
+    };
+    if (until) {
+      params.until = until;
+    }
+    return this.makeRequest<PulseListResponse>('/api/v1/items', params);
   }
 }
