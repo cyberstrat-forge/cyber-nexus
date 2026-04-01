@@ -268,7 +268,13 @@ async function pullFromSource(
       files,
     };
   } catch (error) {
-    // Build error message with context
+    // Programming errors should crash the process, not be swallowed
+    if (error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError) {
+      console.error(`[pulse] 编程错误 in pullFromSource for ${source.name}:`);
+      throw error; // Propagate programming errors
+    }
+
+    // Build error message with context for operational errors
     let errorMessage: string;
     if (error instanceof PulseError) {
       // Include error code for better debugging
@@ -278,6 +284,8 @@ async function pullFromSource(
         console.error(`[pulse] Error details for ${source.name}:`, error.details);
       }
     } else if (error instanceof Error) {
+      // Log non-PulseError errors for debugging
+      console.error(`[pulse] Unexpected error for ${source.name}:`, error.message);
       errorMessage = error.message;
     } else {
       errorMessage = String(error);
