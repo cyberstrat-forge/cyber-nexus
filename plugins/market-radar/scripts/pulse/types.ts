@@ -119,13 +119,17 @@ export interface PulseErrorResponse {
 // ==================== State Types ====================
 
 /**
- * Cursor tracking for a single source
+ * Cursor tracking for a single source (v3.0.0 format)
  */
 export interface PulseCursorState {
-  /** Current cursor (item_id) */
-  cursor: string | null;
-  /** Last pull timestamp (ISO 8601) */
+  /** Last item's fetched_at timestamp, used for since parameter */
+  last_fetched_at: string | null;
+  /** Last item ID, used for cursor parameter */
+  last_item_id: string | null;
+  /** Last pull completion timestamp (ISO 8601) */
   last_pull: string | null;
+  /** Total synced count (statistics) */
+  total_synced: number;
 }
 
 /**
@@ -182,7 +186,7 @@ export type PullSourceResult = PullSourceResultSuccess | PullSourceResultFailure
  */
 export interface PullResult {
   /** Pull mode used */
-  mode: 'incremental' | 'init' | 'since' | 'preview' | 'all';
+  mode: 'init' | 'incremental' | 'all';
   /** Output directory */
   output_dir: string;
   /** Results per source */
@@ -196,7 +200,7 @@ export interface PullResult {
 // ==================== CLI Types ====================
 
 /**
- * Parsed CLI arguments
+ * Parsed CLI arguments (simplified)
  */
 export interface PullOptions {
   /** Source name to pull from */
@@ -205,14 +209,8 @@ export interface PullOptions {
   all: boolean;
   /** Output directory */
   output: string;
-  /** Initialize mode - pull all and reset cursor */
+  /** Initialize mode - full sync from beginning */
   init: boolean;
-  /** Pull items since datetime */
-  since?: string;
-  /** Pull items until datetime */
-  until?: string;
-  /** Preview mode - show items without writing */
-  preview: boolean;
   /** List sources mode */
   listSources: boolean;
   /** Add source mode */
