@@ -99,16 +99,22 @@ function migrateState(state: Record<string, unknown>): Record<string, unknown> {
     state.pulse = DEFAULT_PULSE_STATE;
   }
 
-  // Check for old cursor format and reset
-  const pulseState = state.pulse as Record<string, unknown>;
-  if (pulseState.cursors && typeof pulseState.cursors === 'object') {
-    const cursors = pulseState.cursors as Record<string, unknown>;
-    for (const sourceName of Object.keys(cursors)) {
-      const cursor = cursors[sourceName] as Record<string, unknown>;
-      // Old format has 'cursor' field, new format has 'last_fetched_at'
-      if ('cursor' in cursor && !('last_fetched_at' in cursor)) {
-        console.log(`[pulse] Old cursor format detected for ${sourceName}, resetting`);
-        cursors[sourceName] = DEFAULT_CURSOR_STATE;
+  // Safely check for old cursor format and reset
+  if (state.pulse && typeof state.pulse === 'object') {
+    const pulseState = state.pulse as Record<string, unknown>;
+    if (pulseState.cursors && typeof pulseState.cursors === 'object' && pulseState.cursors !== null) {
+      const cursors = pulseState.cursors as Record<string, unknown>;
+      for (const sourceName of Object.keys(cursors)) {
+        const cursor = cursors[sourceName];
+        // Only process if cursor is a non-null object
+        if (cursor && typeof cursor === 'object') {
+          const cursorObj = cursor as Record<string, unknown>;
+          // Old format has 'cursor' field, new format has 'last_fetched_at'
+          if ('cursor' in cursorObj && !('last_fetched_at' in cursorObj)) {
+            console.log(`[pulse] Old cursor format detected for ${sourceName}, resetting`);
+            cursors[sourceName] = DEFAULT_CURSOR_STATE;
+          }
+        }
       }
     }
   }
@@ -146,7 +152,12 @@ export function getCursorState(
       return cursorState as PulseCursorState;
     }
     // Old format detected (has cursor but no last_fetched_at)
-    console.log(`[pulse] Old cursor format detected for ${sourceName}, migration required`);
+    if ('cursor' in cursorState) {
+      console.log(`[pulse] Old cursor format detected for ${sourceName}, migration required`);
+    } else {
+      // Unexpected structure - log warning
+      console.log(`[pulse] Warning: Unexpected cursor structure for ${sourceName}, resetting`);
+    }
     return DEFAULT_CURSOR_STATE;
   }
 
