@@ -272,8 +272,8 @@
         },
         "review_status": {
           "type": "string",
-          "enum": ["pending", "approved", "rejected"],
-          "description": "Review status"
+          "enum": ["passed", "pending", "approved", "rejected"],
+          "description": "Review status: passed (auto-approved by agent), pending (needs user review), approved (user-approved), rejected (declined by agent or user)"
         },
         "generated_by": {
           "type": "string",

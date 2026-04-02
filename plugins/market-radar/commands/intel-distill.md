@@ -580,19 +580,19 @@ if (needs_processing + pending_review >= 50) {
 **情况 1：明确有价值（`has_strategic_value = true`）**
 - 已生成情报卡片
 - 记录 `intelligence_ids` 和 `output_files`
-- `review_status = null`（无需审核）
+- `review_status = "passed"`（自动通过）
 
 **情况 2：明确无价值（`has_strategic_value = false`）**
 - 未生成情报卡片
 - `intelligence_ids = []`
 - `intelligence_count = 0`
-- `review_status = null`
+- `review_status = "rejected"`（自动拒绝）
 
 **情况 3：需要复核（`has_strategic_value = null`）**
 - 未生成情报卡片
 - 添加到待审核队列
 - 分配临时 `pending_id`（格式：`pending-{domain}-{timestamp}`）
-- `review_status = "pending"`
+- `review_status = "pending"`（待审核）
 
 #### 8.4 统一更新状态文件
 
@@ -873,7 +873,7 @@ pnpm exec tsx reporting/scan-cards.ts \
       "archived_source": "archive/2026/03/report-2026.pdf",
       "archived_exists": true,
       "converted_exists": true,
-      "review_status": null
+      "review_status": "passed"
     }
   },
 
@@ -927,7 +927,7 @@ pnpm exec tsx reporting/scan-cards.ts \
 | `processed[].archived_source` | string | 归档源文件路径 |
 | `processed[].archived_exists` | boolean | 归档文件是否存在 |
 | `processed[].converted_exists` | boolean | 转换文件是否存在 |
-| `processed[].review_status` | string/null | 审核状态（`approved`/`rejected`/`pending`/null） |
+| `processed[].review_status` | string | 审核状态（`passed`/`pending`/`approved`/`rejected`） |
 | `stats` | object | 统计信息 |
 | `stats.preprocess` | object | 预处理统计（scanned, converted, failed, duplicates） |
 | `stats.intelligence` | object | 情报提取统计（processed, cards_generated, pending_review, no_value, failed） |

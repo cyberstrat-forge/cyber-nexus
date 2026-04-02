@@ -110,7 +110,7 @@ source_score: 85
 # ============================================
 # 第四组：处理状态
 # ============================================
-review_status: null
+review_status: "passed"
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
@@ -894,17 +894,25 @@ tags: ["geo:global", "APT", "Lazarus", "ransomware", "cloud-security"]
 
 ### review_status
 
-| Value | Description |
-|-------|-------------|
-| null | 自动批准（Agent 明确判断有价值） |
-| pending | 待人工审核（Agent 无法确定，需复核） |
-| approved | 已审核通过 |
-| rejected | 已审核拒绝 |
+| Value | Description | Decided By |
+|-------|-------------|------------|
+| `passed` | 自动通过（Agent 明确判断有价值） | Agent |
+| `pending` | 待人工审核（Agent 无法确定，需复核） | Agent |
+| `approved` | 人工批准 | User |
+| `rejected` | 拒绝（Agent 自动拒绝或用户拒绝） | Agent/User |
 
-**v3.0 变更**：
-- `null` 表示自动批准，无需人工审核
-- `pending` 表示 Agent 无法确定战略价值，需人工复核
-- 审核后状态变为 `approved` 或 `rejected`
+**状态流转**：
+
+```
+Agent 判断:
+  明确有价值 → passed (生成卡片)
+  明确无价值 → rejected (不生成卡片)
+  难以判断   → pending (加入审核队列)
+
+用户审核:
+  approve    → approved (生成卡片)
+  reject     → rejected (不生成卡片)
+```
 
 ### source_tier（情报源等级）
 
