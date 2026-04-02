@@ -1,23 +1,70 @@
 # Domain Templates Reference
 
-> 七大情报领域的 Frontmatter 和 Body 模板 (v2.0)
+> 七大情报领域的 Frontmatter 和 Body 模板 (v3.0 - 元数据继承)
 
-## 持久化元数据字段
+## 四组层次结构
 
-所有情报卡片都包含以下持久化元数据字段，确保卡片独立于源文件和中间产物：
+所有情报卡片采用四组层次结构的 frontmatter：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `intelligence_id` | string | 正式情报卡片 ID（格式：`{domain}-{YYYYMMDD}-{seq}`） |
-| `source_hash` | string | 源文件 MD5 哈希（用于去重） |
-| `archived_source` | string | 归档文件路径（Obsidian 链接格式：`[[archive/YYYY/MM/{filename}]]`） |
-| `converted_file` | string | 转换文件路径（Obsidian 链接格式：`[[converted/YYYY/MM/{filename}.md]]`） |
-| `source_file` | string | 原始源文件路径（保持兼容） |
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 第一组：核心标识（生成）                                      │
+├─────────────────────────────────────────────────────────────┤
+│ intelligence_id    - 情报卡片唯一标识                         │
+│ title              - 情报卡片标题                             │
+│ created_date       - 卡片生成日期                             │
+│ primary_domain     - 主领域（七大领域之一）                   │
+│ secondary_domains  - 次领域列表                               │
+│ security_relevance - 安全相关性 high/medium                   │
+│ tags               - 嵌套标签（geo:、business:、关键词）      │
+└─────────────────────────────────────────────────────────────┘
 
-这些字段确保：
-- 删除源文件后卡片仍可追溯
-- 重新加入文件时能检测重复
-- 卡片包含完整来源信息
+┌─────────────────────────────────────────────────────────────┐
+│ 第二组：item 来源追溯（继承 + 预处理）                        │
+├─────────────────────────────────────────────────────────────┤
+│ item_id            - 采集阶段标识                             │
+│ item_title         - item 标题                               │
+│ author             - 作者                                     │
+│ original_url       - 原文链接                                 │
+│ published_at       - 原文发布时间                             │
+│ fetched_at         - 采集时间                                 │
+│ completeness_score - 完整度 0-1                               │
+│ archived_file      - 归档文件链接 WikiLink                    │
+│ converted_file     - 转换文件链接 WikiLink                    │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ 第三组：情报源追溯（继承）                                    │
+├─────────────────────────────────────────────────────────────┤
+│ source_id          - 情报源 ID                                │
+│ source_name        - 情报源名称                               │
+│ source_url         - 情报源 URL                               │
+│ source_tier        - 情报源等级 T0-T3                         │
+│ source_score       - 情报源评分 0-100                         │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ 第四组：处理状态（生成）                                      │
+├─────────────────────────────────────────────────────────────┤
+│ review_status      - 审核状态 pending/approved/rejected/null │
+│ generated_by       - 生成者标识                               │
+│ generated_session  - 会话 ID                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### tags 嵌套格式
+
+tags 字段使用命名空间前缀组织：
+
+```yaml
+tags: ["geo:china", "business:MSSP", "APT", "ransomware", "cloud-security"]
+```
+
+| 前缀 | 说明 | 示例值 |
+|------|------|--------|
+| `geo:` | 地域范围 | `geo:global`, `geo:china`, `geo:china-primary`, `geo:overseas`, `geo:unknown` |
+| `business:` | 业务模式 | `business:MSSP`, `business:SECaaS`, `business:Subscription` |
+| 无前缀 | 关键词 | `APT`, `ransomware`, `cloud-security`, `zero-trust` |
 
 ---
 
@@ -27,26 +74,54 @@
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "threat-20260402-001"
 title: "情报标题"
-intelligence_id: "threat-YYYYMMDD-001"    # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Threat-Landscape
+created_date: "2026-04-02"
+primary_domain: "Threat-Landscape"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-security_relevance: high
+security_relevance: "high"
+tags: ["geo:global", "APT", "Lazarus", "financial-sector", "malware"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_url: "https://securityweekly.com"
+source_tier: "T1"
+source_score: 85
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 threat_type:                    # 勒索软件/APT/供应链攻击等
 threat_actor:                   # 威胁组织名称
 target_sector:                  # 目标行业
 target_region:                  # 目标地区
 impact_scale:                   # 影响规模
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -97,24 +172,51 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "industry-20260402-001"
 title: "情报标题"
-intelligence_id: "industry-YYYYMMDD-001"  # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Industry-Analysis
+created_date: "2026-04-02"
+primary_domain: "Industry-Analysis"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-business_model_tags: []           # 业务模式标签（可选）
-security_relevance: medium
+security_relevance: "medium"
+tags: ["geo:china", "business:MSSP", "business:Subscription", "market-growth", "cybersecurity"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_gartner"
+source_name: "Gartner"
+source_url: "https://gartner.com"
+source_tier: "T0"
+source_score: 95
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 market_scope:                   # 全球/中国/区域
 segment:                        # 细分领域
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -172,24 +274,52 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "vendor-20260402-001"
 title: "情报标题"
-intelligence_id: "vendor-YYYYMMDD-001"    # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Vendor-Intelligence
+created_date: "2026-04-02"
+primary_domain: "Vendor-Intelligence"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-security_relevance: medium
+security_relevance: "medium"
+tags: ["geo:global", "CrowdStrike", "funding", "Series-B", "endpoint-security"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_techcrunch"
+source_name: "TechCrunch"
+source_url: "https://techcrunch.com"
+source_tier: "T2"
+source_score: 75
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 vendor_name:
 vendor_type:                    # 创业公司/上市企业/大厂安全部门
 business_area:                  # 业务领域
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -243,23 +373,51 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "emerging-20260402-001"
 title: "情报标题"
-intelligence_id: "emerging-YYYYMMDD-001"  # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Emerging-Tech
+created_date: "2026-04-02"
+primary_domain: "Emerging-Tech"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-security_relevance: high
+security_relevance: "high"
+tags: ["geo:global", "ai-security", "AISP", "LLM-protection", "emerging-tech"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_gartner"
+source_name: "Gartner"
+source_url: "https://gartner.com"
+source_tier: "T0"
+source_score: 95
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 tech_name:                      # 技术名称
 maturity:                       # 概念/早期/成长/成熟
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -316,23 +474,51 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "customer-20260402-001"
 title: "情报标题"
-intelligence_id: "customer-YYYYMMDD-001"  # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Customer-Market
+created_date: "2026-04-02"
+primary_domain: "Customer-Market"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-security_relevance: medium
+security_relevance: "medium"
+tags: ["geo:china", "enterprise", "security-budget", "procurement", "market-demand"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_idc"
+source_name: "IDC"
+source_url: "https://idc.com"
+source_tier: "T1"
+source_score: 88
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 customer_segment:               # 客户细分
 region:                         # 地区
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -386,25 +572,53 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "policy-20260402-001"
 title: "情报标题"
-intelligence_id: "policy-YYYYMMDD-001"    # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Policy-Regulation
+created_date: "2026-04-02"
+primary_domain: "Policy-Regulation"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-security_relevance: high
+security_relevance: "high"
+tags: ["geo:china", "compliance", "data-protection", "regulation", "PIPL"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_official"
+source_name: "Government Official"
+source_url: "https://gov.cn"
+source_tier: "T0"
+source_score: 100
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 policy_name:                    # 政策名称
 issuing_body:                   # 发布机构
 jurisdiction:                   # 管辖区域
 effective_date:                 # 生效时间
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -458,24 +672,52 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ```yaml
 ---
+# ============================================
+# 第一组：核心标识
+# ============================================
+intelligence_id: "capital-20260402-001"
 title: "情报标题"
-intelligence_id: "capital-YYYYMMDD-001"   # 正式情报卡片 ID
-source_file: "inbox/report.pdf"           # 原始源文件路径
-source_hash: "abc123..."                  # 源文件 MD5 哈希
-archived_source: "[[archive/2026/03/report.pdf]]"  # 归档文件路径（Obsidian 链接格式）
-converted_file: "[[converted/2026/03/report.md]]"  # 转换文件路径（Obsidian 链接格式）
-intelligence_date: YYYY-MM-DD
-created_date: YYYY-MM-DD
-primary_domain: Capital-Investment
+created_date: "2026-04-02"
+primary_domain: "Capital-Investment"
 secondary_domains: []
-geo_scope: unknown                # 【必填】地域范围，值域见 Common Fields Reference，无法判断时使用 unknown
-security_relevance: medium
+security_relevance: "medium"
+tags: ["geo:global", "funding", "Series-B", "cybersecurity-unicorn", "venture-capital"]
+
+# ============================================
+# 第二组：item 来源追溯
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# ============================================
+# 第三组：情报源追溯
+# ============================================
+source_id: "src_crunchbase"
+source_name: "Crunchbase"
+source_url: "https://crunchbase.com"
+source_tier: "T1"
+source_score: 85
+
+# ============================================
+# 第四组：处理状态
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+
+# ============================================
+# 领域特定字段
+# ============================================
 event_type:                    # 融资/并购/IPO
 company:                       # 涉及公司
 investors:                     # 投资方/收购方
-review_status: null             # null=自动批准/pending=待审核/approved=已批准/rejected=已拒绝
-generated_by: intelligence-analyzer
-generated_session: "YYYYMMDD-HHMMSS"
 ---
 ```
 
@@ -529,21 +771,110 @@ generated_session: "YYYYMMDD-HHMMSS"
 
 ## Common Fields Reference
 
-### geo_scope（地域范围）
+### tags（嵌套标签）
 
-| Value | Description |
-|-------|-------------|
-| global | 全球/无特定地域 |
-| china | 仅中国 |
-| china-primary | 中国为主，涉及海外 |
-| overseas | 仅海外 |
-| overseas-primary | 海外为主，涉及中国 |
-| unknown | 无法判断（默认值） |
+tags 字段采用命名空间前缀组织，统一管理地域、业务模式和关键词：
+
+```yaml
+tags: ["geo:china", "business:MSSP", "business:Subscription", "APT", "ransomware"]
+```
+
+#### geo: 前缀（地域范围）
+
+| Tag | Description |
+|-----|-------------|
+| `geo:global` | 全球/无特定地域 |
+| `geo:china` | 仅中国 |
+| `geo:china-primary` | 中国为主，涉及海外 |
+| `geo:overseas` | 仅海外 |
+| `geo:overseas-primary` | 海外为主，涉及中国 |
+| `geo:unknown` | 无法判断（默认值） |
 
 **判断规则**：
 - 严格模式：仅依据文档明确提及的地域信息
 - 判断依据：明确提及的国家/地区、涉及的公司总部位置、法规适用范围、攻击目标地理位置
-- 无法判断时设为 `unknown`
+- 无法判断时使用 `geo:unknown`
+
+#### business: 前缀（业务模式）
+
+**仅适用于 Industry-Analysis 领域**，用于识别网络安全行业的业务模式创新。
+
+**交付模式类**：
+
+| Tag | Description |
+|-----|-------------|
+| `business:MSSP` | 托管安全服务提供商 (Managed Security Service Provider) |
+| `business:SECaaS` | 安全即服务 / 云端交付 (Security as a Service) |
+| `business:On-Premise` | 本地部署模式 |
+| `business:Hybrid-Delivery` | 混合交付（本地+云端） |
+| `business:Embedded-Security` | 内嵌安全（安全能力嵌入其他产品） |
+
+**收费模式类**：
+
+| Tag | Description |
+|-----|-------------|
+| `business:Subscription` | 订阅制（周期性付费） |
+| `business:Usage-Based` | 用量计费 |
+| `business:Outcome-Based` | 结果导向（按效果付费） |
+| `business:Freemium` | 免费增值模式 |
+| `business:License-Based` | 授权制（一次性买断） |
+
+**运营模式类**：
+
+| Tag | Description |
+|-----|-------------|
+| `business:MDR` | 托管检测响应服务 (Managed Detection & Response) |
+| `business:MSS` | 托管安全服务 (Managed Security Services) |
+| `business:vCISO` | 虚拟安全官服务 |
+| `business:Security-Operations-Outsourcing` | 安全运营外包 |
+| `business:In-House-Operations` | 自建运营 |
+
+**合作生态类**：
+
+| Tag | Description |
+|-----|-------------|
+| `business:Platform-Ecosystem` | 平台生态（构建开放平台集成 ISV） |
+| `business:Channel-Partner` | 渠道合作（代理商/分销商） |
+| `business:OEM-Partnership` | OEM 合作（技术白牌输出） |
+| `business:Technology-Alliance` | 技术联盟 |
+| `business:Co-Development` | 联合开发 |
+
+**创新/新兴模式类**：
+
+| Tag | Description |
+|-----|-------------|
+| `business:Crowdsourced-Security` | 众包安全（众包漏洞挖掘/测试） |
+| `business:Security-Insurance` | 安全保险 |
+| `business:Bug-Bounty-Platform` | 漏洞赏金平台 |
+| `business:Cyber-Risk-Quantification` | 网络风险量化服务 |
+| `business:Security-Financing` | 安全金融 |
+| `business:Data-Sharing-Alliance` | 威胁情报共享联盟 |
+
+**特殊标签**：
+
+| Tag | Description |
+|-----|-------------|
+| `business:New-Business-Model` | 新出现的业务模式（在 content 中描述） |
+| `business:Business-Model-Shift` | 业务模式转型 |
+
+**使用规则**：
+- 一条情报可打多个 `business:` 标签（如 `business:MSSP` + `business:Subscription`）
+- 发现新模式时使用 `business:New-Business-Model` 并在内容中描述
+- 转型场景使用 `business:Business-Model-Shift`
+
+#### 无前缀（关键词）
+
+直接使用关键词作为标签，无需命名空间前缀：
+
+```yaml
+tags: ["geo:global", "APT", "Lazarus", "ransomware", "cloud-security"]
+```
+
+**常见关键词类别**：
+- 威胁类型：`APT`, `ransomware`, `phishing`, `supply-chain-attack`
+- 技术领域：`ai-security`, `zero-trust`, `cloud-security`, `endpoint-security`
+- 行业垂直：`financial-sector`, `healthcare`, `government`, `critical-infrastructure`
+- 厂商实体：`CrowdStrike`, `Palo-Alto`, `Microsoft-Security`
 
 ### security_relevance
 
@@ -570,77 +901,19 @@ generated_session: "YYYYMMDD-HHMMSS"
 | approved | 已审核通过 |
 | rejected | 已审核拒绝 |
 
-**v2.0 变更**：
+**v3.0 变更**：
 - `null` 表示自动批准，无需人工审核
 - `pending` 表示 Agent 无法确定战略价值，需人工复核
 - 审核后状态变为 `approved` 或 `rejected`
 
-### business_model_tags（业务模式标签）
+### source_tier（情报源等级）
 
-**仅适用于 Industry-Analysis 领域**，用于识别网络安全行业的业务模式创新。
-
-#### 交付模式类
-
-| Tag | Description |
-|-----|-------------|
-| MSSP | 托管安全服务提供商 (Managed Security Service Provider) |
-| SECaaS | 安全即服务 / 云端交付 (Security as a Service) |
-| On-Premise | 本地部署模式 |
-| Hybrid-Delivery | 混合交付（本地+云端） |
-| Embedded-Security | 内嵌安全（安全能力嵌入其他产品） |
-
-#### 收费模式类
-
-| Tag | Description |
-|-----|-------------|
-| Subscription | 订阅制（周期性付费） |
-| Usage-Based | 用量计费 |
-| Outcome-Based | 结果导向（按效果付费） |
-| Freemium | 免费增值模式 |
-| License-Based | 授权制（一次性买断） |
-
-#### 运营模式类
-
-| Tag | Description |
-|-----|-------------|
-| MDR | 托管检测响应服务 (Managed Detection & Response) |
-| MSS | 托管安全服务 (Managed Security Services) |
-| vCISO | 虚拟安全官服务 |
-| Security-Operations-Outsourcing | 安全运营外包 |
-| In-House-Operations | 自建运营 |
-
-#### 合作生态类
-
-| Tag | Description |
-|-----|-------------|
-| Platform-Ecosystem | 平台生态（构建开放平台集成 ISV） |
-| Channel-Partner | 渠道合作（代理商/分销商） |
-| OEM-Partnership | OEM 合作（技术白牌输出） |
-| Technology-Alliance | 技术联盟 |
-| Co-Development | 联合开发 |
-
-#### 创新/新兴模式类
-
-| Tag | Description |
-|-----|-------------|
-| Crowdsourced-Security | 众包安全（众包漏洞挖掘/测试） |
-| Security-Insurance | 安全保险 |
-| Bug-Bounty-Platform | 漏洞赏金平台 |
-| Cyber-Risk-Quantification | 网络风险量化服务 |
-| Security-Financing | 安全金融 |
-| Data-Sharing-Alliance | 威胁情报共享联盟 |
-
-#### 特殊标签
-
-| Tag | Description |
-|-----|-------------|
-| New-Business-Model | 新出现的业务模式（在 content 中描述） |
-| Business-Model-Shift | 业务模式转型 |
-
-**使用规则**：
-- 一条情报可打多个标签（如 `MSSP` + `Subscription`）
-- 发现新模式时使用 `New-Business-Model` 并在内容中描述
-- 转型场景使用 `Business-Model-Shift`
+| Tier | Description |
+|------|-------------|
+| T0 | 最高优先级，官方权威来源 |
+| T1 | 高优先级，知名安全厂商/研究机构 |
+| T2 | 中等优先级，行业媒体/分析师 |
+| T3 | 低优先级，一般来源 |
 
 ---
 

@@ -55,28 +55,72 @@ skills:
 
 **文件格式**：统一的 Markdown，已清洗噪声 token，包含 frontmatter 元数据
 
-**步骤 1.1：解析 frontmatter**
+**步骤 1.1：解析 frontmatter（v3.0 四组结构）**
 
-从转换文件的 frontmatter 中提取元数据：
+从转换文件的 frontmatter 中提取元数据，分为四组：
 
-| 字段 | 说明 | 用途 |
+**第一组：核心标识（生成）**
+- 由 Agent 分析生成，详见后续步骤
+
+**第二组：item 来源追溯（继承 + 预处理）**
+
+| 字段 | 说明 | 必填 |
 |------|------|------|
-| `sourceHash` | 源文件 MD5 哈希 | 写入情报卡片 frontmatter，用于追溯和去重 |
-| `archivedSource` | 归档文件路径 | 写入情报卡片 frontmatter，用于追溯 |
-| `originalPath` | 源文件原始路径 | 记录来源 |
+| `item_id` | 采集阶段标识（格式：`item_{8位hex}`） | ✅ |
+| `item_title` | item 标题 | ✅ |
+| `author` | 作者 | ❌ |
+| `original_url` | 原文链接 | ❌ |
+| `published_at` | 原文发布时间（ISO 8601） | ❌ |
+| `fetched_at` | 采集时间（ISO 8601） | ✅ |
+| `completeness_score` | 完整度 0-1 | ❌ |
+| `archived_file` | 归档文件链接（WikiLink） | ✅ |
+| `converted_file` | 转换文件链接（WikiLink） | ✅ |
+
+**第三组：情报源追溯（继承）**
+
+| 字段 | 说明 | 必填 |
+|------|------|------|
+| `source_id` | 情报源 ID | ❌ |
+| `source_name` | 情报源名称 | ❌ |
+| `source_url` | 情报源 URL | ❌ |
+| `source_tier` | 情报源等级 T0-T3 | ❌ |
+| `source_score` | 情报源评分 0-100 | ❌ |
 
 **frontmatter 示例**：
 
 ```yaml
 ---
-sourceHash: "abc123def456..."
-originalPath: "inbox/report-2026.pdf"
-archivedAt: "2026-03-15T10:00:00Z"
-archivedSource: "archive/2026/03/report-2026.pdf"
+# 第二组：item 来源追溯
+item_id: "item_a1b2c3d4"
+item_title: "Lazarus Group's New Malware Campaign"
+author: "Security Research Team"
+original_url: "https://example.com/security/lazarus-malware-2026"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/20260401-item_a1b2c3d4.md]]"
+converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md]]"
+
+# 第三组：情报源追溯
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_url: "https://securityweekly.com"
+source_tier: "T1"
+source_score: 85
 ---
 
 # 文档内容...
 ```
+
+**步骤 1.2：元数据继承逻辑**
+
+对于非 cyber-pulse 来源的本地文档，以下字段可能不存在：
+- `item_id`：使用 `item_{content_hash前8位}` 生成
+- `item_title`：使用文档标题或文件名
+- `fetched_at`：使用文件修改时间或当前时间
+- `archived_file` / `converted_file`：从预处理阶段获取
+
+所有第三组字段（情报源追溯）对于本地文档为空，这是预期行为。
 
 ### 步骤 2：提取发布日期
 
@@ -135,9 +179,22 @@ archivedSource: "archive/2026/03/report-2026.pdf"
 | 2 | AI 安全平台兴起 | Emerging-Tech | ✅ 独立 |
 | 3 | 零信任成熟度评估框架 | Policy-Regulation | ✅ 独立 |
 
-### 步骤 4.1：地域范围判断
+### 步骤 4.1：地域范围与标签生成
 
-**判断规则（严格模式）**：仅依据文档明确提及的地域信息。
+**tags 字段采用嵌套命名空间格式**：
+
+```yaml
+tags: ["geo:china", "business:MSSP", "APT", "ransomware"]
+```
+
+**支持的命名空间**：
+
+| 前缀 | 说明 | 示例值 |
+|------|------|--------|
+| `geo:` | 地域范围 | `geo:global`, `geo:china`, `geo:china-primary`, `geo:overseas`, `geo:overseas-primary`, `geo:unknown` |
+| `business:` | 业务模式 | `business:MSSP`, `business:SECaaS`, `business:Subscription` 等 |
+
+**地域范围判断规则（严格模式）**：仅依据文档明确提及的地域信息。
 
 **判断依据**：
 - 明确提及的国家/地区名称
@@ -146,46 +203,56 @@ archivedSource: "archive/2026/03/report-2026.pdf"
 - 攻击目标地理位置
 - 市场数据覆盖区域
 
-**值域映射**：
+**geo: 值映射**：
 
-| geo_scope 值 | 判断条件 |
-|--------------|----------|
-| `global` | 明确提及"全球"、"国际"、"世界范围"或多国 |
-| `china` | 明确提及"中国"、"国内"，且不涉及海外 |
-| `china-primary` | 主要涉及中国，同时提及海外市场/客户 |
-| `overseas` | 明确提及海外国家/地区，不涉及中国 |
-| `overseas-primary` | 主要涉及海外，同时提及中国市场 |
-| `unknown` | 文档未明确提及地域信息 |
+| tag 值 | 判断条件 |
+|--------|----------|
+| `geo:global` | 明确提及"全球"、"国际"、"世界范围"或多国 |
+| `geo:china` | 明确提及"中国"、"国内"，且不涉及海外 |
+| `geo:china-primary` | 主要涉及中国，同时提及海外市场/客户 |
+| `geo:overseas` | 明确提及海外国家/地区，不涉及中国 |
+| `geo:overseas-primary` | 主要涉及海外，同时提及中国市场 |
+| `geo:unknown` | 文档未明确提及地域信息 |
 
-**注意**：无法判断时设为 `unknown`，不要主观推断。
+**注意**：无法判断时使用 `geo:unknown`，不要主观推断。
 
 ### 步骤 4.2：业务模式标签提取（仅 Industry-Analysis）
 
-当 `primary_domain` 或 `secondary_domains` 包含 `Industry-Analysis` 时，提取业务模式标签。
+当 `primary_domain` 或 `secondary_domains` 包含 `Industry-Analysis` 时，提取业务模式标签并添加 `business:` 前缀。
 
-**触发关键词**：
+**触发关键词（添加 business: 前缀）**：
 
-| 标签类别 | 关键词示例 |
-|----------|-----------|
-| 交付模式 | MSSP、托管安全服务、SECaaS、SaaS安全、云安全服务、混合部署、内嵌安全 |
-| 收费模式 | 订阅、订阅制、按量计费、按效果付费、免费增值、买断 |
-| 运营模式 | MDR、托管检测响应、MSS、虚拟安全官、安全运营外包、自建SOC |
-| 合作生态 | 平台生态、开放平台、渠道合作、OEM、技术联盟、联合开发 |
-| 创新模式 | 众包安全、漏洞众测、安全保险、漏洞赏金、风险量化、威胁情报共享 |
+| 标签类别 | 生成 tag 示例 |
+|----------|--------------|
+| 交付模式 | `business:MSSP`, `business:SECaaS`, `business:On-Premise`, `business:Hybrid-Delivery`, `business:Embedded-Security` |
+| 收费模式 | `business:Subscription`, `business:Usage-Based`, `business:Outcome-Based`, `business:Freemium`, `business:License-Based` |
+| 运营模式 | `business:MDR`, `business:MSS`, `business:vCISO`, `business:Security-Operations-Outsourcing`, `business:In-House-Operations` |
+| 合作生态 | `business:Platform-Ecosystem`, `business:Channel-Partner`, `business:OEM-Partnership`, `business:Technology-Alliance`, `business:Co-Development` |
+| 创新模式 | `business:Crowdsourced-Security`, `business:Security-Insurance`, `business:Bug-Bounty-Platform`, `business:Cyber-Risk-Quantification`, `business:Security-Financing`, `business:Data-Sharing-Alliance` |
+| 特殊标签 | `business:New-Business-Model`, `business:Business-Model-Shift` |
 
 **提取规则**：
 1. 匹配文档中明确提及的业务模式关键词
-2. 一条情报可打多个标签
-3. 发现新模式时使用 `New-Business-Model` 并在内容中描述
-4. 转型场景使用 `Business-Model-Shift`
-5. 未提及业务模式时，`business_model_tags` 设为空数组 `[]`
+2. 一条情报可打多个 `business:` 标签
+3. 发现新模式时使用 `business:New-Business-Model` 并在内容中描述
+4. 转型场景使用 `business:Business-Model-Shift`
+5. 未提及业务模式时，不添加任何 `business:` 标签
+
+**tags 生成示例**：
+```yaml
+# 行业分析情报
+tags: ["geo:china", "business:MSSP", "business:Subscription", "market-growth", "cybersecurity"]
+
+# 威胁情报
+tags: ["geo:global", "APT", "Lazarus", "financial-sector", "malware"]
+```
 
 ### 步骤 5：生成情报卡片
 
 根据 **intelligence-output-templates** skill 中的模板生成。
 
 **每张情报卡片独立生成**：
-- 独立的 `intelligence_id`：`{domain}-{YYYYMMDD}-{seq}`
+- 独立的 `intelligence_id`：`{domain_prefix}-{YYYYMMDD}-{seq}`
 - 独立的文件名：`{YYYYMMDD}-{subject}-{feature}.md`
 - 独立写入文件：`{output}/{domain}/{filename}`
 
@@ -209,16 +276,60 @@ archivedSource: "archive/2026/03/report-2026.pdf"
 - 例如：`industry-20251013-001`, `industry-20251013-002`
 
 **内容生成**：
-- Frontmatter：标准字段 + 领域特定字段 + 持久化元数据
+- Frontmatter：四组层次结构（核心标识 + item追溯 + 情报源追溯 + 处理状态）
 - Body：按领域模板填充各章节
 
-**持久化元数据（必需）**：
+**持久化元数据（v3.0 四组结构）**：
+
 ```yaml
-intelligence_id: "{domain}-{YYYYMMDD}-{seq}"
-source_hash: "{sourceHash}"                      # 从转换文件 frontmatter 获取
-archived_source: "[[{archivedSource}]]"          # Obsidian 链接格式
-converted_file: "[[{source}]]"                   # Obsidian 链接格式
+---
+# ============================================
+# 第一组：核心标识（生成）
+# ============================================
+intelligence_id: "threat-20260402-001"
+title: "APT组织Lazarus利用新型恶意软件攻击金融机构"
+created_date: "2026-04-02"
+primary_domain: "Threat-Landscape"
+secondary_domains: ["Vendor-Intelligence"]
+security_relevance: "high"
+tags: ["geo:china-primary", "APT", "Lazarus", "financial-sector", "malware"]
+
+# ============================================
+# 第二组：item 来源追溯（继承 + 预处理）
+# ============================================
+item_id: "item_a1b2c3d4"
+item_title: "Lazarus Group's New Malware Campaign Targets Financial Institutions"
+author: "Security Research Team"
+original_url: "https://example.com/security/lazarus-malware-2026"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+archived_file: "[[archive/2026/04/20260401-item_a1b2c3d4.md]]"
+converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md]]"
+
+# ============================================
+# 第三组：情报源追溯（继承）
+# ============================================
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_url: "https://securityweekly.com"
+source_tier: "T1"
+source_score: 85
+
+# ============================================
+# 第四组：处理状态（生成）
+# ============================================
+review_status: null
+generated_by: "intelligence-analyzer"
+generated_session: "20260402-151800"
+---
 ```
+
+**字段继承逻辑**：
+- 从转换文件 frontmatter 读取第二、三组字段
+- 如果转换文件缺少某些继承字段，使用合理的默认值或留空
+- 第一组字段由 Agent 分析生成
+- 第四组字段根据审核逻辑决定
 
 ### 步骤 6：去重与冲突检测
 
@@ -370,11 +481,11 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 - [ ] 每条情报至少满足一个战略标准
 - [ ] 每条情报满足原子化要求（单一主题、独立完整）
 - [ ] 领域分类适当
-- [ ] 地域范围（geo_scope）已填写 — **必填字段，不可省略，无法判断时使用 unknown**
-- [ ] 业务模式标签已提取（仅 Industry-Analysis）
+- [ ] tags 已填写 — **必填字段**，包含 `geo:` 前缀的地域标签
+- [ ] 业务模式标签已提取并添加 `business:` 前缀（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
 - [ ] 每张卡片有独立的 intelligence_id
 - [ ] 每张卡片有独立的文件名（subject-feature 格式）
-- [ ] 持久化元数据字段已添加
+- [ ] 四组元数据字段已正确填写（核心标识 + item追溯 + 情报源追溯 + 处理状态）
 - [ ] 文件已成功写入对应领域目录
 - [ ] 返回 JSON 包含 intelligence_ids 数组和 cards 数组

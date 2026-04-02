@@ -180,29 +180,66 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 | `intelligence/` | 情报卡片输出 | `{YYYYMMDD}-{subject}-{feature}.md` | ✅ 可见 |
 | `.intel/` | 管理目录 | - | ❌ 隐藏 |
 
-### 转换文件格式（v2.1）
+### 转换文件格式（v3.0）
 
-转换后的 Markdown 文件包含 frontmatter 元数据：
+转换后的 Markdown 文件包含 frontmatter 元数据，继承采集阶段的元数据：
 
 ```markdown
 ---
+# 第二组：item 来源追溯
+item_id: "item_a1b2c3d4"
+item_title: "原始标题"
+author: "作者"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
 sourceHash: "abc123def456..."
 originalPath: "inbox/report-2026.pdf"
 archivedAt: "2026-03-15T10:00:00Z"
-archivedSource: "archive/2026/03/report-2026.pdf"
+archived_file: "[[archive/2026/04/report-2026.pdf]]"
+converted_file: "[[converted/2026/04/report-2026.md]]"
+
+# 第三组：情报源追溯
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_url: "https://securityweekly.com"
+source_tier: "T1"
+source_score: 85
 ---
 
 # 文档内容...
 ```
 
-**frontmatter 字段说明**：
+**frontmatter 字段说明（v3.0 四组结构）**：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `sourceHash` | string | 源文件 MD5 哈希（用于去重） |
-| `originalPath` | string | 源文件原始路径（相对于 source_dir） |
-| `archivedAt` | string | 归档时间（ISO 8601 格式） |
-| `archivedSource` | string | 归档文件路径 |
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `item_id` | string | ✅ | 采集阶段标识（格式：`item_{8位hex}`） |
+| `item_title` | string | ✅ | 采集阶段的原始标题 |
+| `author` | string | ❌ | 作者信息 |
+| `original_url` | string | ❌ | 原文链接 |
+| `published_at` | datetime | ❌ | 原文发布时间（ISO 8601） |
+| `fetched_at` | datetime | ✅ | 采集时间（ISO 8601） |
+| `completeness_score` | number | ❌ | 完整度 0-1 |
+| `sourceHash` | string | ✅ | 源文件 MD5 哈希（用于去重） |
+| `originalPath` | string | ✅ | 源文件原始路径 |
+| `archivedAt` | datetime | ✅ | 归档时间（ISO 8601） |
+| `archived_file` | string | ✅ | 归档文件路径（WikiLink 格式） |
+| `converted_file` | string | ✅ | 转换文件路径（WikiLink 格式） |
+| `source_id` | string | ❌ | 情报源 ID |
+| `source_name` | string | ❌ | 情报源名称 |
+| `source_url` | string | ❌ | 情报源 URL |
+| `source_tier` | string | ❌ | 情报源等级 T0-T3 |
+| `source_score` | number | ❌ | 情报源评分 0-100 |
+
+**元数据继承流程**：
+
+```
+intel-pull 采集 → inbox/*.md frontmatter → 预处理转换 → converted/*.md frontmatter → Agent 分析 → 情报卡片
+```
+
+对于本地文档（非 cyber-pulse 来源），第三组字段（情报源追溯）为空，这是预期行为。
 
 ---
 
