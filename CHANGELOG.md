@@ -6,6 +6,26 @@
 
 ---
 
+## [1.0.19] - 2026-04-02
+
+### 插件更新
+
+#### market-radar v1.6.0
+
+**新增**
+- 情报卡片元数据四组层次结构
+  - 第一组（核心标识）：intelligence_id, title, primary_domain, secondary_domains, security_relevance, tags
+  - 第二组（item 来源追溯）：item_id, item_title, author, original_url, published_at, fetched_at 等
+  - 第三组（情报源追溯）：source_id, source_name, source_url, source_tier, source_score
+  - 第四组（处理状态）：review_status, generated_by, generated_session
+- tags 嵌套命名空间格式（`geo:`, `business:` 前缀）
+
+**变更**
+- review_status 状态语义重构：`passed`/`pending`/`approved`/`rejected`
+- 元数据继承链路：intel-pull 采集元数据完整传递到情报卡片
+
+---
+
 ## [1.0.18] - 2026-04-01
 
 ### 插件更新

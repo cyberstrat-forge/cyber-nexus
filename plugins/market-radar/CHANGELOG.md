@@ -2,6 +2,37 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.6.0] - 2026-04-02
+
+### 新增
+
+- **情报卡片元数据四组层次结构**
+  - 第一组（核心标识）：intelligence_id, title, created_date, primary_domain, secondary_domains, security_relevance, tags
+  - 第二组（item 来源追溯）：item_id, item_title, author, original_url, published_at, fetched_at, completeness_score, archived_file, converted_file
+  - 第三组（情报源追溯）：source_id, source_name, source_url, source_tier, source_score
+  - 第四组（处理状态）：review_status, generated_by, generated_session
+
+- **tags 嵌套命名空间格式**
+  - `geo:` 前缀：地域范围（如 `geo:usa`, `geo:china`, `geo:global`）
+  - `business:` 前缀：业务模式（如 `business:MSSP`, `business:Subscription`）
+  - 无前缀：关键词标签
+
+### 变更
+
+- **review_status 状态语义重构**
+  - `passed`：Agent 自动通过（原 `null`）
+  - `rejected`：拒绝（Agent 或 User）
+  - `pending`：待用户审核
+  - `approved`：用户批准
+
+- **元数据继承链路**
+  - intel-pull 采集元数据完整传递到情报卡片
+  - 支持从采集阶段追溯情报来源
+
+### 相关 PR
+
+- [#51](https://github.com/cyberstrat-forge/cyber-nexus/pull/51) 情报卡片元数据优化
+
 ## [1.4.1] - 2026-04-01
 
 ### 修复
@@ -450,6 +481,8 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.6.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.3...v1.4.0
 [1.3.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.3.2...v1.3.3
