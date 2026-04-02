@@ -7,6 +7,27 @@ description: Markdown templates and output structure for intelligence cards. Use
 
 此 skill 提供情报卡片的输出模板。
 
+## 四组层次结构
+
+情报卡片 frontmatter 采用四组层次结构：
+
+1. **核心标识**：`intelligence_id`, `title`, `created_date`, `primary_domain`, `secondary_domains`, `security_relevance`, `tags`
+2. **item 来源追溯**：`item_id`, `item_title`, `author`, `original_url`, `published_at`, `fetched_at`, `completeness_score`, `archived_file`, `converted_file`
+3. **情报源追溯**：`source_id`, `source_name`, `source_url`, `source_tier`, `source_score`
+4. **处理状态**：`review_status`, `generated_by`, `generated_session`
+
+## tags 嵌套格式
+
+tags 字段使用命名空间前缀：
+
+```yaml
+tags: ["geo:china", "business:MSSP", "APT", "ransomware"]
+```
+
+- `geo:` 前缀：地域范围（`geo:global`, `geo:china`, `geo:unknown` 等）
+- `business:` 前缀：业务模式（仅 Industry-Analysis）
+- 无前缀：关键词
+
 ## 写作原则
 
 ### 提炼而非摘抄

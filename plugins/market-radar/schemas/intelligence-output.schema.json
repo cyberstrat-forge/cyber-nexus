@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "intelligence-output.schema.json",
   "title": "Intelligence Output Schema",
-  "description": "JSON Schema for intelligence-analyzer agent output validation",
+  "description": "JSON Schema for intelligence-analyzer agent output validation (v3.0 - with metadata inheritance)",
   "type": "object",
   "required": [
     "source_file",
@@ -132,37 +132,36 @@
     "frontmatter": {
       "type": "object",
       "required": [
+        "intelligence_id",
         "title",
-        "source_file",
-        "intelligence_date",
         "created_date",
         "primary_domain",
         "secondary_domains",
-        "geo_scope",
         "security_relevance",
-        "review_status",
+        "tags",
+        "item_id",
+        "item_title",
+        "fetched_at",
+        "archived_file",
+        "converted_file",
         "generated_by",
         "generated_session"
       ],
       "additionalProperties": true,
       "properties": {
+        "intelligence_id": {
+          "type": "string",
+          "pattern": "^[a-z]+-\\d{8}-\\d{3}$",
+          "description": "Intelligence card unique ID (format: {domain_prefix}-{YYYYMMDD}-{seq})"
+        },
         "title": {
           "type": "string",
           "description": "Intelligence title"
         },
-        "source_file": {
-          "type": "string",
-          "description": "Source file link (WikiLink format)"
-        },
-        "intelligence_date": {
-          "type": "string",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-          "description": "Intelligence date (source published date, YYYY-MM-DD format)"
-        },
         "created_date": {
           "type": "string",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-          "description": "Creation date (YYYY-MM-DD format)"
+          "description": "Card creation date (YYYY-MM-DD format)"
         },
         "primary_domain": {
           "type": "string",
@@ -193,35 +192,88 @@
           },
           "description": "Secondary domains"
         },
-        "geo_scope": {
-          "type": "string",
-          "enum": ["global", "china", "china-primary", "overseas", "overseas-primary", "unknown"],
-          "description": "Geographic scope of the intelligence"
-        },
-        "business_model_tags": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "MSSP", "SECaaS", "On-Premise", "Hybrid-Delivery", "Embedded-Security",
-              "Subscription", "Usage-Based", "Outcome-Based", "Freemium", "License-Based",
-              "MDR", "MSS", "vCISO", "Security-Operations-Outsourcing", "In-House-Operations",
-              "Platform-Ecosystem", "Channel-Partner", "OEM-Partnership", "Technology-Alliance", "Co-Development",
-              "Crowdsourced-Security", "Security-Insurance", "Bug-Bounty-Platform", "Cyber-Risk-Quantification", "Security-Financing", "Data-Sharing-Alliance",
-              "New-Business-Model", "Business-Model-Shift"
-            ]
-          },
-          "description": "Business model tags (Industry-Analysis only)"
-        },
         "security_relevance": {
           "type": "string",
           "enum": ["high", "medium"],
           "description": "Security relevance level"
         },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Nested tags with namespace prefixes (e.g., 'geo:china', 'business:MSSP', 'tech:ai-security')"
+        },
+        "item_id": {
+          "type": "string",
+          "pattern": "^item_[a-f0-9]{8}$",
+          "description": "Item ID from collection stage (format: item_{8hex})"
+        },
+        "item_title": {
+          "type": "string",
+          "description": "Original title from collection stage"
+        },
+        "author": {
+          "type": "string",
+          "description": "Author information (optional, inherited from collection)"
+        },
+        "original_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Original article URL (optional, inherited from collection)"
+        },
+        "published_at": {
+          "type": "string",
+          "description": "Original publication time (ISO 8601 format, optional)"
+        },
+        "fetched_at": {
+          "type": "string",
+          "description": "Fetch time from collection stage (ISO 8601 format)"
+        },
+        "completeness_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Content completeness score 0-1 (optional, inherited from collection)"
+        },
+        "archived_file": {
+          "type": "string",
+          "pattern": "^\\[\\[.+\\]\\]$",
+          "description": "Archived file path (WikiLink format: [[archive/YYYY/MM/filename]])"
+        },
+        "converted_file": {
+          "type": "string",
+          "pattern": "^\\[\\[.+\\]\\]$",
+          "description": "Converted file path (WikiLink format: [[converted/YYYY/MM/filename.md]])"
+        },
+        "source_id": {
+          "type": "string",
+          "description": "Intelligence source ID (optional, inherited from collection)"
+        },
+        "source_name": {
+          "type": "string",
+          "description": "Intelligence source name (optional, inherited from collection)"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Intelligence source URL (optional, inherited from collection)"
+        },
+        "source_tier": {
+          "type": "string",
+          "enum": ["T0", "T1", "T2", "T3"],
+          "description": "Source tier rating (T0=official, T1=well-known, T2=industry, T3=general)"
+        },
+        "source_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Source quality score 0-100 (optional, inherited from collection)"
+        },
         "review_status": {
           "type": "string",
-          "enum": ["pending", "approved", "revised"],
-          "description": "Review status"
+          "enum": ["passed", "pending", "approved", "rejected"],
+          "description": "Review status: passed (auto-approved by agent), pending (needs user review), approved (user-approved), rejected (declined by agent or user)"
         },
         "generated_by": {
           "type": "string",
