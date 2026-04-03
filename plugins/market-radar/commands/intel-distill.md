@@ -596,10 +596,58 @@ if (needs_processing + pending_review >= 50) {
 
 #### 8.4 统一更新状态文件
 
-所有 Agent 完成后，一次性更新 `state.json`：
-- 更新 `processed` 记录
-- 更新 `review.pending` 队列
-- 更新 `stats` 统计
+**⚠️ 关键步骤：必须在所有 Agent 完成后执行**
+
+调用 `update-state.ts` 脚本更新 `state.json`：
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+pnpm exec tsx preprocess/update-state.ts \
+  --output {output_dir} \
+  --results '[{Agent结果JSON数组}]'
+```
+
+**输入参数**：
+
+| 参数 | 说明 |
+|------|------|
+| `--output` | 输出目录（包含 .intel/state.json） |
+| `--results` | Agent 返回结果的 JSON 数组 |
+
+**Agent 结果 JSON 格式**：
+
+```json
+[
+  {
+    "source_file": "converted/2026/04/xxx.md",
+    "content_hash": "abc123...",
+    "source_hash": "def456...",
+    "archived_source": "archive/2026/04/xxx.pdf",
+    "has_strategic_value": true,
+    "intelligence_count": 2,
+    "intelligence_ids": ["industry-001", "emerging-001"],
+    "output_files": ["intelligence/Industry-Analysis/xxx.md"],
+    "domain": "Industry-Analysis"
+  }
+]
+```
+
+**脚本操作**：
+
+1. 更新 `processed` 记录：
+   - 以 `source_file` 为键
+   - 写入 `content_hash`、`source_hash`、`intelligence_ids` 等
+
+2. 更新 `review.pending` 队列：
+   - 对于 `has_strategic_value = null` 的结果
+   - 生成 `pending_id` 并加入队列
+
+3. 更新 `stats` 统计：
+   - `intelligence.processed` += 处理文件数
+   - `intelligence.cards_generated` += 新增卡片数
+   - `intelligence.pending_review` += 待审核数
+
+**执行时机**：在步骤 8.3 收集完所有 Agent 结果后，步骤 9 输出统计前执行。
 
 ### 步骤 9：统一输出统计
 
