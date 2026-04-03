@@ -6,6 +6,26 @@
 
 ---
 
+## [1.0.20] - 2026-04-03
+
+### 插件更新
+
+#### market-radar v1.6.1
+
+**新增**
+- update-state.ts 脚本：实现 intel-distill 步骤 8.4 状态更新
+  - 更新 processed 记录（intelligence_ids, output_files 等）
+  - 更新 review.pending 队列
+  - 更新 stats.intelligence 统计计数器
+
+**修复**
+- 状态文件原子写入（临时文件 + rename 防止损坏）
+- 损坏状态文件自动备份恢复
+- 输入验证防止无效数据污染
+- Pending ID 使用 timestamp + randomBytes 避免碰撞
+
+---
+
 ## [1.0.19] - 2026-04-02
 
 ### 插件更新
@@ -325,6 +345,8 @@
 
 ---
 
+[1.0.20]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.19...v1.0.20
+[1.0.19]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.18...v1.0.19
 [1.0.18]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.17...v1.0.18
 [1.0.17]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.16...v1.0.17
 [1.0.15]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.14...v1.0.15

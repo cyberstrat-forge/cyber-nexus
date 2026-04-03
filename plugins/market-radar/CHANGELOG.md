@@ -2,6 +2,30 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.6.1] - 2026-04-03
+
+### 新增
+
+- **update-state.ts 脚本**：实现 intel-distill 步骤 8.4 状态更新
+  - 更新 `processed` 记录（intelligence_ids, output_files 等）
+  - 更新 `review.pending` 队列（has_strategic_value = null 时）
+  - 更新 `stats.intelligence` 统计计数器
+
+### 修复
+
+- **状态文件写入安全**
+  - 采用原子写入模式（临时文件 + rename）
+  - 损坏状态文件自动备份恢复
+  - 输入验证防止无效数据污染
+
+- **Pending ID 唯一性**
+  - 使用 `timestamp + randomBytes(4)` 替代纯时间戳
+  - 避免同毫秒处理的 ID 碰撞
+
+### 相关 PR
+
+- [#54](https://github.com/cyberstrat-forge/cyber-nexus/pull/54) intel-distill 状态更新脚本
+
 ## [1.6.0] - 2026-04-02
 
 ### 新增
@@ -481,6 +505,7 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.6.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.4.0...v1.4.1
