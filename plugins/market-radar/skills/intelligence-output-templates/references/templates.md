@@ -74,9 +74,6 @@ tags: ["geo:china", "business:MSSP", "APT", "ransomware", "cloud-security"]
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "threat-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -85,9 +82,6 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo:global", "APT", "Lazarus", "financial-sector", "malware"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -98,25 +92,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
 source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: "passed"
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 threat_type:                    # 勒索软件/APT/供应链攻击等
 threat_actor:                   # 威胁组织名称
 target_sector:                  # 目标行业
@@ -172,9 +157,6 @@ impact_scale:                   # 影响规模
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "industry-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -183,9 +165,6 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo:china", "business:MSSP", "business:Subscription", "market-growth", "cybersecurity"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -196,25 +175,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_gartner"
 source_name: "Gartner"
 source_url: "https://gartner.com"
 source_tier: "T0"
 source_score: 95
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: null
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 market_scope:                   # 全球/中国/区域
 segment:                        # 细分领域
 ---
@@ -274,9 +244,6 @@ segment:                        # 细分领域
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "vendor-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -285,9 +252,6 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo:global", "CrowdStrike", "funding", "Series-B", "endpoint-security"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -298,25 +262,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_techcrunch"
 source_name: "TechCrunch"
 source_url: "https://techcrunch.com"
 source_tier: "T2"
 source_score: 75
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: null
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 vendor_name:
 vendor_type:                    # 创业公司/上市企业/大厂安全部门
 business_area:                  # 业务领域
@@ -373,9 +328,6 @@ business_area:                  # 业务领域
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "emerging-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -384,9 +336,6 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo:global", "ai-security", "AISP", "LLM-protection", "emerging-tech"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -397,25 +346,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_gartner"
 source_name: "Gartner"
 source_url: "https://gartner.com"
 source_tier: "T0"
 source_score: 95
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: null
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 tech_name:                      # 技术名称
 maturity:                       # 概念/早期/成长/成熟
 ---
@@ -474,9 +414,6 @@ maturity:                       # 概念/早期/成长/成熟
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "customer-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -485,9 +422,6 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo:china", "enterprise", "security-budget", "procurement", "market-demand"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -498,25 +432,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_idc"
 source_name: "IDC"
 source_url: "https://idc.com"
 source_tier: "T1"
 source_score: 88
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: null
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 customer_segment:               # 客户细分
 region:                         # 地区
 ---
@@ -572,9 +497,6 @@ region:                         # 地区
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "policy-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -583,9 +505,6 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo:china", "compliance", "data-protection", "regulation", "PIPL"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -596,25 +515,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_official"
 source_name: "Government Official"
 source_url: "https://gov.cn"
 source_tier: "T0"
 source_score: 100
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: null
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 policy_name:                    # 政策名称
 issuing_body:                   # 发布机构
 jurisdiction:                   # 管辖区域
@@ -672,9 +582,6 @@ effective_date:                 # 生效时间
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识
-# ============================================
 intelligence_id: "capital-20260402-001"
 title: "情报标题"
 created_date: "2026-04-02"
@@ -683,9 +590,6 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo:global", "funding", "Series-B", "cybersecurity-unicorn", "venture-capital"]
 
-# ============================================
-# 第二组：item 来源追溯
-# ============================================
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -696,25 +600,16 @@ completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# ============================================
-# 第三组：情报源追溯
-# ============================================
 source_id: "src_crunchbase"
 source_name: "Crunchbase"
 source_url: "https://crunchbase.com"
 source_tier: "T1"
 source_score: 85
 
-# ============================================
-# 第四组：处理状态
-# ============================================
 review_status: null
 generated_by: "intelligence-analyzer"
 generated_session: "20260402-151800"
 
-# ============================================
-# 领域特定字段
-# ============================================
 event_type:                    # 融资/并购/IPO
 company:                       # 涉及公司
 investors:                     # 投资方/收购方
