@@ -182,11 +182,13 @@ export interface PullSourceResultFailure {
 export type PullSourceResult = PullSourceResultSuccess | PullSourceResultFailure;
 
 /**
- * Overall pull result
+ * Overall pull result (v2.1 with root_dir)
  */
 export interface PullResult {
   /** Pull mode used */
   mode: 'init' | 'incremental' | 'all';
+  /** Project root directory (for state file) */
+  root_dir: string;
   /** Output directory */
   output_dir: string;
   /** Results per source */
@@ -200,14 +202,16 @@ export interface PullResult {
 // ==================== CLI Types ====================
 
 /**
- * Parsed CLI arguments (simplified)
+ * Parsed CLI arguments (v2.1 with root support)
  */
 export interface PullOptions {
+  /** Project root directory (for state file location) */
+  root?: string;
   /** Source name to pull from */
   source?: string;
   /** Pull from all sources */
   all: boolean;
-  /** Output directory */
+  /** Output directory (relative to root, defaults to ./inbox) */
   output: string;
   /** Initialize mode - full sync from beginning */
   init: boolean;
