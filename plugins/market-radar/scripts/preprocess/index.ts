@@ -740,6 +740,7 @@ async function processFile(
 async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
   const {
     sourceDir,
+    rootDir,
     archiveDir,
     convertedDir,
     preprocessorVersion,
@@ -747,11 +748,11 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
     dateRef = new Date(),
   } = options;
 
-  // Collect known hashes for local file deduplication
-  const knownHashes = force ? new Map<string, string>() : collectKnownHashes(sourceDir);
+  // Collect known hashes from converted directory (under rootDir)
+  const knownHashes = force ? new Map<string, string>() : collectKnownHashes(rootDir);
 
   // Collect known filenames for cyber-pulse file deduplication
-  const knownFiles = force ? new Set<string>() : collectKnownFiles(sourceDir);
+  const knownFiles = force ? new Set<string>() : collectKnownFiles(rootDir);
 
   // Scan for files
   const files = scanDirectory(sourceDir);
@@ -859,7 +860,8 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
  */
 async function main() {
   const args = process.argv.slice(2);
-  let sourceDir = '.';
+  let sourceDir = null;  // null means use default (./inbox relative to root)
+  let rootDir = null;    // null means use current directory
   let force = false;
 
   // Parse arguments
@@ -867,17 +869,21 @@ async function main() {
     if (args[i] === '--source' && args[i + 1]) {
       sourceDir = args[i + 1];
       i++;
+    } else if (args[i] === '--root' && args[i + 1]) {
+      rootDir = args[i + 1];
+      i++;
     } else if (args[i] === '--force') {
       force = true;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: pnpm exec tsx index.ts --source <dir> [--force]
+Usage: pnpm exec tsx index.ts [--source <dir>] [--root <dir>] [--force]
 
-Directory Structure (v2.2):
-  {source_dir}/
-  ├── inbox/              # Drop new files here (recommended)
+Directory Structure (v2.3):
+  {root_dir}/
+  ├── inbox/              # Drop new files here (default source)
   ├── archive/YYYY/MM/    # Archived source files
-  └── converted/YYYY/MM/  # Converted markdown files (with frontmatter)
+  ├── converted/YYYY/MM/  # Converted markdown files (with frontmatter)
+  └── .intel/state.json   # State file
 
 Supported file types:
   - Local files: .md, .txt, .pdf, .docx (converted and cleaned)
@@ -892,7 +898,8 @@ Deduplication:
   - cyber-pulse files: by filename (item_id)
 
 Options:
-  --source <dir>  Source directory (default: current directory)
+  --source <dir>  Source directory to scan (default: ./inbox)
+  --root <dir>    Project root for archive/converted/.intel (default: current directory)
   --force         Force reprocess all files
   --help          Show this help message
       `);
@@ -901,23 +908,36 @@ Options:
   }
 
   // Resolve paths
-  sourceDir = path.resolve(sourceDir);
-  const dateRef = new Date();
-  const archiveDir = getArchiveDir(sourceDir, dateRef);
-  const convertedDir = getConvertedDir(sourceDir, dateRef);
+  // rootDir: where archive/converted/.intel are stored (defaults to current directory)
+  if (!rootDir) {
+    rootDir = process.cwd();
+  }
+  rootDir = path.resolve(rootDir);
 
+  // sourceDir: where to scan for files (defaults to ./inbox relative to root)
+  if (!sourceDir) {
+    sourceDir = path.join(rootDir, 'inbox');
+  }
+  sourceDir = path.resolve(sourceDir);
+
+  const dateRef = new Date();
+  // archive and converted are always under rootDir
+  const archiveDir = getArchiveDir(rootDir, dateRef);
+  const convertedDir = getConvertedDir(rootDir, dateRef);
+
+  console.log(`Root: ${rootDir}`);
   console.log(`Source: ${sourceDir}`);
   console.log(`Archive: ${archiveDir}`);
   console.log(`Converted: ${convertedDir}`);
   console.log(`Version: ${PREPROCESSOR_VERSION}`);
   console.log('');
 
-  // Check inbox directory
-  const inboxDir = path.join(sourceDir, 'inbox');
-  if (!fs.existsSync(inboxDir)) {
-    console.log('💡 Tip: Create an inbox/ directory for better file management:');
-    console.log('   mkdir -p inbox');
-    console.log('   Then drop files into inbox/ for processing.');
+  // Check if source directory exists
+  if (!fs.existsSync(sourceDir)) {
+    console.log(`⚠️  Source directory does not exist: ${sourceDir}`);
+    console.log('   Creating source directory...');
+    fs.mkdirSync(sourceDir, { recursive: true });
+    console.log(`   ✅ Created: ${sourceDir}`);
     console.log('');
   }
 
@@ -949,6 +969,7 @@ Options:
   // Run batch processing
   const result = await batchProcess({
     sourceDir,
+    rootDir,
     archiveDir,
     convertedDir,
     preprocessorVersion: PREPROCESSOR_VERSION,

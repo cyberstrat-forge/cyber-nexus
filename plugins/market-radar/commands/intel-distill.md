@@ -17,8 +17,8 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `--source <dir>` | 否 | 包含文档的源目录（默认：当前目录） |
-| `--output <dir>` | 否 | 情报卡片输出目录（默认：当前目录） |
+| `--source <dir>` | 否 | 待扫描的源文件目录（默认：./inbox） |
+| `--output <dir>` | 否 | 情报卡片输出目录（默认：./intelligence） |
 | `--review <action>` | 否 | 审核操作：`list`/`approve`/`reject` |
 | `--reason <text>` | 条件 | 审核原因（approve/reject 时推荐） |
 | `--report <type> [period]` | 否 | 生成情报简报：`weekly`/`monthly` |
@@ -27,14 +27,17 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ```bash
 # === 情报提取模式 ===
 
-# 处理当前目录下的所有文档
+# 扫描 inbox/，输出到 intelligence/
 /intel-distill
 
-# 处理指定目录下的文档
+# 扫描指定目录，输出到 intelligence/
 /intel-distill --source ./docs
 
-# 指定输出位置
-/intel-distill --source ./docs --output ./intelligence
+# 扫描 inbox/，输出到指定目录
+/intel-distill --output ./reports
+
+# 同时指定源和输出
+/intel-distill --source ./docs --output ./reports
 
 # === 审核模式 ===
 
@@ -133,33 +136,33 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 ---
 
-## 目录结构（v2.1）
+## 目录结构（v2.3）
 
 ### 推荐目录布局
 
 ```
-{source_dir}/
-├── inbox/                          # ⭐️ 待处理文档（推荐入口）
+{root_dir}/                         # 项目根目录（当前目录）
+├── inbox/                          # ⭐️ 待处理文档（默认扫描目录）
 │   ├── report-2026.pdf
 │   ├── ai-article.docx
 │   ├── vendor-news.pdf
 │   └── failed-doc.pdf.error.md     # ⭐️ 转换失败的错误日志
 │
-├── archive/                        # ⭐️ 已归档文档（按年月组织）
+├── archive/                        # ⭐️ 已归档文档（固定位置）
 │   └── 2026/
-│       └── 03/
+│       └── 04/
 │           ├── report-2026.pdf
 │           ├── ai-article.docx
 │           └── vendor-news.pdf
 │
-├── converted/                      # ⭐️ 转换后的 Markdown（按年月组织）
+├── converted/                      # ⭐️ 转换后的 Markdown（固定位置）
 │   └── 2026/
-│       └── 03/
+│       └── 04/
 │           ├── report-2026.md      # ⭐️ 含 frontmatter 元数据
 │           ├── ai-article.md
 │           └── vendor-news.md
 │
-├── intelligence/                   # 情报卡片输出（按领域和年月组织）
+├── intelligence/                   # 情报卡片输出（默认输出目录）
 │   ├── _index.base                 # ⭐️ Obsidian Bases 统一索引文件
 │   ├── Threat-Landscape/
 │   │   └── 2026/
@@ -176,8 +179,8 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 │   ├── Policy-Regulation/
 │   └── Capital-Investment/
 │
-└── .intel/                         # ⭐️ 管理目录（隐藏）
-    └── state.json                  # ⭐️ 状态文件 v2.0
+└── .intel/                         # ⭐️ 管理目录（固定位置）
+    └── state.json                  # ⭐️ 状态文件
 ```
 
 ### 目录说明
@@ -263,8 +266,9 @@ intel-pull 采集 → inbox/*.md frontmatter → 预处理转换 → converted/*
 
 ```
 参数解析：
-- source = --source 参数值
-- output = --output 参数值或当前目录
+- root_dir = 当前目录（固定）
+- source_dir = --source 参数或 ./inbox
+- output_dir = --output 参数或 ./intelligence
 - review_action = --review 参数值（list/approve/reject 或无）
 - review_target = 审核目标 pending_id
 - review_reason = --reason 参数值
@@ -331,9 +335,14 @@ intel-pull 采集 → inbox/*.md frontmatter → 预处理转换 → converted/*
 ### 步骤 2：初始化路径
 
 ```
-source_dir = --source 参数或当前目录
-output_dir = --output 参数或 source_dir 或当前目录
-intel_dir = output_dir/.intel/
+root_dir = 当前目录（固定）
+source_dir = --source 参数或 ./inbox
+output_dir = --output 参数或 ./intelligence
+
+# 固定位置（始终在 root_dir 下）
+archive_dir = root_dir/archive/YYYY/MM/
+converted_dir = root_dir/converted/YYYY/MM/
+intel_dir = root_dir/.intel/
 state_file = intel_dir/state.json
 ```
 
@@ -373,24 +382,23 @@ Done in 262ms using pnpm v10.33.0
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx preprocess/index.ts --source {source_dir}
+pnpm exec tsx preprocess/index.ts --source {source_dir} --root {root_dir}
 ```
 
 **输出位置**：
-- 归档文件：`{source_dir}/archive/YYYY/MM/`
-- 转换文件：`{source_dir}/converted/YYYY/MM/`（含 frontmatter 元数据）
-- 错误日志：`{source_dir}/inbox/{filename}.error.md`（转换失败时）
+- 归档文件：`{root_dir}/archive/YYYY/MM/`
+- 转换文件：`{root_dir}/converted/YYYY/MM/`（含 frontmatter 元数据）
+- 错误日志：`{source_dir}/{filename}.error.md`（转换失败时）
 
 #### 5.2 预处理逻辑
 
 脚本会自动：
-1. 优先扫描 `inbox/` 目录
-2. 兼容扫描根目录（跳过 `inbox/`、`archive/`、`converted/`）
-3. 检查已知源文件哈希，跳过重复文件
-4. 执行格式转换和噪声清洗
-5. 归档源文件到 `archive/YYYY/MM/`
-6. **转换成功**：生成 Markdown 文件到 `converted/YYYY/MM/`，frontmatter 包含元数据
-7. **转换失败**：源文件保留在 `inbox/`，生成 `.error.md` 错误日志
+1. 扫描 `--source` 指定的目录（默认：`./inbox`）
+2. 检查已知源文件哈希，跳过重复文件
+3. 执行格式转换和噪声清洗
+4. 归档源文件到 `{root_dir}/archive/YYYY/MM/`
+5. **转换成功**：生成 Markdown 文件到 `{root_dir}/converted/YYYY/MM/`，frontmatter 包含元数据
+6. **转换失败**：源文件保留在源目录，生成 `.error.md` 错误日志
 
 #### 5.3 转换失败处理
 
@@ -457,8 +465,8 @@ glob pattern: {source_dir}/converted/**/*.md
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
 pnpm exec tsx preprocess/scan-queue.ts \
-  --source {source_dir} \
-  --state {source_dir}/.intel/state.json \
+  --source {root_dir} \
+  --state {root_dir}/.intel/state.json \
   --output json
 ```
 
