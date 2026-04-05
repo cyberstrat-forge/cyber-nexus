@@ -203,8 +203,8 @@ async function scanCards(
     const domainPath = join(outputDir, domain);
 
     try {
-      // 使用 glob 查找所有 markdown 文件
-      const files = await glob('*.md', { cwd: domainPath, absolute: false });
+      // 使用 glob 递归查找所有 markdown 文件（支持年月子目录结构）
+      const files = await glob('**/*.md', { cwd: domainPath, absolute: false });
 
       for (const file of files) {
         const filePath = join(domainPath, file);

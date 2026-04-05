@@ -151,52 +151,55 @@ function migrateDirectory(
 
     // 构建目标路径
     const targetDir = path.join(domainDir, dateInfo.year, dateInfo.month);
-    const targetPath = path.join(targetDir, entry.name);
+    let targetPath = path.join(targetDir, entry.name);
+    let conflictReason: string | undefined;
 
-    // 检查目标文件是否已存在
+    // 检查目标文件是否已存在（冲突处理）
     if (fs.existsSync(targetPath)) {
-      // 追加序号
       const ext = path.extname(entry.name);
       const baseName = path.basename(entry.name, ext);
       let seq = 2;
-      let newTargetPath: string;
       do {
-        newTargetPath = path.join(targetDir, `${baseName}-${seq}${ext}`);
+        targetPath = path.join(targetDir, `${baseName}-${seq}${ext}`);
         seq++;
-      } while (fs.existsSync(newTargetPath));
-
-      if (!dryRun) {
-        // 创建目标目录
-        if (!fs.existsSync(targetDir)) {
-          fs.mkdirSync(targetDir, { recursive: true });
-        }
-        fs.renameSync(sourcePath, newTargetPath);
-      }
-      result.migrated++;
-      result.details.push({
-        source: sourcePath,
-        target: newTargetPath,
-        status: 'migrated',
-        reason: '目标文件已存在，追加序号',
-      });
-      continue;
+      } while (fs.existsSync(targetPath));
+      conflictReason = '目标文件已存在，追加序号';
     }
 
     // 执行迁移
     if (!dryRun) {
-      // 创建目标目录
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
+      try {
+        // 创建目标目录
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        fs.renameSync(sourcePath, targetPath);
+        result.migrated++;
+        result.details.push({
+          source: sourcePath,
+          target: targetPath,
+          status: 'migrated',
+          reason: conflictReason,
+        });
+      } catch (err) {
+        result.skippedError++;
+        result.details.push({
+          source: sourcePath,
+          target: targetPath,
+          status: 'error',
+          reason: err instanceof Error ? err.message : String(err),
+        });
       }
-      fs.renameSync(sourcePath, targetPath);
+    } else {
+      // 模拟运行，直接计数
+      result.migrated++;
+      result.details.push({
+        source: sourcePath,
+        target: targetPath,
+        status: 'migrated',
+        reason: conflictReason,
+      });
     }
-
-    result.migrated++;
-    result.details.push({
-      source: sourcePath,
-      target: targetPath,
-      status: 'migrated',
-    });
   }
 
   return result;
