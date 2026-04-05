@@ -254,7 +254,18 @@ tags: ["geo:global", "APT", "Lazarus", "financial-sector", "malware"]
 **每张情报卡片独立生成**：
 - 独立的 `intelligence_id`：`{domain_prefix}-{YYYYMMDD}-{seq}`
 - 独立的文件名：`{YYYYMMDD}-{subject}-{feature}.md`
-- 独立写入文件：`{output}/{domain}/{filename}`
+- 独立写入文件：`{output}/{domain}/{YYYY}/{MM}/{filename}`
+
+**年月路径提取**：
+
+从 `intelligence_date`（即 `published_at`）提取年份和月份：
+- `{YYYY}` = `intelligence_date` 的年份部分
+- `{MM}` = `intelligence_date` 的月份部分（两位数，如 "03"、"04"）
+
+**日期提取优先级**：
+1. `published_at` 字段（frontmatter）
+2. `created_date` 字段（frontmatter）
+3. 文件系统日期（兜底）
 
 **文件命名规则**（详见 intelligence-output-templates skill）：
 
@@ -364,17 +375,88 @@ generated_session: "20260402-151800"
 #### 6.3 冲突检测流程
 
 ```bash
-# 检查同日期同领域文件
-glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
+# 检查同年同月同领域文件
+glob pattern: {output}/{domain}/{YYYY}/{MM}/{YYYYMMDD}-*.md
 ```
 
 对比现有文件与新情报的三要素，决定跳过或追加序号。
 
 ### 步骤 7：写入文件
 
-使用 Write 工具写入 `{output}/{domain}/{filename}`。
+使用 Write 工具写入 `{output}/{domain}/{YYYY}/{MM}/{filename}`。
+
+Write 工具会自动创建父目录。
 
 写入失败 → 重试 1 次 → 仍失败 → 记录错误信息。
+
+### 步骤 8：生成 Obsidian Bases 索引文件
+
+**生成时机**：情报卡片写入成功后
+
+**生成逻辑**：
+
+```
+对于每个有新情报卡片的领域目录：
+  检查 {output}/{domain}/_index.base 是否存在
+  如不存在 → 使用 obsidian-cli skill 创建 _index.base 文件
+  如已存在 → 跳过（保留用户自定义）
+```
+
+**使用 obsidian-cli skill**：
+
+参考 `obsidian-cli` skill 中的命令，使用 `obsidian create` 创建 Bases 文件：
+
+```bash
+obsidian create path="{output}/{domain}/_index.base" content="..."
+```
+
+**Bases 文件内容模板**：
+
+```yaml
+filters:
+  and:
+    - file.ext == "md"
+    - file.name != "_index"
+
+views:
+  - type: table
+    name: "按发布时间"
+    order:
+      - note.published_at
+    direction: DESC
+
+  - type: table
+    name: "按创建时间"
+    order:
+      - note.created_date
+    direction: DESC
+
+  - type: table
+    name: "最近 7 天新增"
+    filters:
+      note.created_date >= today() - "7 days"
+    order:
+      - note.created_date
+    direction: DESC
+
+  - type: table
+    name: "按年份分组（发布）"
+    groupBy:
+      property: note.published_at
+      direction: DESC
+```
+
+**注意事项**：
+- `_index.base` 文件命名以下划线开头，在 Obsidian 文件列表中会排在前面
+- 过滤条件排除自身，避免索引文件出现在视图中
+- 用户可自定义修改 `_index.base`，命令不会覆盖
+
+**Bases 自动更新机制**：
+
+Bases 是动态查询，每次打开时实时运行：
+- 新情报卡片创建后，打开 `_index.base` 即可见
+- 无需手动更新索引
+- Bases 文件只需创建一次
 
 ## 输出格式
 
@@ -479,6 +561,7 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 ## 最终检查清单
 
 - [ ] 发布日期已正确提取
+- [ ] 年月路径已正确生成（{YYYY}/{MM}）
 - [ ] 战略价值评估明确（true/false/null）
 - [ ] 如为 null，是否提供了 review_reason
 - [ ] 每条情报至少满足一个战略标准
@@ -490,5 +573,6 @@ glob pattern: {output}/{domain}/{YYYYMMDD}-*.md
 - [ ] 每张卡片有独立的 intelligence_id
 - [ ] 每张卡片有独立的文件名（subject-feature 格式）
 - [ ] 四组元数据字段已正确填写（核心标识 + item追溯 + 情报源追溯 + 处理状态）
-- [ ] 文件已成功写入对应领域目录
+- [ ] 文件已成功写入对应年月子目录（{domain}/{YYYY}/{MM}/）
 - [ ] 返回 JSON 包含 intelligence_ids 数组和 cards 数组
+- [ ] _index.base 文件已生成（如不存在）

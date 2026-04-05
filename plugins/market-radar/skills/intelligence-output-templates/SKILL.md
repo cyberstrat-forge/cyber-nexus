@@ -44,18 +44,45 @@ tags: ["geo:china", "business:MSSP", "APT", "ransomware"]
 
 ## 输出结构
 
-情报卡片按领域存储：
+情报卡片按领域和年月存储：
 
 ```
 {output_dir}/
 ├── Threat-Landscape/
+│   └── 2026/
+│       ├── 03/
+│       │   └── 20260301-apt-activity.md
+│       └── 04/
+│           └── 20260402-ransomware-trend.md
 ├── Industry-Analysis/
+│   └── 2025/
+│       └── 10/
+│           └── 20251013-cybersecurity-trends-2026.md
 ├── Vendor-Intelligence/
+│   └── 2026/
 ├── Emerging-Tech/
+│   └── 2026/
 ├── Customer-Market/
+│   └── 2026/
 ├── Policy-Regulation/
+│   └── 2026/
 └── Capital-Investment/
+    └── 2026/
 ```
+
+**输出路径格式**：
+
+```
+{output}/{domain}/{YYYY}/{MM}/{YYYYMMDD}-{subject}-{feature}.md
+```
+
+其中：
+- `{domain}` - 情报领域（如 Threat-Landscape）
+- `{YYYY}` - 发布年份（从 published_at 提取）
+- `{MM}` - 发布月份（从 published_at 提取）
+- `{YYYYMMDD}` - 发布日期
+- `{subject}` - 主体/对象
+- `{feature}` - 核心特征
 
 ## 领域特定模板
 
