@@ -6,6 +6,18 @@
 
 ---
 
+## [1.0.24] - 2026-04-05
+
+### 插件更新
+
+#### market-radar v1.7.3
+
+**变更**
+- intel-pull 添加 `--root` 参数，状态文件统一在项目根目录
+- 与 intel-distill 命令保持一致的路径逻辑
+
+---
+
 ## [1.0.23] - 2026-04-05
 
 ### 插件更新
@@ -396,6 +408,7 @@
 
 ---
 
+[1.0.24]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.23...v1.0.24
 [1.0.23]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.22...v1.0.23
 [1.0.22]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.21...v1.0.22
 [1.0.21]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.20...v1.0.21
