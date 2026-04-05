@@ -173,7 +173,7 @@ pnpm exec tsx pulse/index.ts --set-default {name}
 
 ## 拉取模式
 
-### 步骤 P0：检查脚本依赖
+### 步骤 P0：检查并安装脚本依赖
 
 在执行脚本前，检查 `node_modules` 是否存在：
 
@@ -181,15 +181,17 @@ pnpm exec tsx pulse/index.ts --set-default {name}
 检查 ${CLAUDE_PLUGIN_ROOT}/scripts/node_modules 目录是否存在
 ```
 
-**如果不存在**，提示用户安装依赖并退出：
+**如果不存在**，自动安装依赖：
 
-```
-⚠️  脚本依赖未安装
-
-请先安装依赖：
+```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
+```
 
-安装完成后重新执行命令。
+**输出示例**：
+```
+📦 正在安装脚本依赖...
+Done in 262ms using pnpm v10.33.0
+✅ 依赖安装完成
 ```
 
 ### 步骤 P1：检查配置文件

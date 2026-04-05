@@ -54,7 +54,7 @@ function parseFrontmatter(content: string): { data: Record<string, unknown>; con
 
 interface CardMetadata {
   title: string;
-  intelligence_date: string;
+  created_date: string;
   primary_domain: string;
 }
 
@@ -211,19 +211,19 @@ async function scanCards(
         const content = await fs.readFile(filePath, 'utf-8');
         const { data: frontmatter } = parseFrontmatter(content);
 
-        const intelDate = frontmatter.intelligence_date as string;
-        if (!intelDate) {
-          // 没有 intelligence_date 字段，跳过
+        const createdDate = frontmatter.created_date as string;
+        if (!createdDate) {
+          // 没有 created_date 字段，跳过
           continue;
         }
 
         // 检查是否在时间范围内
-        if (intelDate >= dateRange.start && intelDate <= dateRange.end) {
+        if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
           cards.push({
             path: `${domain}/${file}`,
             metadata: {
               title: (frontmatter.title as string) || file.replace('.md', ''),
-              intelligence_date: intelDate,
+              created_date: createdDate,
               primary_domain: domain
             }
           });
@@ -315,7 +315,7 @@ async function main() {
 
     // 按日期排序（倒序）
     cards.sort((a, b) => {
-      return b.metadata.intelligence_date.localeCompare(a.metadata.intelligence_date);
+      return b.metadata.created_date.localeCompare(a.metadata.created_date);
     });
 
     // 输出结果

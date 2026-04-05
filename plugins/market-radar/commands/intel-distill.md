@@ -325,7 +325,7 @@ intel_dir = output_dir/.intel/
 state_file = intel_dir/state.json
 ```
 
-### 步骤 3：检查脚本依赖
+### 步骤 3：检查并安装脚本依赖
 
 在执行脚本前，检查 `node_modules` 是否存在：
 
@@ -333,15 +333,17 @@ state_file = intel_dir/state.json
 检查 ${CLAUDE_PLUGIN_ROOT}/scripts/node_modules 目录是否存在
 ```
 
-**如果不存在**，提示用户安装依赖并退出：
+**如果不存在**，自动安装依赖：
 
-```
-⚠️  脚本依赖未安装
-
-请先安装依赖：
+```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
+```
 
-安装完成后重新执行命令。
+**输出示例**：
+```
+📦 正在安装脚本依赖...
+Done in 262ms using pnpm v10.33.0
+✅ 依赖安装完成
 ```
 
 ### 步骤 4：加载或创建状态文件
@@ -794,7 +796,7 @@ pnpm exec tsx preprocess/update-state.ts \
 
 当 `--report` 参数存在时，执行以下流程：
 
-### 步骤 R0：检查脚本依赖
+### 步骤 R0：检查并安装脚本依赖
 
 在执行脚本前，检查 `node_modules` 是否存在：
 
@@ -802,15 +804,17 @@ pnpm exec tsx preprocess/update-state.ts \
 检查 ${CLAUDE_PLUGIN_ROOT}/scripts/node_modules 目录是否存在
 ```
 
-**如果不存在**，提示用户安装依赖并退出：
+**如果不存在**，自动安装依赖：
 
-```
-⚠️  脚本依赖未安装
-
-请先安装依赖：
+```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm install
+```
 
-安装完成后重新执行命令。
+**输出示例**：
+```
+📦 正在安装脚本依赖...
+Done in 262ms using pnpm v10.33.0
+✅ 依赖安装完成
 ```
 
 ### 步骤 R1：调用扫描脚本
