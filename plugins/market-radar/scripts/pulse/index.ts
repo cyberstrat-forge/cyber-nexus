@@ -241,7 +241,8 @@ async function pullFromSource(
 
     // Determine since parameter (convert null to undefined)
     const since = mode === 'init' ? 'beginning' : (cursorState.last_fetched_at ?? undefined);
-    let cursor: string | undefined = undefined;
+    // For incremental mode, use cursor to exclude the last processed item
+    let cursor: string | undefined = mode === 'incremental' ? (cursorState.last_item_id ?? undefined) : undefined;
     let hasMore = true;
 
     while (hasMore) {
