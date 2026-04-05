@@ -198,14 +198,14 @@ Done in 262ms using pnpm v10.33.0
 
 检查配置文件是否存在：
 
-**配置文件位置**：`${CLAUDE_PLUGIN_ROOT}/.claude-plugin/pulse-sources.json`
+**配置文件位置**：`${root_dir}/.intel/pulse-sources.json`（与 state.json 同目录）
 
 **如果不存在**，显示错误提示和配置示例，退出：
 
 ```
 ⚠️  未找到情报源配置文件
 
-配置文件位置：plugins/market-radar/.claude-plugin/pulse-sources.json
+配置文件位置：.intel/pulse-sources.json
 
 请创建配置文件：
 
@@ -333,7 +333,7 @@ pnpm exec tsx pulse/index.ts --all [--output {dir}]
 
 ### 配置文件
 
-**位置**：`${CLAUDE_PLUGIN_ROOT}/.claude-plugin/pulse-sources.json`
+**位置**：`{root_dir}/.intel/pulse-sources.json`（项目根目录下，与 state.json 同目录）
 
 ```json
 {

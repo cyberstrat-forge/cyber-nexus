@@ -25,7 +25,7 @@
 
 首次使用前需要配置情报源。创建配置文件：
 
-**位置**：`plugins/market-radar/.claude-plugin/pulse-sources.json`
+**位置**：`{root_dir}/.intel/pulse-sources.json`（项目根目录下）
 
 ```json
 {
@@ -33,18 +33,14 @@
     {
       "name": "local",
       "url": "http://localhost:8000",
-      "key_ref": "CYBER_PULSE_LOCAL_KEY"
+      "api_key": "cp_live_xxx"
     }
   ],
   "default_source": "local"
 }
 ```
 
-设置环境变量：
-
-```bash
-export CYBER_PULSE_LOCAL_KEY=cp_live_xxx
-```
+> 配置文件与 `state.json` 同目录，插件升级时不会被覆盖。
 
 ### 2. 拉取情报
 

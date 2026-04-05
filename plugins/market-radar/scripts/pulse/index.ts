@@ -104,8 +104,10 @@ function prompt(rl: readline.Interface, question: string): Promise<string> {
 
 /**
  * Interactive source addition
+ *
+ * @param rootDir - Project root directory for config file location
  */
-async function interactiveAddSource(): Promise<void> {
+async function interactiveAddSource(rootDir: string): Promise<void> {
   const rl = createReadlineInterface();
 
   try {
@@ -135,7 +137,7 @@ async function interactiveAddSource(): Promise<void> {
     // Load existing config or create new one
     let config: PulseSourcesConfig;
     try {
-      config = loadConfig();
+      config = loadConfig(rootDir);
     } catch (error) {
       // Only create new config if file doesn't exist
       // Other errors (parse error, validation error) should be thrown
@@ -159,7 +161,7 @@ async function interactiveAddSource(): Promise<void> {
         config.default_source = name;
       }
 
-      saveConfig(config);
+      saveConfig(config, rootDir);
       console.log('');
       console.log(`成功添加源: ${name}`);
     } catch (error) {
@@ -326,7 +328,7 @@ async function executePull(options: PullOptions): Promise<PullResult> {
   };
 
   // Load config
-  const config = loadConfig();
+  const config = loadConfig(rootDir);
 
   // Determine sources to pull
   const sources: PulseSource[] = options.all
@@ -413,7 +415,7 @@ function generateReport(result: PullResult): string {
   };
 
   // Report each source
-  const config = loadConfig(); // Load config once outside the loop
+  const config = loadConfig(result.root_dir); // Load config once outside the loop
   for (const sourceResult of result.sources) {
     try {
       const source = getSource(config, sourceResult.source);
@@ -443,18 +445,34 @@ function generateReport(result: PullResult): string {
         lines.push(`• 错误: ${sourceResult.error}`);
         lines.push('');
       }
-    } catch {
-      // Source might have been deleted from config
-      lines.push(`源: ${sourceResult.source} (配置已删除)`);
-      lines.push('');
-      if (sourceResult.success) {
-        lines.push('【拉取统计】');
-        lines.push(`• 新增情报: ${sourceResult.count} 条`);
+    } catch (error) {
+      // Only handle SOURCE_NOT_FOUND as "deleted", log unexpected errors
+      if (error instanceof PulseError && error.code === 'SOURCE_NOT_FOUND') {
+        lines.push(`源: ${sourceResult.source} (配置已删除)`);
         lines.push('');
+        if (sourceResult.success) {
+          lines.push('【拉取统计】');
+          lines.push(`• 新增情报: ${sourceResult.count} 条`);
+          lines.push('');
+        } else {
+          lines.push('【拉取失败】');
+          lines.push(`• 错误: ${sourceResult.error}`);
+          lines.push('');
+        }
       } else {
-        lines.push('【拉取失败】');
-        lines.push(`• 错误: ${sourceResult.error}`);
+        // Unexpected error - log and show basic info
+        console.error(`[pulse] 生成报告时意外错误 for ${sourceResult.source}:`, error);
+        lines.push(`源: ${sourceResult.source} (报告生成错误)`);
         lines.push('');
+        if (sourceResult.success) {
+          lines.push('【拉取统计】');
+          lines.push(`• 新增情报: ${sourceResult.count} 条`);
+          lines.push('');
+        } else {
+          lines.push('【拉取失败】');
+          lines.push(`• 错误: ${sourceResult.error}`);
+          lines.push('');
+        }
       }
     }
   }
@@ -492,31 +510,44 @@ program
     // Check dependencies
     checkDependencies();
 
+    // Resolve root directory
+    const rootDir = options.root ? path.resolve(options.root) : process.cwd();
+
+    // Validate root directory
+    if (!fs.existsSync(rootDir)) {
+      console.error(`错误: 项目根目录不存在: ${rootDir}`);
+      process.exit(1);
+    }
+    if (!fs.statSync(rootDir).isDirectory()) {
+      console.error(`错误: 指定路径不是目录: ${rootDir}`);
+      process.exit(1);
+    }
+
     try {
       // Source management modes
       if (options.listSources) {
-        const config = loadConfig();
+        const config = loadConfig(rootDir);
         console.log(formatSourcesList(config));
         return;
       }
 
       if (options.addSource) {
-        await interactiveAddSource();
+        await interactiveAddSource(rootDir);
         return;
       }
 
       if (options.removeSource) {
-        const config = loadConfig();
+        const config = loadConfig(rootDir);
         removeSource(config, options.removeSource);
-        saveConfig(config);
+        saveConfig(config, rootDir);
         console.log(`成功删除源: ${options.removeSource}`);
         return;
       }
 
       if (options.setDefault) {
-        const config = loadConfig();
+        const config = loadConfig(rootDir);
         setDefaultSource(config, options.setDefault);
-        saveConfig(config);
+        saveConfig(config, rootDir);
         console.log(`已设置默认源: ${options.setDefault}`);
         return;
       }

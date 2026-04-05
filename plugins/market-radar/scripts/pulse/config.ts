@@ -20,7 +20,8 @@ import {
 // ==================== Constants ====================
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PLUGIN_ROOT = path.resolve(__dirname, '..', '..');
+/** Plugin root directory (for legacy config path checks) */
+export const PLUGIN_ROOT = path.resolve(__dirname, '..', '..');
 const SCHEMAS_DIR = path.resolve(PLUGIN_ROOT, 'schemas');
 
 /** Default config file name */
@@ -59,12 +60,14 @@ function getValidator(): ReturnType<Ajv['compile']> {
 /**
  * Get default config file path
  *
- * The config file is stored in .claude-plugin/ directory at plugin root.
+ * The config file is stored in .intel/ directory at project root (same as state.json).
+ * This ensures the config persists across plugin upgrades.
  *
+ * @param rootDir - Project root directory
  * @returns Absolute path to the default config file
  */
-export function getDefaultConfigPath(): string {
-  return path.join(PLUGIN_ROOT, '.claude-plugin', CONFIG_FILENAME);
+export function getDefaultConfigPath(rootDir: string): string {
+  return path.join(rootDir, '.intel', CONFIG_FILENAME);
 }
 
 /**
@@ -137,14 +140,35 @@ export function validateConfig(config: unknown): asserts config is PulseSourcesC
 /**
  * Load and validate config from file
  *
- * @param configPath - Optional path to config file (defaults to .claude-plugin/pulse-sources.json)
+ * @param rootDir - Project root directory (required for default path)
+ * @param configPath - Optional path to config file (defaults to .intel/pulse-sources.json)
  * @returns Validated config object
  * @throws {PulseError} If file not found or validation fails
  */
-export function loadConfig(configPath?: string): PulseSourcesConfig {
-  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath();
+export function loadConfig(rootDir: string, configPath?: string): PulseSourcesConfig {
+  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath(rootDir);
 
   if (!fs.existsSync(resolvedPath)) {
+    // Check for old config location and provide migration guidance
+    const oldConfigPath = path.join(PLUGIN_ROOT, '.claude-plugin', CONFIG_FILENAME);
+    if (fs.existsSync(oldConfigPath)) {
+      throw new PulseError(
+        'CONFIG_NOT_FOUND',
+        `配置文件位置已变更！
+
+旧位置: ${oldConfigPath} (已废弃)
+新位置: ${resolvedPath}
+
+请迁移配置文件:
+  mkdir -p ${path.dirname(resolvedPath)}
+  mv "${oldConfigPath}" "${resolvedPath}"
+
+或手动创建新配置文件:
+${generateConfigNotFoundMessage(resolvedPath)}`,
+        { newPath: resolvedPath, oldPath: oldConfigPath }
+      );
+    }
+
     throw new PulseError(
       'CONFIG_NOT_FOUND',
       generateConfigNotFoundMessage(resolvedPath),
@@ -230,15 +254,25 @@ export function hasApiKey(source: PulseSource): boolean {
  * Save config to file
  *
  * @param config - Config object to save
+ * @param rootDir - Project root directory (required for default path)
  * @param configPath - Optional path to config file
  */
-export function saveConfig(config: PulseSourcesConfig, configPath?: string): void {
-  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath();
+export function saveConfig(config: PulseSourcesConfig, rootDir: string, configPath?: string): void {
+  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath(rootDir);
   const dir = path.dirname(resolvedPath);
 
   // Ensure directory exists
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new PulseError(
+        'CONFIG_PARSE_ERROR',
+        `无法创建配置目录 ${dir}: ${message}`,
+        { dir, error }
+      );
+    }
   }
 
   const content = JSON.stringify(config, null, 2) + '\n';
