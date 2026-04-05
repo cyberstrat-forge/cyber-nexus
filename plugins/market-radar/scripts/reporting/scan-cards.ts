@@ -208,25 +208,38 @@ async function scanCards(
 
       for (const file of files) {
         const filePath = join(domainPath, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        const { data: frontmatter } = parseFrontmatter(content);
 
-        const createdDate = frontmatter.created_date as string;
-        if (!createdDate) {
-          // 没有 created_date 字段，跳过
-          continue;
-        }
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          const { data: frontmatter } = parseFrontmatter(content);
 
-        // 检查是否在时间范围内
-        if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
-          cards.push({
-            path: `${domain}/${file}`,
-            metadata: {
-              title: (frontmatter.title as string) || file.replace('.md', ''),
-              created_date: createdDate,
-              primary_domain: domain
-            }
-          });
+          const createdDate = frontmatter.created_date as string;
+          if (!createdDate) {
+            // 没有 created_date 字段，跳过
+            continue;
+          }
+
+          // 验证日期格式
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(createdDate)) {
+            console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
+            continue;
+          }
+
+          // 检查是否在时间范围内
+          if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
+            cards.push({
+              path: `${domain}/${file}`,
+              metadata: {
+                title: (frontmatter.title as string) || file.replace('.md', ''),
+                created_date: createdDate,
+                primary_domain: domain
+              }
+            });
+          }
+        } catch (fileErr) {
+          // 单个文件读取失败，记录警告但继续处理其他文件
+          const errMsg = fileErr instanceof Error ? fileErr.message : String(fileErr);
+          console.warn(`Warning: Failed to process file ${filePath}: ${errMsg}`);
         }
       }
     } catch (error) {

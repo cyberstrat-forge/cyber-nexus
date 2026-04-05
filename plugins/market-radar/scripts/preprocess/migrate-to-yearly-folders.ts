@@ -91,7 +91,19 @@ function migrateDirectory(
     return result;
   }
 
-  const entries = fs.readdirSync(domainDir, { withFileTypes: true });
+  // 读取目录内容（包装错误处理）
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(domainDir, { withFileTypes: true });
+  } catch (err) {
+    result.skippedError++;
+    result.details.push({
+      source: domainDir,
+      status: 'error',
+      reason: `无法读取目录: ${err instanceof Error ? err.message : String(err)}`,
+    });
+    return result;
+  }
 
   for (const entry of entries) {
     // 递归处理子目录中的文件
@@ -263,23 +275,29 @@ function printReport(results: Map<string, MigrationResult>, dryRun: boolean) {
 }
 
 function main() {
-  const { directory, dryRun } = parseArgs();
+  try {
+    const { directory, dryRun } = parseArgs();
 
-  console.log(`正在扫描目录: ${directory}`);
-  if (dryRun) {
-    console.log('（模拟运行，不实际移动文件）');
+    console.log(`正在扫描目录: ${directory}`);
+    if (dryRun) {
+      console.log('（模拟运行，不实际移动文件）');
+    }
+    console.log();
+
+    const results = new Map<string, MigrationResult>();
+
+    for (const domain of DOMAINS) {
+      const domainDir = path.join(directory, domain);
+      const result = migrateDirectory(domainDir, domain, dryRun);
+      results.set(domain, result);
+    }
+
+    printReport(results, dryRun);
+  } catch (err) {
+    console.error('迁移脚本执行失败:');
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
   }
-  console.log();
-
-  const results = new Map<string, MigrationResult>();
-
-  for (const domain of DOMAINS) {
-    const domainDir = path.join(directory, domain);
-    const result = migrateDirectory(domainDir, domain, dryRun);
-    results.set(domain, result);
-  }
-
-  printReport(results, dryRun);
 }
 
 main();
