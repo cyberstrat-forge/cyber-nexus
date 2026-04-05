@@ -27,12 +27,10 @@ import {
   PreprocessResult,
   PreprocessOptions,
   BatchResult,
-  SupportedFormat,
   PreprocessErrorCode,
 } from './types';
-import { convertToMarkdown, isSupportedFormat, isPandocAvailable, getAvailablePdfConverter, isPdfToTextAvailable, isPyMuPdfAvailable } from './convert';
+import { convertToMarkdown, isSupportedFormat, isPandocAvailable, getAvailablePdfConverter } from './convert';
 import { cleanMarkdown } from './clean';
-import { calculateStats } from './cleaners/types';
 import { calculateHash } from '../utils/hash';
 import { parseFrontmatter, generateFrontmatter as generateYamlFrontmatter } from '../utils/frontmatter';
 
@@ -374,9 +372,9 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
 function processCyberPulseFile(
   sourcePath: string,
   convertedDir: string,
-  sourceDir: string,
+  _sourceDir: string,
   knownFiles: Set<string>,
-  dateRef: Date
+  _dateRef: Date
 ): PreprocessResult {
   const filename = path.basename(sourcePath);
 
@@ -495,7 +493,7 @@ function scanDirectory(sourceDir: string): string[] {
   const files: string[] = [];
   const excludeDirs = new Set(['inbox', 'archive', 'converted', 'intelligence', '.intel']);
 
-  function scan(dir: string, isRoot: boolean = false) {
+  function scan(dir: string, _isRoot: boolean = false) {
     if (!fs.existsSync(dir)) {
       return;
     }
@@ -556,9 +554,9 @@ async function processFile(
   archiveDir: string,
   convertedDir: string,
   sourceDir: string,
-  currentVersion: string,
+  _currentVersion: string,
   knownHashes: Map<string, string>,
-  dateRef: Date
+  _dateRef: Date
 ): Promise<PreprocessResult> {
   // Calculate source hash for deduplication
   const sourceHash = calculateHash(sourcePath);
@@ -659,7 +657,6 @@ async function processFile(
   }
 
   // Phase 4: Archive source file (only after successful conversion)
-  const relativeArchivePath = path.relative(sourceDir, archivePath);
 
   // Ensure archive directory exists
   try {
