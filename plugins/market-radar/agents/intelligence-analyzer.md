@@ -396,19 +396,14 @@ Write 工具会自动创建父目录。
 **生成逻辑**：
 
 ```
-对于每个有新情报卡片的领域目录：
-  检查 {output}/{domain}/_index.base 是否存在
-  如不存在 → 使用 obsidian-cli skill 创建 _index.base 文件
-  如已存在 → 跳过（保留用户自定义）
+检查 {output}/_index.base 是否存在
+如不存在 → 使用 Write 工具创建统一索引文件
+如已存在 → 跳过（保留用户自定义）
 ```
 
-**使用 obsidian-cli skill**：
+**使用 Write 工具**：
 
-参考 `obsidian-cli` skill 中的命令，使用 `obsidian create` 创建 Bases 文件：
-
-```bash
-obsidian create path="{output}/{domain}/_index.base" content="..."
-```
+直接使用 Write 工具创建 `{output}/_index.base` 文件。
 
 **Bases 文件内容模板**：
 
@@ -420,36 +415,87 @@ filters:
 
 views:
   - type: table
-    name: "按发布时间"
+    name: "全部情报"
     order:
-      - note.published_at
+      - created_date
     direction: DESC
+    columns:
+      - file.link
+      - file.name
+      - created_date
+      - primary_domain
+      - source_name
 
   - type: table
-    name: "按创建时间"
-    order:
-      - note.created_date
-    direction: DESC
-
-  - type: table
-    name: "最近 7 天新增"
-    filters:
-      note.created_date >= today() - "7 days"
-    order:
-      - note.created_date
-    direction: DESC
-
-  - type: table
-    name: "按年份分组（发布）"
+    name: "最近7天-按创建时间"
+    filters: created_date >= today() - "7d"
     groupBy:
-      property: note.published_at
+      property: primary_domain
       direction: DESC
+    order:
+      - created_date
+    direction: DESC
+    columns:
+      - file.link
+      - file.name
+      - created_date
+      - primary_domain
+      - source_name
+
+  - type: table
+    name: "最近7天-按发布时间"
+    filters: published_at >= today() - "7d"
+    groupBy:
+      property: primary_domain
+      direction: DESC
+    order:
+      - published_at
+    direction: DESC
+    columns:
+      - file.link
+      - file.name
+      - published_at
+      - primary_domain
+      - source_name
+
+  - type: table
+    name: "最近30天-按创建时间"
+    filters: created_date >= today() - "30d"
+    groupBy:
+      property: primary_domain
+      direction: DESC
+    order:
+      - created_date
+    direction: DESC
+    columns:
+      - file.link
+      - file.name
+      - created_date
+      - primary_domain
+      - source_name
+
+  - type: table
+    name: "最近30天-按发布时间"
+    filters: published_at >= today() - "30d"
+    groupBy:
+      property: primary_domain
+      direction: DESC
+    order:
+      - published_at
+    direction: DESC
+    columns:
+      - file.link
+      - file.name
+      - published_at
+      - primary_domain
+      - source_name
 ```
 
 **注意事项**：
 - `_index.base` 文件命名以下划线开头，在 Obsidian 文件列表中会排在前面
 - 过滤条件排除自身，避免索引文件出现在视图中
 - 用户可自定义修改 `_index.base`，命令不会覆盖
+- 统一索引支持跨领域浏览，便于日常监控和报告撰写
 
 **Bases 自动更新机制**：
 
