@@ -20,7 +20,6 @@ import { fileURLToPath } from 'url';
 import {
   PullOptions,
   PullResult,
-  PullSourceResult,
   PullSourceResultSuccess,
   PullSourceResultFailure,
   PulseSource,
@@ -97,7 +96,7 @@ function createReadlineInterface(): readline.Interface {
  */
 function prompt(rl: readline.Interface, question: string): Promise<string> {
   return new Promise((resolve) => {
-    rl.question(question, (answer) => {
+    rl.question(question, (answer: string) => {
       resolve(answer.trim());
     });
   });

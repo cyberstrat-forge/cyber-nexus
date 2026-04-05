@@ -100,8 +100,8 @@ function collectKnownFiles(sourceDir: string): Set<string> {
   let years: string[];
   try {
     years = fs.readdirSync(convertedBase, { withFileTypes: true })
-      .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
-      .map(e => e.name);
+      .filter((e: fs.Dirent) => e.isDirectory() && /^\d{4}$/.test(e.name))
+      .map((e: fs.Dirent) => e.name);
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.warn(`Warning: Cannot read converted directory ${convertedBase}: ${errMsg}`);
@@ -112,8 +112,8 @@ function collectKnownFiles(sourceDir: string): Set<string> {
     let months: string[];
     try {
       months = fs.readdirSync(path.join(convertedBase, year), { withFileTypes: true })
-        .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
-        .map(e => e.name);
+        .filter((e: fs.Dirent) => e.isDirectory() && /^\d{2}$/.test(e.name))
+        .map((e: fs.Dirent) => e.name);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       console.warn(`Warning: Cannot read year directory ${year}: ${errMsg}`);
@@ -125,8 +125,8 @@ function collectKnownFiles(sourceDir: string): Set<string> {
       let files: string[];
       try {
         files = fs.readdirSync(monthDir, { withFileTypes: true })
-          .filter(e => e.isFile() && e.name.endsWith('.md'))
-          .map(e => e.name);
+          .filter((e: fs.Dirent) => e.isFile() && e.name.endsWith('.md'))
+          .map((e: fs.Dirent) => e.name);
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.warn(`Warning: Cannot read month directory ${monthDir}: ${errMsg}`);
@@ -309,8 +309,8 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
   let years: string[];
   try {
     years = fs.readdirSync(convertedBase, { withFileTypes: true })
-      .filter(e => e.isDirectory() && /^\d{4}$/.test(e.name))
-      .map(e => e.name);
+      .filter((e: fs.Dirent) => e.isDirectory() && /^\d{4}$/.test(e.name))
+      .map((e: fs.Dirent) => e.name);
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.warn(`Warning: Cannot read converted directory ${convertedBase}: ${errMsg}`);
@@ -321,8 +321,8 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
     let months: string[];
     try {
       months = fs.readdirSync(path.join(convertedBase, year), { withFileTypes: true })
-        .filter(e => e.isDirectory() && /^\d{2}$/.test(e.name))
-        .map(e => e.name);
+        .filter((e: fs.Dirent) => e.isDirectory() && /^\d{2}$/.test(e.name))
+        .map((e: fs.Dirent) => e.name);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       console.warn(`Warning: Cannot read year directory ${year}: ${errMsg}`);
@@ -334,8 +334,8 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
       let files: string[];
       try {
         files = fs.readdirSync(monthDir, { withFileTypes: true })
-          .filter(e => e.isFile() && e.name.endsWith('.md'))
-          .map(e => e.name);
+          .filter((e: fs.Dirent) => e.isFile() && e.name.endsWith('.md'))
+          .map((e: fs.Dirent) => e.name);
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.warn(`Warning: Cannot read month directory ${monthDir}: ${errMsg}`);
