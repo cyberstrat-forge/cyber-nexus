@@ -105,8 +105,10 @@ function prompt(rl: readline.Interface, question: string): Promise<string> {
 
 /**
  * Interactive source addition
+ *
+ * @param rootDir - Project root directory for config file location
  */
-async function interactiveAddSource(): Promise<void> {
+async function interactiveAddSource(rootDir: string): Promise<void> {
   const rl = createReadlineInterface();
 
   try {
@@ -136,7 +138,7 @@ async function interactiveAddSource(): Promise<void> {
     // Load existing config or create new one
     let config: PulseSourcesConfig;
     try {
-      config = loadConfig();
+      config = loadConfig(rootDir);
     } catch (error) {
       // Only create new config if file doesn't exist
       // Other errors (parse error, validation error) should be thrown
@@ -160,7 +162,7 @@ async function interactiveAddSource(): Promise<void> {
         config.default_source = name;
       }
 
-      saveConfig(config);
+      saveConfig(config, rootDir);
       console.log('');
       console.log(`成功添加源: ${name}`);
     } catch (error) {
@@ -327,7 +329,7 @@ async function executePull(options: PullOptions): Promise<PullResult> {
   };
 
   // Load config
-  const config = loadConfig();
+  const config = loadConfig(rootDir);
 
   // Determine sources to pull
   const sources: PulseSource[] = options.all
@@ -414,7 +416,7 @@ function generateReport(result: PullResult): string {
   };
 
   // Report each source
-  const config = loadConfig(); // Load config once outside the loop
+  const config = loadConfig(result.root_dir); // Load config once outside the loop
   for (const sourceResult of result.sources) {
     try {
       const source = getSource(config, sourceResult.source);
@@ -493,31 +495,34 @@ program
     // Check dependencies
     checkDependencies();
 
+    // Resolve root directory
+    const rootDir = options.root ? path.resolve(options.root) : process.cwd();
+
     try {
       // Source management modes
       if (options.listSources) {
-        const config = loadConfig();
+        const config = loadConfig(rootDir);
         console.log(formatSourcesList(config));
         return;
       }
 
       if (options.addSource) {
-        await interactiveAddSource();
+        await interactiveAddSource(rootDir);
         return;
       }
 
       if (options.removeSource) {
-        const config = loadConfig();
+        const config = loadConfig(rootDir);
         removeSource(config, options.removeSource);
-        saveConfig(config);
+        saveConfig(config, rootDir);
         console.log(`成功删除源: ${options.removeSource}`);
         return;
       }
 
       if (options.setDefault) {
-        const config = loadConfig();
+        const config = loadConfig(rootDir);
         setDefaultSource(config, options.setDefault);
-        saveConfig(config);
+        saveConfig(config, rootDir);
         console.log(`已设置默认源: ${options.setDefault}`);
         return;
       }

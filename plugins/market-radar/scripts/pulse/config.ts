@@ -59,12 +59,14 @@ function getValidator(): ReturnType<Ajv['compile']> {
 /**
  * Get default config file path
  *
- * The config file is stored in .claude-plugin/ directory at plugin root.
+ * The config file is stored in .intel/ directory at project root (same as state.json).
+ * This ensures the config persists across plugin upgrades.
  *
+ * @param rootDir - Project root directory
  * @returns Absolute path to the default config file
  */
-export function getDefaultConfigPath(): string {
-  return path.join(PLUGIN_ROOT, '.claude-plugin', CONFIG_FILENAME);
+export function getDefaultConfigPath(rootDir: string): string {
+  return path.join(rootDir, '.intel', CONFIG_FILENAME);
 }
 
 /**
@@ -137,12 +139,13 @@ export function validateConfig(config: unknown): asserts config is PulseSourcesC
 /**
  * Load and validate config from file
  *
- * @param configPath - Optional path to config file (defaults to .claude-plugin/pulse-sources.json)
+ * @param rootDir - Project root directory (required for default path)
+ * @param configPath - Optional path to config file (defaults to .intel/pulse-sources.json)
  * @returns Validated config object
  * @throws {PulseError} If file not found or validation fails
  */
-export function loadConfig(configPath?: string): PulseSourcesConfig {
-  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath();
+export function loadConfig(rootDir: string, configPath?: string): PulseSourcesConfig {
+  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath(rootDir);
 
   if (!fs.existsSync(resolvedPath)) {
     throw new PulseError(
@@ -230,10 +233,11 @@ export function hasApiKey(source: PulseSource): boolean {
  * Save config to file
  *
  * @param config - Config object to save
+ * @param rootDir - Project root directory (required for default path)
  * @param configPath - Optional path to config file
  */
-export function saveConfig(config: PulseSourcesConfig, configPath?: string): void {
-  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath();
+export function saveConfig(config: PulseSourcesConfig, rootDir: string, configPath?: string): void {
+  const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath(rootDir);
   const dir = path.dirname(resolvedPath);
 
   // Ensure directory exists
