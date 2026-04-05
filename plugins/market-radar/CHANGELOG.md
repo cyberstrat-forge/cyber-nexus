@@ -2,6 +2,18 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.7.4] - 2026-04-05
+
+### 修复
+
+- **TypeScript 类型定义**：修复 tsconfig 缺少 `types: ["node"]` 导致的类型错误
+- **配置文件位置**：`pulse-sources.json` 移至项目根目录 `.intel/`，避免插件升级时被覆盖
+- **错误处理增强**：
+  - 添加 `rootDir` 参数验证
+  - 包裹 `mkdirSync` 错误处理
+  - `generateReport` 区分错误类型
+  - 检测旧配置位置并提供迁移引导
+
 ## [1.7.3] - 2026-04-05
 
 ### 变更
@@ -556,6 +568,7 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.7.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.0...v1.7.1
