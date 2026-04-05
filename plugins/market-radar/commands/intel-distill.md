@@ -159,11 +159,22 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 │           ├── ai-article.md
 │           └── vendor-news.md
 │
-├── intelligence/                   # 情报卡片输出
-│   ├── threat-intelligence/
-│   ├── market-trends/
-│   ├── technology-innovation/
-│   └── ...
+├── intelligence/                   # 情报卡片输出（按领域和年月组织）
+│   ├── Threat-Landscape/
+│   │   └── 2026/
+│   │       ├── 03/
+│   │       │   └── 20260301-apt-activity.md
+│   │       └── 04/
+│   │           └── 20260402-ransomware-trend.md
+│   ├── Industry-Analysis/
+│   │   └── 2026/
+│   │       └── 04/
+│   │           └── _index.base     # ⭐️ Obsidian Bases 索引文件
+│   ├── Vendor-Intelligence/
+│   ├── Emerging-Tech/
+│   ├── Customer-Market/
+│   ├── Policy-Regulation/
+│   └── Capital-Investment/
 │
 └── .intel/                         # ⭐️ 管理目录（隐藏）
     └── state.json                  # ⭐️ 状态文件 v2.0
@@ -177,7 +188,8 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 | `inbox/*.error.md` | 转换失败的错误日志 | `{filename}.error.md` | ✅ 可见 |
 | `archive/YYYY/MM/` | 已归档文档目录 | 保持原名 | ✅ 可见 |
 | `converted/YYYY/MM/` | 转换后的 Markdown（含 frontmatter） | 保持原名（仅改扩展名） | ✅ 可见 |
-| `intelligence/` | 情报卡片输出 | `{YYYYMMDD}-{subject}-{feature}.md` | ✅ 可见 |
+| `intelligence/{domain}/YYYY/MM/` | 情报卡片（按领域和年月组织） | `{YYYYMMDD}-{subject}-{feature}.md` | ✅ 可见 |
+| `intelligence/{domain}/_index.base` | Obsidian Bases 索引文件 | `_index.base` | ✅ 可见 |
 | `.intel/` | 管理目录 | - | ❌ 隐藏 |
 
 ### 转换文件格式（v3.0）
