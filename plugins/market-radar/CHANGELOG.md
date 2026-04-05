@@ -2,6 +2,19 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.7.1] - 2026-04-05
+
+### 变更
+
+- **Obsidian Bases 索引位置**：从各领域目录移至 intelligence 根目录，实现跨领域统一浏览
+- **Bases 视图优化**：新增 5 个视图（全部情报、最近7天/30天按创建/发布时间），支持领域分组
+- **Frontmatter 模板清理**：删除分隔注释块，保留干净的属性定义
+
+### 修复
+
+- **scan-cards.ts**：使用递归 glob pattern 支持年月子目录扫描
+- **migrate-to-yearly-folders.ts**：多层错误处理增强健壮性
+
 ## [1.7.0] - 2026-04-05
 
 ### 新增
