@@ -262,7 +262,7 @@ async function pullFromSource(
 
     return {
       success: true,
-      count: items.length,
+      count: files.length,  // Actual files written (excluding skipped)
       lastFetchedAt,
       lastItemId,
       files,
