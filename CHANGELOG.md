@@ -6,6 +6,19 @@
 
 ---
 
+## [1.0.25] - 2026-04-05
+
+### 插件更新
+
+#### market-radar v1.7.4
+
+**修复**
+- TypeScript 类型定义：添加 `types: ["node"]` 到 tsconfig
+- 配置文件位置：`pulse-sources.json` 移至项目根目录，避免升级覆盖
+- 错误处理：rootDir 验证、mkdirSync 错误处理、迁移引导
+
+---
+
 ## [1.0.24] - 2026-04-05
 
 ### 插件更新
@@ -408,6 +421,7 @@
 
 ---
 
+[1.0.25]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.24...v1.0.25
 [1.0.24]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.23...v1.0.24
 [1.0.23]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.22...v1.0.23
 [1.0.22]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.21...v1.0.22
