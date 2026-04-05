@@ -57,7 +57,7 @@ intelligence/ (情报卡片)
 
 ## 执行流程
 
-### 步骤 0：参数解析与模式判断
+### 步骤 0：参数解析与路径初始化
 
 解析命令参数，确定执行模式：
 
@@ -69,6 +69,17 @@ intelligence/ (情报卡片)
 | `--set-default <name>` | 设置默认源模式 | 执行默认源设置（步骤 S1-S2） |
 | `--init` | 全量同步模式 | 执行全量同步（步骤 P3） |
 | 默认 | 增量同步模式 | 执行增量同步（步骤 P1-P2） |
+
+**路径初始化**：
+
+```
+root_dir = 当前工作目录（用户执行命令的位置）
+output_dir = --output 参数或 ./inbox
+
+# 固定位置（始终在 root_dir 下）
+config_file = root_dir/.intel/pulse-sources.json
+state_file = root_dir/.intel/state.json
+```
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -100,7 +111,7 @@ intelligence/ (情报卡片)
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --list-sources
+pnpm exec tsx pulse/index.ts --root {root_dir} --list-sources
 ```
 
 **输出示例**：
@@ -123,7 +134,7 @@ pnpm exec tsx pulse/index.ts --list-sources
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --add-source
+pnpm exec tsx pulse/index.ts --root {root_dir} --add-source
 ```
 
 **交互流程**：
@@ -145,7 +156,7 @@ API Key: cp_live_a1b2c3d4e5f6789012345678abcdef01
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --remove-source {name}
+pnpm exec tsx pulse/index.ts --root {root_dir} --remove-source {name}
 ```
 
 **输出示例**：
@@ -160,7 +171,7 @@ pnpm exec tsx pulse/index.ts --remove-source {name}
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --set-default {name}
+pnpm exec tsx pulse/index.ts --root {root_dir} --set-default {name}
 ```
 
 **输出示例**：
@@ -229,7 +240,7 @@ Done in 262ms using pnpm v10.33.0
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --root {root_dir} [--source {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -249,7 +260,7 @@ pnpm exec tsx pulse/index.ts [--source {name}] [--output {dir}]
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --init [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --root {root_dir} --init [--source {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -268,7 +279,7 @@ pnpm exec tsx pulse/index.ts --init [--source {name}] [--output {dir}]
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --all [--output {dir}]
+pnpm exec tsx pulse/index.ts --root {root_dir} --all [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -367,7 +378,7 @@ API Key 直接存储在配置文件中，简化用户配置流程：
 
 ### 状态文件
 
-**位置**：`{output_dir}/.intel/state.json`
+**位置**：`{root_dir}/.intel/state.json`
 
 与 `intel-distill` 共享同一状态文件，在现有结构中维护 `pulse` 字段：
 
