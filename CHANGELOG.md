@@ -6,6 +6,18 @@
 
 ---
 
+## [1.0.23] - 2026-04-05
+
+### 插件更新
+
+#### market-radar v1.7.2
+
+**变更**
+- intel-distill 默认参数优化：`--source` 默认 `./inbox`，`--output` 默认 `./intelligence`
+- `archive/`、`converted/`、`.intel/` 始终在项目根目录下
+
+---
+
 ## [1.0.22] - 2026-04-05
 
 ### 插件更新
@@ -384,6 +396,9 @@
 
 ---
 
+[1.0.23]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.22...v1.0.23
+[1.0.22]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.21...v1.0.22
+[1.0.21]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.20...v1.0.21
 [1.0.20]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.19...v1.0.20
 [1.0.19]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.18...v1.0.19
 [1.0.18]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.17...v1.0.18
