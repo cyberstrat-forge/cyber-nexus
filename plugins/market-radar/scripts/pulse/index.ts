@@ -60,7 +60,7 @@ import { writeContentFiles } from './output.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.resolve(__dirname, '..');
 
-/** Default output directory */
+/** Default output directory (relative to root) */
 const DEFAULT_OUTPUT_DIR = './inbox';
 
 // ==================== Dependency Check ====================
@@ -262,7 +262,7 @@ async function pullFromSource(
 
     return {
       success: true,
-      count: items.length,
+      count: files.length,  // Actual files written (excluding skipped)
       lastFetchedAt,
       lastItemId,
       files,
@@ -312,9 +312,15 @@ async function pullFromSource(
  */
 async function executePull(options: PullOptions): Promise<PullResult> {
   const mode = determinePullMode(options);
+
+  // Resolve paths
+  const rootDir = options.root ? path.resolve(options.root) : process.cwd();
+  const outputDir = path.resolve(rootDir, options.output);
+
   const result: PullResult = {
     mode: mode === 'all' ? 'incremental' : mode,
-    output_dir: path.resolve(options.output),
+    root_dir: rootDir,
+    output_dir: outputDir,
     sources: [],
     total_count: 0,
     pulled_at: new Date().toISOString(),
@@ -328,11 +334,11 @@ async function executePull(options: PullOptions): Promise<PullResult> {
     ? config.sources
     : [getSource(config, options.source)];
 
-  // Ensure state directory exists
-  ensureStateDir(options.output);
+  // Ensure state directory exists (in root)
+  ensureStateDir(rootDir);
 
-  // Load state
-  let state = loadState(options.output);
+  // Load state (from root)
+  let state = loadState(rootDir);
 
   // Pull from each source
   for (const source of sources) {
@@ -341,7 +347,7 @@ async function executePull(options: PullOptions): Promise<PullResult> {
       state = clearCursorState(state, source.name);
     }
 
-    const sourceResult = await pullFromSource(source, options, state);
+    const sourceResult = await pullFromSource(source, { ...options, output: outputDir }, state);
 
     if (sourceResult.success) {
       const successResult: PullSourceResultSuccess = {
@@ -374,8 +380,8 @@ async function executePull(options: PullOptions): Promise<PullResult> {
     }
   }
 
-  // Save state
-  saveState(state, options.output);
+  // Save state (to root)
+  saveState(state, rootDir);
 
   return result;
 }
@@ -423,8 +429,8 @@ function generateReport(result: PullResult): string {
         lines.push(`• 写入位置: ${result.output_dir}`);
         lines.push('');
 
-        // Read state to show cursor info
-        const state = loadState(result.output_dir);
+        // Read state to show cursor info (use root_dir)
+        const state = loadState(result.root_dir);
         const cursorState = getCursorState(state, source.name);
         if (cursorState.last_fetched_at && cursorState.last_item_id) {
           lines.push('【状态更新】');
@@ -473,10 +479,11 @@ const program = new Command();
 program
   .name('pulse')
   .description('从 cyber-pulse API 拉取情报内容')
-  .version('2.0.0')
+  .version('2.1.0')
+  .option('-r, --root <dir>', '项目根目录（状态文件位置）')
   .option('-s, --source <name>', '指定情报源名称')
   .option('-a, --all', '拉取所有配置的情报源')
-  .option('-o, --output <dir>', '输出目录', DEFAULT_OUTPUT_DIR)
+  .option('-o, --output <dir>', '输出目录（相对于根目录）', DEFAULT_OUTPUT_DIR)
   .option('--init', '全量同步（从头开始）')
   .option('--list-sources', '列出所有已配置的情报源')
   .option('--add-source', '交互式添加情报源')

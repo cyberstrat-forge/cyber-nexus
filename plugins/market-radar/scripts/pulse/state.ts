@@ -40,16 +40,21 @@ const DEFAULT_CURSOR_STATE: PulseCursorState = {
 
 /**
  * Get state file path
+ *
+ * @param rootDir - Project root directory (state file always in root/.intel/)
+ * @returns Full path to state.json
  */
-export function getStatePath(outputDir: string): string {
-  return path.join(outputDir, '.intel', 'state.json');
+export function getStatePath(rootDir: string): string {
+  return path.join(rootDir, '.intel', 'state.json');
 }
 
 /**
  * Load state from file
+ *
+ * @param rootDir - Project root directory
  */
-export function loadState(outputDir: string): Record<string, unknown> {
-  const statePath = getStatePath(outputDir);
+export function loadState(rootDir: string): Record<string, unknown> {
+  const statePath = getStatePath(rootDir);
 
   if (!fs.existsSync(statePath)) {
     // Return default state structure
@@ -222,12 +227,15 @@ export function clearCursorState(
 
 /**
  * Save state to file
+ *
+ * @param state - State object to save
+ * @param rootDir - Project root directory
  */
 export function saveState(
   state: Record<string, unknown>,
-  outputDir: string
+  rootDir: string
 ): void {
-  const statePath = getStatePath(outputDir);
+  const statePath = getStatePath(rootDir);
   const stateDir = path.dirname(statePath);
 
   if (!fs.existsSync(stateDir)) {
@@ -240,9 +248,11 @@ export function saveState(
 
 /**
  * Ensure state directory exists
+ *
+ * @param rootDir - Project root directory
  */
-export function ensureStateDir(outputDir: string): void {
-  const stateDir = path.join(outputDir, '.intel');
+export function ensureStateDir(rootDir: string): void {
+  const stateDir = path.join(rootDir, '.intel');
   if (!fs.existsSync(stateDir)) {
     fs.mkdirSync(stateDir, { recursive: true });
   }
