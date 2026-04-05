@@ -20,7 +20,6 @@ import { fileURLToPath } from 'url';
 import {
   PullOptions,
   PullResult,
-  PullSourceResult,
   PullSourceResultSuccess,
   PullSourceResultFailure,
   PulseSource,
@@ -446,18 +445,34 @@ function generateReport(result: PullResult): string {
         lines.push(`• 错误: ${sourceResult.error}`);
         lines.push('');
       }
-    } catch {
-      // Source might have been deleted from config
-      lines.push(`源: ${sourceResult.source} (配置已删除)`);
-      lines.push('');
-      if (sourceResult.success) {
-        lines.push('【拉取统计】');
-        lines.push(`• 新增情报: ${sourceResult.count} 条`);
+    } catch (error) {
+      // Only handle SOURCE_NOT_FOUND as "deleted", log unexpected errors
+      if (error instanceof PulseError && error.code === 'SOURCE_NOT_FOUND') {
+        lines.push(`源: ${sourceResult.source} (配置已删除)`);
         lines.push('');
+        if (sourceResult.success) {
+          lines.push('【拉取统计】');
+          lines.push(`• 新增情报: ${sourceResult.count} 条`);
+          lines.push('');
+        } else {
+          lines.push('【拉取失败】');
+          lines.push(`• 错误: ${sourceResult.error}`);
+          lines.push('');
+        }
       } else {
-        lines.push('【拉取失败】');
-        lines.push(`• 错误: ${sourceResult.error}`);
+        // Unexpected error - log and show basic info
+        console.error(`[pulse] 生成报告时意外错误 for ${sourceResult.source}:`, error);
+        lines.push(`源: ${sourceResult.source} (报告生成错误)`);
         lines.push('');
+        if (sourceResult.success) {
+          lines.push('【拉取统计】');
+          lines.push(`• 新增情报: ${sourceResult.count} 条`);
+          lines.push('');
+        } else {
+          lines.push('【拉取失败】');
+          lines.push(`• 错误: ${sourceResult.error}`);
+          lines.push('');
+        }
       }
     }
   }
@@ -497,6 +512,16 @@ program
 
     // Resolve root directory
     const rootDir = options.root ? path.resolve(options.root) : process.cwd();
+
+    // Validate root directory
+    if (!fs.existsSync(rootDir)) {
+      console.error(`错误: 项目根目录不存在: ${rootDir}`);
+      process.exit(1);
+    }
+    if (!fs.statSync(rootDir).isDirectory()) {
+      console.error(`错误: 指定路径不是目录: ${rootDir}`);
+      process.exit(1);
+    }
 
     try {
       // Source management modes

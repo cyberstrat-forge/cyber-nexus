@@ -239,7 +239,12 @@ export function saveState(
   const stateDir = path.dirname(statePath);
 
   if (!fs.existsSync(stateDir)) {
-    fs.mkdirSync(stateDir, { recursive: true });
+    try {
+      fs.mkdirSync(stateDir, { recursive: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new PulseError('STATE_ERROR', `无法创建状态目录 ${stateDir}: ${message}`, { dir: stateDir, error });
+    }
   }
 
   state.updated_at = new Date().toISOString();
@@ -254,6 +259,11 @@ export function saveState(
 export function ensureStateDir(rootDir: string): void {
   const stateDir = path.join(rootDir, '.intel');
   if (!fs.existsSync(stateDir)) {
-    fs.mkdirSync(stateDir, { recursive: true });
+    try {
+      fs.mkdirSync(stateDir, { recursive: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new PulseError('STATE_ERROR', `无法创建状态目录 ${stateDir}: ${message}`, { dir: stateDir, error });
+    }
   }
 }

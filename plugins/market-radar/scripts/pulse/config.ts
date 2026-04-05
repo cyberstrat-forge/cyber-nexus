@@ -20,7 +20,8 @@ import {
 // ==================== Constants ====================
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PLUGIN_ROOT = path.resolve(__dirname, '..', '..');
+/** Plugin root directory (for legacy config path checks) */
+export const PLUGIN_ROOT = path.resolve(__dirname, '..', '..');
 const SCHEMAS_DIR = path.resolve(PLUGIN_ROOT, 'schemas');
 
 /** Default config file name */
@@ -148,6 +149,26 @@ export function loadConfig(rootDir: string, configPath?: string): PulseSourcesCo
   const resolvedPath = configPath ? path.resolve(configPath) : getDefaultConfigPath(rootDir);
 
   if (!fs.existsSync(resolvedPath)) {
+    // Check for old config location and provide migration guidance
+    const oldConfigPath = path.join(PLUGIN_ROOT, '.claude-plugin', CONFIG_FILENAME);
+    if (fs.existsSync(oldConfigPath)) {
+      throw new PulseError(
+        'CONFIG_NOT_FOUND',
+        `配置文件位置已变更！
+
+旧位置: ${oldConfigPath} (已废弃)
+新位置: ${resolvedPath}
+
+请迁移配置文件:
+  mkdir -p ${path.dirname(resolvedPath)}
+  mv "${oldConfigPath}" "${resolvedPath}"
+
+或手动创建新配置文件:
+${generateConfigNotFoundMessage(resolvedPath)}`,
+        { newPath: resolvedPath, oldPath: oldConfigPath }
+      );
+    }
+
     throw new PulseError(
       'CONFIG_NOT_FOUND',
       generateConfigNotFoundMessage(resolvedPath),
@@ -242,7 +263,16 @@ export function saveConfig(config: PulseSourcesConfig, rootDir: string, configPa
 
   // Ensure directory exists
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new PulseError(
+        'CONFIG_PARSE_ERROR',
+        `无法创建配置目录 ${dir}: ${message}`,
+        { dir, error }
+      );
+    }
   }
 
   const content = JSON.stringify(config, null, 2) + '\n';
