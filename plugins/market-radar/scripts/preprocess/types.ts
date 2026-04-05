@@ -90,10 +90,11 @@ export type SupportedFormat = '.md' | '.txt' | '.pdf' | '.docx';
 export type ConverterFn = (filePath: string) => Promise<string>;
 
 /**
- * Preprocessing options (v2.0)
+ * Preprocessing options (v2.3)
  */
 export interface PreprocessOptions {
-  sourceDir: string;         // Source directory path
+  sourceDir: string;         // Source directory to scan for files
+  rootDir: string;           // Project root for archive/converted/.intel (v2.3)
   archiveDir: string;        // Archive directory path (archive/YYYY/MM/)
   convertedDir: string;      // Output directory for converted files (converted/YYYY/MM/)
   preprocessorVersion: string; // Current preprocessor version
