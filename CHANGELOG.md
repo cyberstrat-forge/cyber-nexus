@@ -6,6 +6,17 @@
 
 ---
 
+## [1.0.26] - 2026-04-05
+
+### 插件更新
+
+#### market-radar v1.7.5
+
+**修复**
+- intel-pull 命令：所有脚本调用添加 `--root` 参数，修复路径错误
+
+---
+
 ## [1.0.25] - 2026-04-05
 
 ### 插件更新
@@ -421,6 +432,7 @@
 
 ---
 
+[1.0.26]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.25...v1.0.26
 [1.0.25]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.24...v1.0.25
 [1.0.24]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.23...v1.0.24
 [1.0.23]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.22...v1.0.23
