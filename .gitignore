@@ -100,3 +100,5 @@ temp/
 # ----------------------------------------
 # Git worktrees for isolated development
 .worktrees/
+# Pulse source config (contains API keys)
+plugins/market-radar/.claude-plugin/pulse-sources.json

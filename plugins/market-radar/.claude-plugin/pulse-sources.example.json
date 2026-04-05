@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "name": "example-source",
+      "url": "https://pulse.example.com",
+      "api_key": "cp_live_your_api_key_here"
+    }
+  ],
+  "default_source": "example-source"
+}
