@@ -6,6 +6,28 @@
 
 ---
 
+## [1.0.21] - 2026-04-05
+
+### 插件更新
+
+#### market-radar v1.7.0
+
+**新增**
+- 年月子目录结构：情报卡片输出改为 `{domain}/{YYYY}/{MM}/{filename}.md` 格式
+- Obsidian Bases 索引：自动为各领域目录生成 `_index.base` 文件
+- obsidian-cli skill：支持通过 Obsidian CLI 进行文件操作、属性读写、Bases 查询
+- 历史文件迁移脚本：`migrate-to-yearly-folders.ts` 支持将扁平结构迁移到年月子目录
+
+**变更**
+- intelligence-analyzer Agent：更新输出路径逻辑，支持年月子目录结构
+- intelligence-output-templates Skill：更新输出结构文档
+
+**修复**
+- scan-cards.ts：使用递归 glob pattern 支持年月子目录扫描
+- migrate-to-yearly-folders.ts：多层错误处理增强健壮性
+
+---
+
 ## [1.0.20] - 2026-04-03
 
 ### 插件更新
