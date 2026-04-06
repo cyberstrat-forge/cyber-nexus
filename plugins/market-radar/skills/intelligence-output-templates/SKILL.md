@@ -14,7 +14,7 @@ description: This skill should be used when generating intelligence card markdow
 情报卡片 frontmatter 采用四组层次结构：
 
 1. **核心标识**：`intelligence_id`, `title`, `created_date`, `primary_domain`, `secondary_domains`, `security_relevance`, `tags`
-2. **item 来源追溯**：`item_id`, `item_title`, `author`, `original_url`, `published_at`, `fetched_at`, `completeness_score`, `archived_file`, `converted_file`
+2. **item 来源追溯**：`item_id`, `item_title`, `author`, `original_url`, `published_at`, `fetched_at`, `completeness_score`, `archived_file`, `converted_file`, `converted_content_hash`
 3. **情报源追溯**：`source_id`, `source_name`, `source_url`, `source_tier`, `source_score`
 4. **处理状态**：`review_status`, `generated_by`, `generated_session`
 
