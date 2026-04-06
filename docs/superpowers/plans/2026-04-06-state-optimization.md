@@ -1597,3 +1597,96 @@ Expected: 扫描结果正确显示已处理/待处理数量
 - [x] `ProcessedStatus` 类型在 scan-queue.ts 和 update-state.ts 一致
 - [x] `PendingFile` 接口与 pending.schema.json 一致
 - [x] `PendingItem` 结构在各文件一致
+
+---
+
+## 向后兼容性与迁移策略
+
+### 现有文档处理
+
+| 目录 | 新字段 | 现有文件 | 处理策略 |
+|------|--------|---------|----------|
+| **archive/** | 无变化 | ✅ 无影响 | 无需处理 |
+| **converted/** | `processed_status` | ⚠️ 无此字段 | 自动检测 intelligence 卡片存在 → 视为已处理 |
+| **intelligence/** | `converted_content_hash` | ⚠️ 无此字段 | 新处理时自动写入 |
+| **state.json** | → `pending.json` | ⚠️ 需迁移 | 运行 `migrate-state.ts` |
+
+### 向后兼容逻辑 (scan-queue.ts)
+
+```typescript
+if (processedStatus === undefined || processedStatus === null) {
+  // BACKWARD COMPATIBILITY: No processed_status field
+  // Check if intelligence card exists - if yes, treat as already processed
+  if (convertedToHash.has(relativePath)) {
+    alreadyProcessed++;
+    continue;
+  }
+  // No intelligence card - needs processing
+}
+```
+
+**行为说明：**
+- 现有 converted 文件（无 `processed_status`）→ 检查是否存在对应的 intelligence 卡片
+- 如果存在 → 视为已处理，跳过
+- 如果不存在 → 加入处理队列
+
+### 用户升级步骤
+
+1. **备份数据**（可选但推荐）
+   ```bash
+   cp -r .intel .intel.backup
+   cp -r converted converted.backup
+   cp -r intelligence intelligence.backup
+   ```
+
+2. **运行迁移脚本**
+   ```bash
+   cd plugins/market-radar/scripts
+   pnpm exec tsx preprocess/migrate-v1-to-v2.ts --root /path/to/vault
+   ```
+
+   预览模式（不实际修改）：
+   ```bash
+   pnpm exec tsx preprocess/migrate-v1-to-v2.ts --root /path/to/vault --dry-run
+   ```
+
+3. **迁移结果**
+
+   | 步骤 | 操作 | 结果 |
+   |------|------|------|
+   | state.json | → pending.json | state.json 备份为 state.json.bak |
+   | converted/*.md | 添加字段 | `processed_status: "passed"`, `processed_at: "<timestamp>"` |
+   | intelligence/*.md | 添加字段 | `converted_content_hash: "<md5>"` |
+
+4. **验证迁移**
+   ```bash
+   # 检查 pending.json
+   cat .intel/pending.json
+
+   # 检查 converted 文件
+   head -20 converted/2026/04/some-file.md
+
+   # 检查 intelligence 卡片
+   head -20 intelligence/Industry-Analysis/some-card.md
+   ```
+
+### 迁移脚本详解
+
+**文件**: `scripts/preprocess/migrate-v1-to-v2.ts`
+
+**功能**:
+1. **state.json → pending.json**: 提取 review.pending 和 pulse.cursors
+2. **converted 文件**: 添加 `processed_status: 'passed'` 和 `processed_at` 时间戳
+3. **intelligence 卡片**: 从卡片内容计算 MD5 hash，添加 `converted_content_hash`
+
+**特点**:
+- **幂等性**: 可以安全地多次运行，已迁移的文件会被跳过
+- **dry-run 模式**: 预览将要执行的操作
+- **错误收集**: 不会因单个文件失败而中断，最终汇总所有错误
+
+### 无需手动迁移的字段
+
+以下字段会自动添加，用户无需手动干预：
+- `processed_status` - 所有 converted 文件自动标记为 'passed'
+- `processed_at` - 迁移时的时间戳
+- `converted_content_hash` - 从 intelligence 卡片内容计算
