@@ -6,6 +6,25 @@
 
 ---
 
+## [1.0.28] - 2026-04-06
+
+### 插件更新
+
+#### market-radar v1.8.0
+
+**新增**
+- 情报日报功能：`--report daily` 生成每日情报监测报告
+  - 支持 `--date YYYY-MM-DD` 指定日期
+  - 有机聚合 8 种维度：主体聚合、事件链条聚合、商业模式聚合、跨领域关联聚合、主题聚合、地域聚合、时间序列聚合、独立展示
+  - 重点关注筛选高价值情报（最多 5 条），包含研究问题
+- 新增 `intelligence-daily-writer` Agent 和日报模板
+- scan-cards.ts 新增 `--date`、`--format json`、`--preview` 参数
+
+**变更**
+- 报告文件命名规范统一：周报 `YYYY-WXX-weekly.md`，月报 `YYYY-MM-monthly.md`，日报 `YYYY-MM-DD-daily.md`
+
+---
+
 ## [1.0.27] - 2026-04-06
 
 ### 插件更新
