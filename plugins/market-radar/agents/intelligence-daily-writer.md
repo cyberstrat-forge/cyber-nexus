@@ -1,7 +1,7 @@
 ---
 name: intelligence-daily-writer
 description: |
-  Use this agent when intel-distill command needs to generate daily intelligence reports from scanned card list. This agent analyzes cards, identifies aggregation patterns, and generates structured daily reports with executive summary, overview, and key focus sections.
+  This agent should be used when the user asks to "generate daily report", "/intel-distill --report daily", "create today's intelligence summary", or needs daily intelligence aggregation analysis from scanned card list.
 
   <example>
   Context: scan-cards script has returned 12 cards for today

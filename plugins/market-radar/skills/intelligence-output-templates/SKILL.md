@@ -1,6 +1,6 @@
 ---
 name: intelligence-output-templates
-description: Markdown templates and output structure for intelligence cards and reports. Use when generating final markdown output from agent JSON results.
+description: This skill should be used when generating intelligence card markdown, creating daily/weekly/monthly reports, formatting agent JSON output, or the user asks to "create an intelligence card", "generate report template", "format report output".
 ---
 
 ## 概述
