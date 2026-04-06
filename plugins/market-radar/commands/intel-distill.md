@@ -584,8 +584,10 @@ if (needs_processing + pending_review >= 50) {
 
 **参数**:
 - `source`: 转换文件路径（Agent 从 frontmatter 读取 sourceHash、archivedSource）
-- `output`: 输出目录
+- `output`: 输出目录，值为 `output_dir`（默认 `./intelligence` 或用户指定的 `--output` 参数值）
 - `session_id`: 会话 ID
+
+**写入路径**：Agent 写入情报卡片到 `{output}/{domain}/{YYYY}/{MM}/{filename}`，因此 `output` 参数必须是情报卡片的根目录（如 `./intelligence`），而非项目根目录。
 
 **Agent 职责**：
 - 从 frontmatter 解析元数据（sourceHash、archivedSource）

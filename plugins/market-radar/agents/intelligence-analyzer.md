@@ -510,6 +510,11 @@ Bases 是动态查询，每次打开时实时运行：
 
 返回轻量 JSON，不包含情报内容详情。
 
+**路径格式约定**：
+- `output_files` 和 `output_file` 字段返回相对于项目根目录的路径
+- 格式为 `{output}/{domain}/{YYYY}/{MM}/{filename}`
+- 例如：`intelligence/Industry-Analysis/2025/10/20251013-cybersecurity-trends-2026.md`
+
 详细格式参见 `references/json-format.md`，Schema 定义参见 `schemas/agent-result.schema.json`。
 
 **四种返回状态**：
@@ -527,22 +532,22 @@ Bases 是动态查询，每次打开时实时运行：
     "emerging-20251013-001"
   ],
   "output_files": [
-    "Industry-Analysis/20251013-cybersecurity-trends-2026.md",
-    "Emerging-Tech/20251013-ai-security-platform-rise.md"
+    "intelligence/Industry-Analysis/2025/10/20251013-cybersecurity-trends-2026.md",
+    "intelligence/Emerging-Tech/2025/10/20251013-ai-security-platform-rise.md"
   ],
   "cards": [
     {
       "intelligence_id": "industry-20251013-001",
       "primary_domain": "Industry-Analysis",
       "secondary_domains": [],
-      "output_file": "Industry-Analysis/20251013-cybersecurity-trends-2026.md",
+      "output_file": "intelligence/Industry-Analysis/2025/10/20251013-cybersecurity-trends-2026.md",
       "title": "Gartner发布2026年网络安全规划指南：六大趋势定义未来方向"
     },
     {
       "intelligence_id": "emerging-20251013-001",
       "primary_domain": "Emerging-Tech",
       "secondary_domains": [],
-      "output_file": "Emerging-Tech/20251013-ai-security-platform-rise.md",
+      "output_file": "intelligence/Emerging-Tech/2025/10/20251013-ai-security-platform-rise.md",
       "title": "AI安全平台（AISP）成为企业安全新焦点"
     }
   ],
