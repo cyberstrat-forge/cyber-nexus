@@ -275,8 +275,9 @@ function buildConvertedFileHashLookup(
 
             lookup.set(convertedFile, hash);
           }
-        } catch {
-          // Skip files that can't be read
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          console.warn(`[lookup] Skipping unreadable file ${fullPath}: ${errMsg}`);
         }
       }
     }

@@ -45,8 +45,9 @@ function loadOrCreateState(statePath: string): ThemeState {
         const content = readFileSync(statePath, 'utf-8');
         writeFileSync(backupPath, content, 'utf-8');
         console.error(`  备份已保存至: ${backupPath}`);
-      } catch {
-        // Could not backup - file may be unreadable
+      } catch (backupError) {
+        const backupErrMsg = backupError instanceof Error ? backupError.message : String(backupError);
+        console.error(`  Warning: Could not backup corrupted file: ${backupErrMsg}`);
       }
       console.error(`状态文件损坏，将重新创建: ${errMsg}`);
     }

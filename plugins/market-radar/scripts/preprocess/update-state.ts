@@ -35,7 +35,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { PendingItem, PendingFile, PulseCursorState, createDefaultPending } from './types/pending';
+import { PendingFile, createDefaultPending } from './types/pending';
 
 // ==================== Type Definitions ====================
 
@@ -436,8 +436,9 @@ function main(): void {
   let results: AgentResult[];
   try {
     results = JSON.parse(resultsJson);
-  } catch {
-    console.error('Error: Invalid JSON in --results');
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Error: Invalid JSON in --results: ${errMsg}`);
     process.exit(1);
   }
 
