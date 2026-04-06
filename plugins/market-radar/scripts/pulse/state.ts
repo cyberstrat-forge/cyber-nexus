@@ -2,7 +2,7 @@
 /**
  * Pulse state management
  *
- * Manages cursor tracking in state.json (shared with intel-distill).
+ * Manages cursor tracking in pending.json (shared with intel-distill).
  *
  * Cursor format (v3.0.0):
  * - last_fetched_at: timestamp for incremental sync (since parameter)
@@ -10,9 +10,9 @@
  * - last_pull: last pull completion timestamp
  * - total_synced: cumulative sync count
  *
- * Field ownership in state.json:
+ * Field ownership in pending.json:
  * - pulse.cursors: managed by intel-pull (this module)
- * - queue, review, processed, stats: managed by intel-distill
+ * - review.items: managed by intel-distill
  *
  * Usage:
  *   import { loadState, saveState, getCursorState, setCursorState, clearCursorState } from './state';
@@ -39,12 +39,22 @@ const DEFAULT_CURSOR_STATE: PulseCursorState = {
 };
 
 /**
- * Get state file path
+ * Get state file path (now pending.json)
  *
- * @param rootDir - Project root directory (state file always in root/.intel/)
- * @returns Full path to state.json
+ * @param rootDir - Project root directory
+ * @returns Full path to pending.json
  */
 export function getStatePath(rootDir: string): string {
+  return path.join(rootDir, '.intel', 'pending.json');
+}
+
+/**
+ * Get old state.json path (for migration)
+ *
+ * @param rootDir - Project root directory
+ * @returns Full path to old state.json
+ */
+export function getOldStatePath(rootDir: string): string {
   return path.join(rootDir, '.intel', 'state.json');
 }
 
@@ -55,21 +65,26 @@ export function getStatePath(rootDir: string): string {
  */
 export function loadState(rootDir: string): Record<string, unknown> {
   const statePath = getStatePath(rootDir);
+  const oldStatePath = getOldStatePath(rootDir);
 
-  if (!fs.existsSync(statePath)) {
-    // Return default state structure
+  // Check if old state.json exists (need migration)
+  if (!fs.existsSync(statePath) && fs.existsSync(oldStatePath)) {
+    console.log('[pulse] Old state.json detected, migration required');
+    // Migration will be handled by migrate-state.ts
+    // Return default structure for now
     return {
       version: STATE_VERSION,
       updated_at: new Date().toISOString(),
-      queue: { processing: {} },
-      review: { pending: [] },
-      processed: {},
-      stats: {
-        preprocess: { scanned: 0, converted: 0, failed: 0, duplicates: 0 },
-        intelligence: { processed: 0, cards_generated: 0, pending_review: 0, no_value: 0, failed: 0 },
-        review: { pending: 0, approved: 0, rejected: 0 },
-        last_run: new Date().toISOString(),
-      },
+      review: { items: [] },
+      pulse: DEFAULT_PULSE_STATE,
+    };
+  }
+
+  if (!fs.existsSync(statePath)) {
+    return {
+      version: STATE_VERSION,
+      updated_at: new Date().toISOString(),
+      review: { items: [] },
       pulse: DEFAULT_PULSE_STATE,
     };
   }
@@ -87,51 +102,31 @@ export function loadState(rootDir: string): Record<string, unknown> {
 }
 
 /**
- * Migrate state to current version
+ * Migrate state to current version (simplified for pending.json)
  */
 function migrateState(state: Record<string, unknown>): Record<string, unknown> {
-  const rawVersion = state.version;
-  const version = typeof rawVersion === 'string' ? rawVersion : '1.0';
-
-  if (version === STATE_VERSION) {
-    return state;
-  }
-
-  console.log(`[pulse] Migrating state from version ${version} to ${STATE_VERSION}`);
-
-  // Add pulse field if missing
+  // pending.json format is simpler, just ensure pulse field exists
   if (!state.pulse) {
     state.pulse = DEFAULT_PULSE_STATE;
   }
 
-  // Safely check for old cursor format and reset
-  if (state.pulse && typeof state.pulse === 'object') {
-    const pulseState = state.pulse as Record<string, unknown>;
-    if (pulseState.cursors && typeof pulseState.cursors === 'object' && pulseState.cursors !== null) {
-      const cursors = pulseState.cursors as Record<string, unknown>;
-      for (const sourceName of Object.keys(cursors)) {
-        const cursor = cursors[sourceName];
-        // Only process if cursor is a non-null object
-        if (cursor && typeof cursor === 'object') {
-          const cursorObj = cursor as Record<string, unknown>;
-          // Old format has 'cursor' field, new format has 'last_fetched_at'
-          if ('cursor' in cursorObj && !('last_fetched_at' in cursorObj)) {
-            console.log(`[pulse] Old cursor format detected for ${sourceName}, resetting`);
-            cursors[sourceName] = DEFAULT_CURSOR_STATE;
-          }
-        }
-      }
+  // Ensure review.items exists
+  if (!state.review) {
+    state.review = { items: [] };
+  } else {
+    const review = state.review as { items?: unknown[] };
+    if (!review.items) {
+      (state.review as { items: unknown[] }).items = [];
     }
   }
 
-  state.version = STATE_VERSION;
   return state;
 }
 
 /**
  * Get pulse state from full state
  *
- * Returns the pulse portion of the shared state.json, with validation.
+ * Returns the pulse portion of the shared pending.json, with validation.
  */
 export function getPulseState(state: Record<string, unknown>): PulseState {
   const pulse = state.pulse;
