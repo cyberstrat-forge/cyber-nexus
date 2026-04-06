@@ -202,7 +202,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Nested tags with namespace prefixes (e.g., 'geo:china', 'business:MSSP', 'tech:ai-security')"
+          "description": "Obsidian nested tags with slash separator (e.g., 'geo/china', 'business/MSSP', 'tech/ai-security')"
         },
         "item_id": {
           "type": "string",

@@ -18,15 +18,17 @@ description: Markdown templates and output structure for intelligence cards. Use
 
 ## tags 嵌套格式
 
-tags 字段使用命名空间前缀：
+tags 字段使用 Obsidian 嵌套标签格式（斜杠分隔）：
 
 ```yaml
-tags: ["geo:china", "business:MSSP", "APT", "ransomware"]
+tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 ```
 
-- `geo:` 前缀：地域范围（`geo:global`, `geo:china`, `geo:unknown` 等）
-- `business:` 前缀：业务模式（仅 Industry-Analysis）
+- `geo/` 前缀：地域范围（`geo/global`, `geo/china`, `geo/unknown` 等）
+- `business/` 前缀：业务模式（仅 Industry-Analysis）
 - 无前缀：关键词
+
+> **Obsidian 规范**：嵌套标签使用 `/` 分隔，如 `#geo/china`，冒号 `:` 不是有效字符。
 
 ## 写作原则
 

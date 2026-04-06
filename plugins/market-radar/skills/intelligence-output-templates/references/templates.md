@@ -16,7 +16,7 @@
 │ primary_domain     - 主领域（七大领域之一）                   │
 │ secondary_domains  - 次领域列表                               │
 │ security_relevance - 安全相关性 high/medium                   │
-│ tags               - 嵌套标签（geo:、business:、关键词）      │
+│ tags               - 嵌套标签（geo/、business/、关键词）      │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -57,13 +57,13 @@
 tags 字段使用命名空间前缀组织：
 
 ```yaml
-tags: ["geo:china", "business:MSSP", "APT", "ransomware", "cloud-security"]
+tags: ["geo/china", "business/MSSP", "APT", "ransomware", "cloud-security"]
 ```
 
 | 前缀 | 说明 | 示例值 |
 |------|------|--------|
-| `geo:` | 地域范围 | `geo:global`, `geo:china`, `geo:china-primary`, `geo:overseas`, `geo:unknown` |
-| `business:` | 业务模式 | `business:MSSP`, `business:SECaaS`, `business:Subscription` |
+| `geo/` | 地域范围 | `geo/global`, `geo/china`, `geo/china-primary`, `geo/overseas`, `geo/unknown` |
+| `business/` | 业务模式 | `business/MSSP`, `business/SECaaS`, `business/Subscription` |
 | 无前缀 | 关键词 | `APT`, `ransomware`, `cloud-security`, `zero-trust` |
 
 ---
@@ -80,7 +80,7 @@ created_date: "2026-04-02"
 primary_domain: "Threat-Landscape"
 secondary_domains: []
 security_relevance: "high"
-tags: ["geo:global", "APT", "Lazarus", "financial-sector", "malware"]
+tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -163,7 +163,7 @@ created_date: "2026-04-02"
 primary_domain: "Industry-Analysis"
 secondary_domains: []
 security_relevance: "medium"
-tags: ["geo:china", "business:MSSP", "business:Subscription", "market-growth", "cybersecurity"]
+tags: ["geo/china", "business/MSSP", "business/Subscription", "market-growth", "cybersecurity"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -250,7 +250,7 @@ created_date: "2026-04-02"
 primary_domain: "Vendor-Intelligence"
 secondary_domains: []
 security_relevance: "medium"
-tags: ["geo:global", "CrowdStrike", "funding", "Series-B", "endpoint-security"]
+tags: ["geo/global", "CrowdStrike", "funding", "Series-B", "endpoint-security"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -334,7 +334,7 @@ created_date: "2026-04-02"
 primary_domain: "Emerging-Tech"
 secondary_domains: []
 security_relevance: "high"
-tags: ["geo:global", "ai-security", "AISP", "LLM-protection", "emerging-tech"]
+tags: ["geo/global", "ai-security", "AISP", "LLM-protection", "emerging-tech"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -420,7 +420,7 @@ created_date: "2026-04-02"
 primary_domain: "Customer-Market"
 secondary_domains: []
 security_relevance: "medium"
-tags: ["geo:china", "enterprise", "security-budget", "procurement", "market-demand"]
+tags: ["geo/china", "enterprise", "security-budget", "procurement", "market-demand"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -503,7 +503,7 @@ created_date: "2026-04-02"
 primary_domain: "Policy-Regulation"
 secondary_domains: []
 security_relevance: "high"
-tags: ["geo:china", "compliance", "data-protection", "regulation", "PIPL"]
+tags: ["geo/china", "compliance", "data-protection", "regulation", "PIPL"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -588,7 +588,7 @@ created_date: "2026-04-02"
 primary_domain: "Capital-Investment"
 secondary_domains: []
 security_relevance: "medium"
-tags: ["geo:global", "funding", "Series-B", "cybersecurity-unicorn", "venture-capital"]
+tags: ["geo/global", "funding", "Series-B", "cybersecurity-unicorn", "venture-capital"]
 
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
@@ -671,26 +671,26 @@ investors:                     # 投资方/收购方
 tags 字段采用命名空间前缀组织，统一管理地域、业务模式和关键词：
 
 ```yaml
-tags: ["geo:china", "business:MSSP", "business:Subscription", "APT", "ransomware"]
+tags: ["geo/china", "business/MSSP", "business/Subscription", "APT", "ransomware"]
 ```
 
-#### geo: 前缀（地域范围）
+#### geo/ 前缀（地域范围）
 
 | Tag | Description |
 |-----|-------------|
-| `geo:global` | 全球/无特定地域 |
-| `geo:china` | 仅中国 |
-| `geo:china-primary` | 中国为主，涉及海外 |
-| `geo:overseas` | 仅海外 |
-| `geo:overseas-primary` | 海外为主，涉及中国 |
-| `geo:unknown` | 无法判断（默认值） |
+| `geo/global` | 全球/无特定地域 |
+| `geo/china` | 仅中国 |
+| `geo/china-primary` | 中国为主，涉及海外 |
+| `geo/overseas` | 仅海外 |
+| `geo/overseas-primary` | 海外为主，涉及中国 |
+| `geo/unknown` | 无法判断（默认值） |
 
 **判断规则**：
 - 严格模式：仅依据文档明确提及的地域信息
 - 判断依据：明确提及的国家/地区、涉及的公司总部位置、法规适用范围、攻击目标地理位置
-- 无法判断时使用 `geo:unknown`
+- 无法判断时使用 `geo/unknown`
 
-#### business: 前缀（业务模式）
+#### business/ 前缀（业务模式）
 
 **仅适用于 Industry-Analysis 领域**，用于识别网络安全行业的业务模式创新。
 
@@ -698,71 +698,71 @@ tags: ["geo:china", "business:MSSP", "business:Subscription", "APT", "ransomware
 
 | Tag | Description |
 |-----|-------------|
-| `business:MSSP` | 托管安全服务提供商 (Managed Security Service Provider) |
-| `business:SECaaS` | 安全即服务 / 云端交付 (Security as a Service) |
-| `business:On-Premise` | 本地部署模式 |
-| `business:Hybrid-Delivery` | 混合交付（本地+云端） |
-| `business:Embedded-Security` | 内嵌安全（安全能力嵌入其他产品） |
+| `business/MSSP` | 托管安全服务提供商 (Managed Security Service Provider) |
+| `business/SECaaS` | 安全即服务 / 云端交付 (Security as a Service) |
+| `business/On-Premise` | 本地部署模式 |
+| `business/Hybrid-Delivery` | 混合交付（本地+云端） |
+| `business/Embedded-Security` | 内嵌安全（安全能力嵌入其他产品） |
 
 **收费模式类**：
 
 | Tag | Description |
 |-----|-------------|
-| `business:Subscription` | 订阅制（周期性付费） |
-| `business:Usage-Based` | 用量计费 |
-| `business:Outcome-Based` | 结果导向（按效果付费） |
-| `business:Freemium` | 免费增值模式 |
-| `business:License-Based` | 授权制（一次性买断） |
+| `business/Subscription` | 订阅制（周期性付费） |
+| `business/Usage-Based` | 用量计费 |
+| `business/Outcome-Based` | 结果导向（按效果付费） |
+| `business/Freemium` | 免费增值模式 |
+| `business/License-Based` | 授权制（一次性买断） |
 
 **运营模式类**：
 
 | Tag | Description |
 |-----|-------------|
-| `business:MDR` | 托管检测响应服务 (Managed Detection & Response) |
-| `business:MSS` | 托管安全服务 (Managed Security Services) |
-| `business:vCISO` | 虚拟安全官服务 |
-| `business:Security-Operations-Outsourcing` | 安全运营外包 |
-| `business:In-House-Operations` | 自建运营 |
+| `business/MDR` | 托管检测响应服务 (Managed Detection & Response) |
+| `business/MSS` | 托管安全服务 (Managed Security Services) |
+| `business/vCISO` | 虚拟安全官服务 |
+| `business/Security-Operations-Outsourcing` | 安全运营外包 |
+| `business/In-House-Operations` | 自建运营 |
 
 **合作生态类**：
 
 | Tag | Description |
 |-----|-------------|
-| `business:Platform-Ecosystem` | 平台生态（构建开放平台集成 ISV） |
-| `business:Channel-Partner` | 渠道合作（代理商/分销商） |
-| `business:OEM-Partnership` | OEM 合作（技术白牌输出） |
-| `business:Technology-Alliance` | 技术联盟 |
-| `business:Co-Development` | 联合开发 |
+| `business/Platform-Ecosystem` | 平台生态（构建开放平台集成 ISV） |
+| `business/Channel-Partner` | 渠道合作（代理商/分销商） |
+| `business/OEM-Partnership` | OEM 合作（技术白牌输出） |
+| `business/Technology-Alliance` | 技术联盟 |
+| `business/Co-Development` | 联合开发 |
 
 **创新/新兴模式类**：
 
 | Tag | Description |
 |-----|-------------|
-| `business:Crowdsourced-Security` | 众包安全（众包漏洞挖掘/测试） |
-| `business:Security-Insurance` | 安全保险 |
-| `business:Bug-Bounty-Platform` | 漏洞赏金平台 |
-| `business:Cyber-Risk-Quantification` | 网络风险量化服务 |
-| `business:Security-Financing` | 安全金融 |
-| `business:Data-Sharing-Alliance` | 威胁情报共享联盟 |
+| `business/Crowdsourced-Security` | 众包安全（众包漏洞挖掘/测试） |
+| `business/Security-Insurance` | 安全保险 |
+| `business/Bug-Bounty-Platform` | 漏洞赏金平台 |
+| `business/Cyber-Risk-Quantification` | 网络风险量化服务 |
+| `business/Security-Financing` | 安全金融 |
+| `business/Data-Sharing-Alliance` | 威胁情报共享联盟 |
 
 **特殊标签**：
 
 | Tag | Description |
 |-----|-------------|
-| `business:New-Business-Model` | 新出现的业务模式（在 content 中描述） |
-| `business:Business-Model-Shift` | 业务模式转型 |
+| `business/New-Business-Model` | 新出现的业务模式（在 content 中描述） |
+| `business/Business-Model-Shift` | 业务模式转型 |
 
 **使用规则**：
-- 一条情报可打多个 `business:` 标签（如 `business:MSSP` + `business:Subscription`）
-- 发现新模式时使用 `business:New-Business-Model` 并在内容中描述
-- 转型场景使用 `business:Business-Model-Shift`
+- 一条情报可打多个 `business/` 标签（如 `business/MSSP` + `business/Subscription`）
+- 发现新模式时使用 `business/New-Business-Model` 并在内容中描述
+- 转型场景使用 `business/Business-Model-Shift`
 
 #### 无前缀（关键词）
 
 直接使用关键词作为标签，无需命名空间前缀：
 
 ```yaml
-tags: ["geo:global", "APT", "Lazarus", "ransomware", "cloud-security"]
+tags: ["geo/global", "APT", "Lazarus", "ransomware", "cloud-security"]
 ```
 
 **常见关键词类别**：

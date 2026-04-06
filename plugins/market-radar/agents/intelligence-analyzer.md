@@ -181,18 +181,20 @@ source_score: 85
 
 ### 步骤 4.1：地域范围与标签生成
 
-**tags 字段采用嵌套命名空间格式**：
+**tags 字段采用 Obsidian 嵌套标签格式**（使用斜杠分隔）：
 
 ```yaml
-tags: ["geo:china", "business:MSSP", "APT", "ransomware"]
+tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 ```
 
 **支持的命名空间**：
 
 | 前缀 | 说明 | 示例值 |
 |------|------|--------|
-| `geo:` | 地域范围 | `geo:global`, `geo:china`, `geo:china-primary`, `geo:overseas`, `geo:overseas-primary`, `geo:unknown` |
-| `business:` | 业务模式 | `business:MSSP`, `business:SECaaS`, `business:Subscription` 等 |
+| `geo/` | 地域范围 | `geo/global`, `geo/china`, `geo/china-primary`, `geo/overseas`, `geo/overseas-primary`, `geo/unknown` |
+| `business/` | 业务模式 | `business/MSSP`, `business/SECaaS`, `business/Subscription` 等 |
+
+> **Obsidian 规范**：嵌套标签使用斜杠 `/` 分隔，如 `#geo/china`。冒号 `:` 不是有效字符。
 
 **地域范围判断规则（严格模式）**：仅依据文档明确提及的地域信息。
 
@@ -203,48 +205,48 @@ tags: ["geo:china", "business:MSSP", "APT", "ransomware"]
 - 攻击目标地理位置
 - 市场数据覆盖区域
 
-**geo: 值映射**：
+**geo/ 值映射**：
 
 | tag 值 | 判断条件 |
 |--------|----------|
-| `geo:global` | 明确提及"全球"、"国际"、"世界范围"或多国 |
-| `geo:china` | 明确提及"中国"、"国内"，且不涉及海外 |
-| `geo:china-primary` | 主要涉及中国，同时提及海外市场/客户 |
-| `geo:overseas` | 明确提及海外国家/地区，不涉及中国 |
-| `geo:overseas-primary` | 主要涉及海外，同时提及中国市场 |
-| `geo:unknown` | 文档未明确提及地域信息 |
+| `geo/global` | 明确提及"全球"、"国际"、"世界范围"或多国 |
+| `geo/china` | 明确提及"中国"、"国内"，且不涉及海外 |
+| `geo/china-primary` | 主要涉及中国，同时提及海外市场/客户 |
+| `geo/overseas` | 明确提及海外国家/地区，不涉及中国 |
+| `geo/overseas-primary` | 主要涉及海外，同时提及中国市场 |
+| `geo/unknown` | 文档未明确提及地域信息 |
 
-**注意**：无法判断时使用 `geo:unknown`，不要主观推断。
+**注意**：无法判断时使用 `geo/unknown`，不要主观推断。
 
 ### 步骤 4.2：业务模式标签提取（仅 Industry-Analysis）
 
-当 `primary_domain` 或 `secondary_domains` 包含 `Industry-Analysis` 时，提取业务模式标签并添加 `business:` 前缀。
+当 `primary_domain` 或 `secondary_domains` 包含 `Industry-Analysis` 时，提取业务模式标签并添加 `business/` 前缀。
 
-**触发关键词（添加 business: 前缀）**：
+**触发关键词（添加 business/ 前缀）**：
 
 | 标签类别 | 生成 tag 示例 |
 |----------|--------------|
-| 交付模式 | `business:MSSP`, `business:SECaaS`, `business:On-Premise`, `business:Hybrid-Delivery`, `business:Embedded-Security` |
-| 收费模式 | `business:Subscription`, `business:Usage-Based`, `business:Outcome-Based`, `business:Freemium`, `business:License-Based` |
-| 运营模式 | `business:MDR`, `business:MSS`, `business:vCISO`, `business:Security-Operations-Outsourcing`, `business:In-House-Operations` |
-| 合作生态 | `business:Platform-Ecosystem`, `business:Channel-Partner`, `business:OEM-Partnership`, `business:Technology-Alliance`, `business:Co-Development` |
-| 创新模式 | `business:Crowdsourced-Security`, `business:Security-Insurance`, `business:Bug-Bounty-Platform`, `business:Cyber-Risk-Quantification`, `business:Security-Financing`, `business:Data-Sharing-Alliance` |
-| 特殊标签 | `business:New-Business-Model`, `business:Business-Model-Shift` |
+| 交付模式 | `business/MSSP`, `business/SECaaS`, `business/On-Premise`, `business/Hybrid-Delivery`, `business/Embedded-Security` |
+| 收费模式 | `business/Subscription`, `business/Usage-Based`, `business/Outcome-Based`, `business/Freemium`, `business/License-Based` |
+| 运营模式 | `business/MDR`, `business/MSS`, `business/vCISO`, `business/Security-Operations-Outsourcing`, `business/In-House-Operations` |
+| 合作生态 | `business/Platform-Ecosystem`, `business/Channel-Partner`, `business/OEM-Partnership`, `business/Technology-Alliance`, `business/Co-Development` |
+| 创新模式 | `business/Crowdsourced-Security`, `business/Security-Insurance`, `business/Bug-Bounty-Platform`, `business/Cyber-Risk-Quantification`, `business/Security-Financing`, `business/Data-Sharing-Alliance` |
+| 特殊标签 | `business/New-Business-Model`, `business/Business-Model-Shift` |
 
 **提取规则**：
 1. 匹配文档中明确提及的业务模式关键词
-2. 一条情报可打多个 `business:` 标签
-3. 发现新模式时使用 `business:New-Business-Model` 并在内容中描述
-4. 转型场景使用 `business:Business-Model-Shift`
-5. 未提及业务模式时，不添加任何 `business:` 标签
+2. 一条情报可打多个 `business/` 标签
+3. 发现新模式时使用 `business/New-Business-Model` 并在内容中描述
+4. 转型场景使用 `business/Business-Model-Shift`
+5. 未提及业务模式时，不添加任何 `business/` 标签
 
 **tags 生成示例**：
 ```yaml
 # 行业分析情报
-tags: ["geo:china", "business:MSSP", "business:Subscription", "market-growth", "cybersecurity"]
+tags: ["geo/china", "business/MSSP", "business/Subscription", "market-growth", "cybersecurity"]
 
 # 威胁情报
-tags: ["geo:global", "APT", "Lazarus", "financial-sector", "malware"]
+tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 ```
 
 ### 步骤 5：生成情报卡片
@@ -303,7 +305,7 @@ created_date: "2026-04-02"
 primary_domain: "Threat-Landscape"
 secondary_domains: ["Vendor-Intelligence"]
 security_relevance: "high"
-tags: ["geo:china-primary", "APT", "Lazarus", "financial-sector", "malware"]
+tags: ["geo/china-primary", "APT", "Lazarus", "financial-sector", "malware"]
 
 # ============================================
 # 第二组：item 来源追溯（继承 + 预处理）
@@ -613,8 +615,8 @@ Bases 是动态查询，每次打开时实时运行：
 - [ ] 每条情报至少满足一个战略标准
 - [ ] 每条情报满足原子化要求（单一主题、独立完整）
 - [ ] 领域分类适当
-- [ ] tags 已填写 — **必填字段**，包含 `geo:` 前缀的地域标签
-- [ ] 业务模式标签已提取并添加 `business:` 前缀（仅 Industry-Analysis）
+- [ ] tags 已填写 — **必填字段**，包含 `geo/` 前缀的地域标签
+- [ ] 业务模式标签已提取并添加 `business/` 前缀（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
 - [ ] 每张卡片有独立的 intelligence_id
 - [ ] 每张卡片有独立的文件名（subject-feature 格式）
