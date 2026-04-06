@@ -113,8 +113,17 @@ interface ScanResultJson {
   };
 }
 
-// 七大情报领域
-const INTELLIGENCE_DOMAINS = [
+// 七大情报领域（类型定义）
+type IntelligenceDomain =
+  | 'Threat-Landscape'
+  | 'Industry-Analysis'
+  | 'Vendor-Intelligence'
+  | 'Emerging-Tech'
+  | 'Customer-Market'
+  | 'Policy-Regulation'
+  | 'Capital-Investment';
+
+const INTELLIGENCE_DOMAINS: IntelligenceDomain[] = [
   'Threat-Landscape',
   'Industry-Analysis',
   'Vendor-Intelligence',
@@ -123,6 +132,46 @@ const INTELLIGENCE_DOMAINS = [
   'Policy-Regulation',
   'Capital-Investment'
 ];
+
+// === 运行时类型验证辅助函数 ===
+
+/**
+ * 安全获取字符串值
+ */
+function safeString(value: unknown, fallback: string = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+/**
+ * 安全获取字符串数组值
+ */
+function safeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === 'string');
+  }
+  return [];
+}
+
+/**
+ * 安全获取可选字符串值
+ */
+function safeOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * 安全获取可选数值
+ */
+function safeOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+/**
+ * 验证日期格式 (YYYY-MM-DD)
+ */
+function isValidDateFormat(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
 
 /**
  * 计算时间范围
@@ -298,11 +347,11 @@ async function scanCards(
         }
       }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      // 目录不存在是预期情况，静默跳过
-      if (err.code !== 'ENOENT') {
-        // 其他错误（权限、I/O等）打印警告
-        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${err.message}`);
+      // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
+      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+      if (!isEnoent) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
       }
     }
   }
@@ -311,8 +360,7 @@ async function scanCards(
 }
 
 /**
- * 扫描卡片并返回完整元数据（用于 Agent）
- * 此函数不影响现有的 scanCards 函数
+ * 扫描卡片（现有实现，保持不变）
  */
 async function scanCardsFull(
   outputDir: string,
@@ -333,8 +381,15 @@ async function scanCardsFull(
           const content = await fs.readFile(filePath, 'utf-8');
           const { data: frontmatter, content: body } = parseFrontmatter(content);
 
-          const createdDate = frontmatter.created_date as string;
-          if (!createdDate || !/^\d{4}-\d{2}-\d{2}$/.test(createdDate)) {
+          const createdDate = safeString(frontmatter.created_date);
+          if (!createdDate) {
+            // 没有 created_date 字段，跳过（与 scanCards 保持一致）
+            continue;
+          }
+
+          // 验证日期格式（与 scanCards 保持一致，添加警告日志）
+          if (!isValidDateFormat(createdDate)) {
+            console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
             continue;
           }
 
@@ -343,35 +398,35 @@ async function scanCardsFull(
             const bodySummary = body.slice(0, 500).trim();
 
             cards.push({
-              intelligence_id: (frontmatter.intelligence_id as string) || '',
-              title: (frontmatter.title as string) || file.replace('.md', ''),
+              intelligence_id: safeString(frontmatter.intelligence_id),
+              title: safeString(frontmatter.title) || file.replace('.md', ''),
               created_date: createdDate,
               primary_domain: domain,
-              secondary_domains: (frontmatter.secondary_domains as string[]) || [],
-              security_relevance: (frontmatter.security_relevance as string) || 'medium',
-              tags: (frontmatter.tags as string[]) || [],
-              published_at: frontmatter.published_at as string,
-              source_name: frontmatter.source_name as string,
-              source_tier: frontmatter.source_tier as string,
-              item_id: frontmatter.item_id as string,
-              item_title: frontmatter.item_title as string,
-              original_url: frontmatter.original_url as string,
-              completeness_score: frontmatter.completeness_score as number,
-              archived_file: frontmatter.archived_file as string,
-              converted_file: frontmatter.converted_file as string,
+              secondary_domains: safeStringArray(frontmatter.secondary_domains),
+              security_relevance: safeString(frontmatter.security_relevance) || 'medium',
+              tags: safeStringArray(frontmatter.tags),
+              published_at: safeOptionalString(frontmatter.published_at),
+              source_name: safeOptionalString(frontmatter.source_name),
+              source_tier: safeOptionalString(frontmatter.source_tier),
+              item_id: safeOptionalString(frontmatter.item_id),
+              item_title: safeOptionalString(frontmatter.item_title),
+              original_url: safeOptionalString(frontmatter.original_url),
+              completeness_score: safeOptionalNumber(frontmatter.completeness_score),
+              archived_file: safeOptionalString(frontmatter.archived_file),
+              converted_file: safeOptionalString(frontmatter.converted_file),
               card_path: `${domain}/${file}`,
               body_summary: bodySummary,
               // Domain-specific fields
-              threat_type: frontmatter.threat_type as string,
-              threat_actor: frontmatter.threat_actor as string,
-              target_sector: frontmatter.target_sector as string,
-              target_region: frontmatter.target_region as string,
-              vendor_name: frontmatter.vendor_name as string,
-              tech_name: frontmatter.tech_name as string,
-              policy_name: frontmatter.policy_name as string,
-              company: frontmatter.company as string,
-              investors: frontmatter.investors as string,
-              event_type: frontmatter.event_type as string,
+              threat_type: safeOptionalString(frontmatter.threat_type),
+              threat_actor: safeOptionalString(frontmatter.threat_actor),
+              target_sector: safeOptionalString(frontmatter.target_sector),
+              target_region: safeOptionalString(frontmatter.target_region),
+              vendor_name: safeOptionalString(frontmatter.vendor_name),
+              tech_name: safeOptionalString(frontmatter.tech_name),
+              policy_name: safeOptionalString(frontmatter.policy_name),
+              company: safeOptionalString(frontmatter.company),
+              investors: safeOptionalString(frontmatter.investors),
+              event_type: safeOptionalString(frontmatter.event_type),
             });
           }
         } catch (fileErr) {
@@ -380,9 +435,11 @@ async function scanCardsFull(
         }
       }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (err.code !== 'ENOENT') {
-        console.warn(`Warning: Failed to scan domain ${domain}: ${err.message}`);
+      // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
+      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+      if (!isEnoent) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
       }
     }
   }
@@ -427,7 +484,6 @@ async function main() {
     .option('--param <value>', 'Period parameter: 2026-W10, 2026-03, or 2026-04-06 (for daily)')
     .option('--date <date>', 'Specific date for daily report (YYYY-MM-DD), takes priority over --param')
     .option('--format <format>', 'Output format: list or json', 'list')
-    .option('--preview', 'Preview mode: output to terminal without writing file', false)
     .option('--output-dir <dir>', 'Intelligence cards output directory', '.')
     .parse(process.argv);
 
@@ -456,6 +512,17 @@ async function main() {
   const dateParam = options.date as string | undefined;
   const format = options.format as string;
   const outputDir = options.outputDir as string;
+
+  // 验证 outputDir 目录是否存在
+  try {
+    await fs.access(outputDir);
+  } catch {
+    console.error(JSON.stringify({
+      error: true,
+      message: `Output directory does not exist: ${outputDir}`
+    }));
+    process.exit(1);
+  }
 
   try {
     // 计算时间范围，传入 dateParam
