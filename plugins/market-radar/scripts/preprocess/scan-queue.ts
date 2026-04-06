@@ -3,10 +3,10 @@
  * Scan converted files and build processing queue
  *
  * Scans converted directory for markdown files, calculates content hashes,
- * and compares with state.json to determine which files need processing.
+ * and checks processed_status to determine which files need processing.
  *
  * Usage:
- *   pnpm exec tsx scan-queue.ts --source <dir> [--state <file>] [--output json|text]
+ *   pnpm exec tsx scan-queue.ts --source <dir> [--output json|text]
  *
  * Output (JSON format):
  * {
@@ -30,7 +30,6 @@ const RECOMMENDED_SCRIPT_THRESHOLD = 50;
  * Status of a file in the processing queue
  */
 export type QueueItemStatus =
-  | 'already_processed'  // Content hash matches, no changes
   | 'needs_processing'   // New file or content changed
   | 'pending_review';    // Already in review queue
 
@@ -43,8 +42,6 @@ export interface QueueItem {
   source_hash?: string;   // MD5 hash of original source file (from frontmatter)
   archived_source?: string; // Path to archived source file (from frontmatter)
   status: QueueItemStatus;
-  intelligence_count?: number;  // For already_processed items
-  intelligence_ids?: string[];  // For already_processed items
 }
 
 /**
@@ -62,65 +59,106 @@ export interface ScanQueueResult {
 }
 
 /**
- * Processed entry in state file (object value format)
+ * Processed status in converted file frontmatter
  */
-interface ProcessedEntry {
-  intelligence_count?: number;
-  intelligence_ids?: string[];
-  review_status?: string | null;
-  content_hash?: string;
-  source_hash?: string;
+type ProcessedStatus = 'pending' | 'passed' | 'rejected';
+
+/**
+ * Converted file frontmatter (new fields)
+ */
+interface ConvertedFrontmatter {
+  sourceHash?: string;
+  processed_status?: ProcessedStatus;
+  processed_at?: string | null;
+  archivedSource?: string;
 }
 
 /**
- * State file structure (simplified for reading)
- * Supports both v2.0 (object) and legacy (array) formats
+ * Intelligence card frontmatter (for converted_file lookup)
  */
-interface StateFile {
-  version: string;
-  processed?: Record<string, ProcessedEntry> | ProcessedEntry[];
-  review?: {
-    pending?: Array<{
-      pending_id: string;
-      converted_file: string;
-    }>;
-  };
+interface IntelligenceFrontmatter {
+  converted_file?: string;
+  converted_content_hash?: string;
 }
 
 /**
- * Load state file
+ * Pending review item
  */
-function loadState(statePath: string): StateFile | null {
-  if (!fs.existsSync(statePath)) {
+interface PendingReviewItem {
+  pending_id: string;
+  converted_file: string;
+  archived_source: string;
+  added_at: string;
+  reason: string;
+}
+
+/**
+ * Get pending.json path
+ */
+function getPendingPath(sourceDir: string): string {
+  return path.join(sourceDir, '.intel', 'pending.json');
+}
+
+/**
+ * Load pending.json
+ */
+function loadPending(pendingPath: string): {
+  review: { items: PendingReviewItem[] };
+  pulse: { cursors: Record<string, unknown> };
+} | null {
+  if (!fs.existsSync(pendingPath)) {
     return null;
   }
 
   try {
-    const content = fs.readFileSync(statePath, 'utf-8');
+    const content = fs.readFileSync(pendingPath, 'utf-8');
     return JSON.parse(content);
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    const errorCode = (error as NodeJS.ErrnoException).code;
-
-    if (errorCode === 'ENOENT') {
-      // File was deleted between exists check and read
-      console.warn(`Warning: State file disappeared: ${statePath}`);
-    } else if (errorCode === 'EACCES') {
-      console.error(`Error: Permission denied reading state file: ${statePath}`);
-    } else if (error instanceof SyntaxError) {
-      console.error(`Error: Invalid JSON in state file: ${statePath} - ${errMsg}`);
-    } else {
-      console.error(`Warning: Failed to read state file: ${statePath} - ${errMsg}`);
-    }
+  } catch {
     return null;
   }
 }
 
 /**
- * Get state file path
+ * Scan intelligence cards to build converted_file lookup
  */
-function getStatePath(sourceDir: string): string {
-  return path.join(sourceDir, '.intel', 'state.json');
+function scanIntelligenceCards(sourceDir: string): Map<string, string> {
+  const convertedToHash = new Map<string, string>();
+  const intelligenceDir = path.join(sourceDir, 'intelligence');
+
+  if (!fs.existsSync(intelligenceDir)) {
+    return convertedToHash;
+  }
+
+  // Recursively scan intelligence/**/*.md
+  const scanDir = (dir: string): void => {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scanDir(fullPath);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        try {
+          const content = fs.readFileSync(fullPath, 'utf-8');
+          const frontmatter = parseFrontmatter(content) as IntelligenceFrontmatter | null;
+          if (frontmatter?.converted_file) {
+            // Extract converted_file from WikiLink format: [[path]]
+            const convertedFile = frontmatter.converted_file
+              .replace(/^\[\[/, '')
+              .replace(/\]\]$/, '');
+            convertedToHash.set(
+              convertedFile,
+              frontmatter.converted_content_hash || ''
+            );
+          }
+        } catch {
+          // Skip files that can't be read
+        }
+      }
+    }
+  };
+
+  scanDir(intelligenceDir);
+  return convertedToHash;
 }
 
 /**
@@ -162,51 +200,23 @@ function scanMarkdownFiles(dir: string, baseDir: string): string[] {
  */
 function scanAndBuildQueue(
   sourceDir: string,
-  statePath?: string
+  pendingPath?: string
 ): ScanQueueResult {
   // Resolve paths
   const resolvedSourceDir = path.resolve(sourceDir);
-  const resolvedStatePath = statePath || getStatePath(resolvedSourceDir);
+  const resolvedPendingPath = pendingPath || getPendingPath(resolvedSourceDir);
 
-  // Load state
-  const state = loadState(resolvedStatePath);
-
-  // Build lookup maps from state
-  const processedMap = new Map<string, {
-    intelligence_count?: number;
-    intelligence_ids?: string[];
-    review_status?: string | null;
-  }>();
-
-  if (state && state.processed) {
-    if (Array.isArray(state.processed)) {
-      // Legacy array format
-      for (const item of state.processed) {
-        processedMap.set((item as ProcessedEntry & { source_file: string }).source_file, {
-          intelligence_count: item.intelligence_count,
-          intelligence_ids: item.intelligence_ids,
-          review_status: item.review_status,
-        });
-      }
-    } else {
-      // v2.0 object format
-      for (const [filePath, entry] of Object.entries(state.processed)) {
-        processedMap.set(filePath, {
-          intelligence_count: entry.intelligence_count,
-          intelligence_ids: entry.intelligence_ids,
-          review_status: entry.review_status,
-        });
-      }
-    }
-  }
-
-  // Build pending review set
+  // Load pending items
+  const pending = loadPending(resolvedPendingPath);
   const pendingReviewSet = new Set<string>();
-  if (state?.review?.pending && Array.isArray(state.review.pending)) {
-    for (const item of state.review.pending) {
+  if (pending?.review?.items) {
+    for (const item of pending.review.items) {
       pendingReviewSet.add(item.converted_file);
     }
   }
+
+  // Scan intelligence cards for converted_file lookup
+  const convertedToHash = scanIntelligenceCards(resolvedSourceDir);
 
   // Scan converted files
   const convertedDir = path.join(resolvedSourceDir, 'converted');
@@ -217,29 +227,26 @@ function scanAndBuildQueue(
   let alreadyProcessed = 0;
   let needsProcessing = 0;
   let pendingReview = 0;
-  let readErrors = 0;
 
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
 
-    // Read file content with error handling
+    // Read file content
     let content: string;
     try {
       content = fs.readFileSync(filePath, 'utf-8');
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      console.warn(`Warning: Cannot read file ${relativePath}: ${errMsg}`);
-      readErrors++;
-      continue; // Skip files that can't be read
+    } catch {
+      continue;
     }
 
     // Calculate content hash
     const contentHash = createHash('md5').update(content).digest('hex');
 
-    // Parse frontmatter for metadata
-    const frontmatter = parseFrontmatter(content);
+    // Parse frontmatter
+    const frontmatter = parseFrontmatter(content) as ConvertedFrontmatter | null;
     const sourceHash = frontmatter?.sourceHash;
     const archivedSource = frontmatter?.archivedSource;
+    const processedStatus = frontmatter?.processed_status;
 
     // Check if in pending review
     if (pendingReviewSet.has(relativePath)) {
@@ -254,37 +261,33 @@ function scanAndBuildQueue(
       continue;
     }
 
-    // Check against state
-    const processedInfo = processedMap.get(relativePath);
-
-    if (!processedInfo) {
-      // New file, needs processing
-      queue.push({
-        file: relativePath,
-        content_hash: contentHash,
-        source_hash: sourceHash,
-        archived_source: archivedSource,
-        status: 'needs_processing',
-      });
-      needsProcessing++;
-    } else {
-      // Already processed - include in queue for reference
-      queue.push({
-        file: relativePath,
-        content_hash: contentHash,
-        source_hash: sourceHash,
-        archived_source: archivedSource,
-        status: 'already_processed',
-        intelligence_count: processedInfo.intelligence_count,
-        intelligence_ids: processedInfo.intelligence_ids,
-      });
+    // Check processed_status
+    if (processedStatus === 'rejected') {
+      // Skip rejected files
       alreadyProcessed++;
+      continue;
     }
-  }
 
-  // Log summary of read errors
-  if (readErrors > 0) {
-    console.warn(`Warning: ${readErrors} file(s) could not be read and were skipped`);
+    if (processedStatus === 'passed') {
+      // Verify intelligence card exists
+      const recordedHash = convertedToHash.get(relativePath);
+      if (recordedHash && recordedHash === contentHash) {
+        // Already processed, content unchanged
+        alreadyProcessed++;
+        continue;
+      }
+      // Content changed or card missing - needs reprocessing
+    }
+
+    // pending, missing status, or needs reprocessing
+    queue.push({
+      file: relativePath,
+      content_hash: contentHash,
+      source_hash: sourceHash,
+      archived_source: archivedSource,
+      status: 'needs_processing',
+    });
+    needsProcessing++;
   }
 
   // Determine recommendation
@@ -339,34 +342,33 @@ function formatAsText(result: ScanQueueResult): string {
 /**
  * CLI entry point
  */
-function main() {
+function main(): void {
   const args = process.argv.slice(2);
   let sourceDir = '.';
-  let statePath: string | undefined;
   let outputFormat: 'json' | 'text' = 'json';
 
   // Parse arguments
+  // Note: pending.json path is derived from sourceDir automatically
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--source' && args[i + 1]) {
+    if (args[i] === '--source' && i + 1 < args.length) {
       sourceDir = args[i + 1];
       i++;
-    } else if (args[i] === '--state' && args[i + 1]) {
-      statePath = args[i + 1];
-      i++;
-    } else if (args[i] === '--output' && args[i + 1]) {
+    } else if (args[i] === '--output' && i + 1 < args.length) {
       outputFormat = args[i + 1] as 'json' | 'text';
       i++;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: pnpm exec tsx scan-queue.ts --source <dir> [--state <file>] [--output json|text]
+Usage: pnpm exec tsx scan-queue.ts --source <dir> [--output json|text]
 
 Scan converted files and build processing queue for intel-distill.
 
 Options:
   --source <dir>   Source directory (default: current directory)
-  --state <file>   Path to state.json (default: .intel/state.json)
   --output <fmt>   Output format: json or text (default: json)
   --help           Show this help message
+
+Note: pending.json path is automatically derived from source directory
+      ({source}/.intel/pending.json)
 
 Threshold: ${RECOMMENDED_SCRIPT_THRESHOLD} files
   - < ${RECOMMENDED_SCRIPT_THRESHOLD}: Recommend using Glob tool directly
@@ -388,14 +390,12 @@ Output JSON structure:
     }
   }
 
-  // Run scan
-  const result = scanAndBuildQueue(sourceDir, statePath);
+  const result = scanAndBuildQueue(sourceDir);
 
-  // Output result
-  if (outputFormat === 'text') {
-    console.log(formatAsText(result));
-  } else {
+  if (outputFormat === 'json') {
     console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(formatAsText(result));
   }
 }
 
