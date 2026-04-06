@@ -187,12 +187,12 @@ skills:
 使用 Write 工具写入：
 
 ```
-{output_dir}/reports/{period}/{period_param}-briefing.md
+{output_dir}/reports/{period}/{period_param}-{period}.md
 ```
 
 **文件命名规则**：
-- 周报：`2026-W10-briefing.md`
-- 月报：`2026-03-briefing.md`
+- 周报：`2026-W10-weekly.md`
+- 月报：`2026-03-monthly.md`
 
 **覆盖规则**：
 - 如果文件已存在，直接覆盖（不保留历史版本）
@@ -213,7 +213,7 @@ skills:
 # 网络安全情报简报
 ...
 
-报告文件位置：./intel/reports/weekly/2026-W10-briefing.md
+报告文件位置：./intel/reports/weekly/2026-W10-weekly.md
 ```
 
 ## 质量要求

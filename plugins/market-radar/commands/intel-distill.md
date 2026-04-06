@@ -913,7 +913,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 ```
 ✅ 情报简报已生成
 
-报告文件: {output}/reports/{period}/{period_param}-briefing.md
+报告文件: {output}/reports/{period}/{period_param}-{period}.md
 
 --- 报告内容 ---
 ```
