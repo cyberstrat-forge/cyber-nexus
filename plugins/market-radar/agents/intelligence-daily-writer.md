@@ -214,79 +214,13 @@ tools: ["Read", "Write"]
 
 #### 4.1 执行摘要（编辑点评视角）
 
-以自然语言段落形式撰写，不使用列表：
-
-**内容要素**：
-- 今日情报总体情况（数量、领域覆盖）
-- 2-3 个关键动向概述
-- 潜在影响提示
-- 战略意义总结
-
-**写作要求**：
-- 单一段落，流畅自然
-- 突出趋势和关联
-- 编辑点评视角，非机械汇总
-
-**示例**：
-```markdown
-今日情报呈现三个值得关注的方向。厂商层面，CrowdStrike 动作密集——产品发布与融资同步推进，显示出在 AI 安全赛道上的加速姿态。威胁层面，供应链攻击持续发酵，攻防博弈的时间差值得关注。政策层面，AI 安全治理指南的出台将重塑合规格局。总体而言，AI 正在成为安全市场竞争的核心变量。
-```
-
 #### 4.2 情报概览
-
-按聚合维度组织内容，遍历所有聚合后的情报组：
-
-**格式**：
-```markdown
-### {聚合标题}
-
-{关联分析描述}
-
-- {卡片简述}... [[{文件名}]]
-- {卡片简述}... [[{文件名}]]
-
-**商业模式影响**：{仅商业模式聚合时添加}
-```
-
-**Obsidian 链接格式**：
-- 从 `card_path` 提取文件名：`Vendor-Intelligence/2026/04/20260406-crowdstrike.md` → `[[20260406-crowdstrike]]`
-- 使用 `[[filename]]` 格式，不含路径
 
 #### 4.3 重点关注
 
-遍历筛选出的重点关注情报（最多 5 条）：
-
-**格式**：
-```markdown
-### {重点关注标题}
-
-{深入分析，200-300 字}
-
-**关键问题**：{研究问题}
-
-**相关情报卡片**：[[{文件名}]]、[[{文件名}]]
-```
-
-**深入分析要求**：
-- 提出研究问题而非重复内容
-- 包含技术细节追问
-- 包含对比分析建议
-- 包含后续跟踪方向
-
 #### 4.4 工作统计
 
-数据表格格式：
-
-```markdown
-| 指标 | 数量 |
-|------|------|
-| 新增情报卡片 | {stats.total_count} |
-| 情报领域覆盖 | {Object.keys(stats.domains_distribution).length} |
-| 来源数量 | {Object.keys(stats.sources_distribution).length} |
-| 重点关注情报 | {重点关注数量} |
-
-**领域分布**：{从 stats.domains_distribution 生成，如"威胁态势 3 条，厂商情报 3 条..."}
-```
+**输出格式详见**：`../skills/intelligence-output-templates/references/daily-report-template.md`
 
 ---
 
@@ -302,23 +236,7 @@ tools: ["Read", "Write"]
 
 **文件路径**：`{output_dir}/reports/daily/{date}-daily.md`
 
-**文件命名规则**：
-- 格式：`YYYY-MM-DD-daily.md`
-- 示例：`2026-04-06-daily.md`
-
-**frontmatter 结构**：
-
-```yaml
----
-report_type: daily
-date: {date}
-generated_at: {当前时间 ISO 8601}
-generated_by: intelligence-daily-writer
-intelligence_count: {卡片总数}
-domains_covered: [{领域列表}]
-high_priority_count: {重点关注数量}
----
-```
+**frontmatter 和正文结构**：参见 `../skills/intelligence-output-templates/references/daily-report-template.md`
 
 ### 步骤 7：显示报告内容
 

@@ -117,15 +117,15 @@ high_priority_count: N
 
 ---
 
-## 文件命名规则
+## 输出路径
 
-日报文件命名格式：
+日报文件路径格式：
 
 ```
-{date}-daily.md
+{output_dir}/reports/daily/{date}-daily.md
 ```
 
-示例：`2026-04-06-daily.md`
+示例：`intelligence/reports/daily/2026-04-06-daily.md`
 
 ---
 
