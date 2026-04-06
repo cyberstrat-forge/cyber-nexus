@@ -1381,7 +1381,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 # 列出待审核
 pnpm exec tsx preprocess/update-state.ts --output {output_dir} --review list
 
-# 批准审核
+# 批准审核（注意：Agent 调用由命令层处理，脚本仅更新状态）
 pnpm exec tsx preprocess/update-state.ts --output {output_dir} \
   --review approve \
   --pending-id {pending_id} \
@@ -1393,48 +1393,33 @@ pnpm exec tsx preprocess/update-state.ts --output {output_dir} \
   --pending-id {pending_id} \
   --reason "拒绝原因"
 ```
-```
 
-- [ ] **Step 2.2: 添加迁移触发流程**
-
-在步骤 4（加载或创建状态文件）之后添加迁移检测：
-
-```markdown
-### 步骤 4.5：检测并执行迁移
-
-检查是否存在旧的 `state.json`：
-
-```bash
-if [ -f "{root_dir}/.intel/state.json" ] && [ ! -f "{root_dir}/.intel/pending.json" ]; then
-  echo "🔄 检测到旧版状态文件，执行迁移..."
-  cd ${CLAUDE_PLUGIN_ROOT}/scripts
-  pnpm exec tsx preprocess/migrate-state.ts --root {root_dir}
-fi
-```
-
-迁移完成后继续正常流程。
+**注意**：`approve` 操作时，Agent 调用由命令层执行（需要 Agent 工具权限），脚本仅负责更新 pending.json 和转换文件状态。
 ```
 
 - [ ] **Step 3: 删除 processed 和 stats 字段说明**
 
 移除文档中关于 `state.processed` 和 `state.stats` 的详细说明。
 
-- [ ] **Step 4: 添加迁移说明**
+- [ ] **Step 4: 更新迁移说明（独立迁移）**
 
 ```markdown
-### 迁移
+### 迁移说明
 
-首次运行时，如果检测到旧的 `state.json`，自动执行迁移：
+**升级说明**：从旧版 state.json 迁移到 pending.json 是一次性操作，请手动执行迁移脚本：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
 pnpm exec tsx preprocess/migrate-state.ts --root {root_dir}
 ```
 
-迁移操作：
+**迁移操作**：
 - 提取 `review.pending` → `pending.json`
 - 提取 `pulse.cursors` → `pending.json`
 - 备份 `state.json` → `state.json.bak`
+
+**首次运行检测**：
+如果首次运行时检测到旧版 `state.json` 且没有 `pending.json`，命令会提示用户执行迁移脚本，然后退出。
 ```
 
 - [ ] **Step 5: 提交**
@@ -1495,6 +1480,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 | `pulse.cursors.{source}.last_item_id` | string | API 返回的最后一条数据的 ID |
 | `pulse.cursors.{source}.last_pull` | string | 本地同步完成时间 |
 | `pulse.cursors.{source}.total_synced` | number | 累计同步数量 |
+
+### 迁移说明
+
+**升级说明**：从旧版 state.json 迁移到 pending.json 是一次性操作。如果首次运行时检测到旧版 `state.json` 且没有 `pending.json`，会提示用户执行迁移脚本：
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+pnpm exec tsx preprocess/migrate-state.ts --root {root_dir}
+```
+
+迁移完成后重新执行 intel-pull 命令。
 ```
 
 - [ ] **Step 2: 提交**
