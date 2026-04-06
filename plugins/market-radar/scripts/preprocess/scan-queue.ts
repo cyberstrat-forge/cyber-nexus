@@ -264,7 +264,7 @@ function scanAndBuildQueue(
     }
 
     if (processedStatus === 'passed') {
-      // Verify intelligence card exists
+      // Verify intelligence card exists with matching hash
       const recordedHash = convertedToHash.get(relativePath);
       if (recordedHash && recordedHash === contentHash) {
         // Already processed, content unchanged
@@ -272,14 +272,6 @@ function scanAndBuildQueue(
         continue;
       }
       // Content changed or card missing - needs reprocessing
-    } else if (processedStatus === undefined || processedStatus === null) {
-      // BACKWARD COMPATIBILITY: No processed_status field
-      // Check if intelligence card exists - if yes, treat as already processed
-      if (convertedToHash.has(relativePath)) {
-        alreadyProcessed++;
-        continue;
-      }
-      // No intelligence card - needs processing
     }
 
     // pending, missing status, or needs reprocessing
