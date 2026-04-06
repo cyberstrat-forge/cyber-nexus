@@ -246,6 +246,11 @@
           "pattern": "^\\[\\[.+\\]\\]$",
           "description": "Converted file path (WikiLink format: [[converted/YYYY/MM/filename.md]])"
         },
+        "converted_content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "MD5 hash of converted file content for change detection (32 hex chars)"
+        },
         "source_id": {
           "type": "string",
           "description": "Intelligence source ID (optional, inherited from collection)"

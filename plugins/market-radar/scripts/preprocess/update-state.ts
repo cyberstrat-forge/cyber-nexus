@@ -150,6 +150,11 @@ function getPendingPath(outputDir: string): string {
 
 /**
  * Load or create pending.json
+ *
+ * Error handling strategy:
+ * - File not exists: create new structure
+ * - JSON parse error: backup corrupted file, then create new structure
+ * - This prevents silent data loss while allowing workflow to continue
  */
 function loadOrCreatePending(pendingPath: string): PendingFile {
   if (fs.existsSync(pendingPath)) {
@@ -164,8 +169,15 @@ function loadOrCreatePending(pendingPath: string): PendingFile {
         parsed.pulse = { cursors: {} };
       }
       return parsed;
-    } catch {
-      console.warn(`Warning: Invalid JSON in ${pendingPath}. Creating new file.`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      // Backup corrupted file to prevent silent data loss
+      const backupPath = pendingPath + '.corrupted';
+      fs.writeFileSync(backupPath, content, 'utf-8');
+      console.warn(`Warning: Invalid JSON in ${pendingPath}.`);
+      console.warn(`  Error: ${errMsg}`);
+      console.warn(`  Backup saved to: ${backupPath}`);
+      console.warn(`  Creating new pending.json structure.`);
     }
   }
 

@@ -26,14 +26,23 @@ function getMtime(filePath: string): string {
 
 /**
  * 加载或创建状态文件
+ *
+ * Error handling strategy:
+ * - File not exists: create new structure
+ * - JSON parse error: backup corrupted file, then create new structure
  */
 function loadOrCreateState(statePath: string): ThemeState {
   if (existsSync(statePath)) {
+    const content = readFileSync(statePath, 'utf-8');
     try {
-      const content = readFileSync(statePath, 'utf-8');
       return JSON.parse(content) as ThemeState;
     } catch (error) {
-      console.error(`状态文件损坏，将重新创建: ${error}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      // Backup corrupted file to prevent silent data loss
+      const backupPath = statePath + '.corrupted';
+      writeFileSync(backupPath, content, 'utf-8');
+      console.error(`状态文件损坏，将重新创建: ${errMsg}`);
+      console.error(`  备份已保存至: ${backupPath}`);
     }
   }
 
