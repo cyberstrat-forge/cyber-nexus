@@ -1604,31 +1604,12 @@ Expected: 扫描结果正确显示已处理/待处理数量
 
 ### 现有文档处理
 
-| 目录 | 新字段 | 现有文件 | 处理策略 |
-|------|--------|---------|----------|
-| **archive/** | 无变化 | ✅ 无影响 | 无需处理 |
-| **converted/** | `processed_status` | ⚠️ 无此字段 | 自动检测 intelligence 卡片存在 → 视为已处理 |
-| **intelligence/** | `converted_content_hash` | ⚠️ 无此字段 | 新处理时自动写入 |
-| **state.json** | → `pending.json` | ⚠️ 需迁移 | 运行 `migrate-state.ts` |
-
-### 向后兼容逻辑 (scan-queue.ts)
-
-```typescript
-if (processedStatus === undefined || processedStatus === null) {
-  // BACKWARD COMPATIBILITY: No processed_status field
-  // Check if intelligence card exists - if yes, treat as already processed
-  if (convertedToHash.has(relativePath)) {
-    alreadyProcessed++;
-    continue;
-  }
-  // No intelligence card - needs processing
-}
-```
-
-**行为说明：**
-- 现有 converted 文件（无 `processed_status`）→ 检查是否存在对应的 intelligence 卡片
-- 如果存在 → 视为已处理，跳过
-- 如果不存在 → 加入处理队列
+| 目录 | 新字段 | 迁移操作 |
+|------|--------|----------|
+| **archive/** | 无变化 | 无需处理 |
+| **converted/** | `processed_status`, `processed_at` | 迁移脚本自动添加 |
+| **intelligence/** | `converted_content_hash` | 迁移脚本自动添加 |
+| **state.json** | → `pending.json` | 迁移脚本转换 |
 
 ### 用户升级步骤
 
