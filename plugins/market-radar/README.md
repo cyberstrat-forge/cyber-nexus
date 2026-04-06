@@ -1,6 +1,6 @@
 # Market Radar
 
-[![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.6.1)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/cyberstrat-forge/cyber-nexus/releases/tag/v1.8.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > 为网络安全战略规划提供战略性市场洞察
@@ -264,6 +264,12 @@ cd plugins/market-radar/scripts && pnpm install
 
 # === 报告模式 ===
 
+# 生成当天日报（从现有卡片，按 created_date）
+/intel-distill --report daily
+
+# 生成指定日期日报
+/intel-distill --report daily --date 2026-04-05
+
 # 生成当前周报（从现有卡片）
 /intel-distill --report weekly
 
@@ -307,7 +313,9 @@ cd plugins/market-radar/scripts && pnpm install
 | `--output <dir>` | 情报卡片输出目录 | 当前目录 |
 | `--review <action> [id]` | 审核操作：`list`（列出）/`approve`（批准）/`reject`（拒绝） | - |
 | `--reason <text>` | 审核原因（approve/reject 时推荐） | - |
-| `--report <type> [period]` | 生成情报简报：`weekly`（周报）或 `monthly`（月报），可选周期参数 | - |
+| `--report <type>` | 生成情报简报：`daily`（日报）/`weekly`（周报）/`monthly`（月报） | - |
+| `--date <YYYY-MM-DD>` | 日报日期（仅 daily 模式） | 当天 |
+| `<period>` | 周期参数：周报 `YYYY-Wnn`，月报 `YYYY-MM` | - |
 | `--help` | 显示帮助信息 | - |
 
 ### thematic-analysis 参数说明
@@ -373,12 +381,15 @@ cd plugins/market-radar/scripts && pnpm install
 ├── Policy-Regulation/    # 政策法规：新法规、合规要求、监管动态
 ├── Capital-Investment/   # 资本动态：融资、并购、IPO
 └── reports/              # 情报报告
+    ├── daily/            # 日报
+    │   ├── 2026-04-05-daily.md
+    │   └── 2026-04-06-daily.md
     ├── weekly/           # 周报
-    │   ├── 2026-W09-briefing.md
-    │   └── 2026-W10-briefing.md
+    │   ├── 2026-W09-weekly.md
+    │   └── 2026-W10-weekly.md
     └── monthly/          # 月报
-        ├── 2026-01-briefing.md
-        └── 2026-02-briefing.md
+        ├── 2026-03-monthly.md
+        └── 2026-04-monthly.md
 ```
 
 ### 管理目录

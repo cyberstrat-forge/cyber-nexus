@@ -58,6 +58,39 @@ interface CardMetadata {
   primary_domain: string;
 }
 
+// 新增：完整元数据接口（仅用于 JSON 输出）
+interface CardMetadataFull {
+  intelligence_id: string;
+  title: string;
+  created_date: string;
+  primary_domain: string;
+  secondary_domains: string[];
+  security_relevance: string;
+  tags: string[];
+  published_at?: string;
+  source_name?: string;
+  source_tier?: string;
+  item_id?: string;
+  item_title?: string;
+  original_url?: string;
+  completeness_score?: number;
+  archived_file?: string;
+  converted_file?: string;
+  card_path: string;
+  body_summary?: string;
+  // Domain-specific fields for aggregation
+  threat_type?: string;
+  threat_actor?: string;
+  target_sector?: string;
+  target_region?: string;
+  vendor_name?: string;
+  tech_name?: string;
+  policy_name?: string;
+  company?: string;
+  investors?: string;
+  event_type?: string;
+}
+
 interface ScanResult {
   period: string;
   period_param: string;
@@ -69,8 +102,28 @@ interface ScanResult {
   };
 }
 
-// 七大情报领域
-const INTELLIGENCE_DOMAINS = [
+// 新增：JSON 输出结构
+interface ScanResultJson {
+  date: string;
+  intelligence_cards: CardMetadataFull[];
+  stats: {
+    total_count: number;
+    domains_distribution: Record<string, number>;
+    sources_distribution: Record<string, number>;
+  };
+}
+
+// 七大情报领域（类型定义）
+type IntelligenceDomain =
+  | 'Threat-Landscape'
+  | 'Industry-Analysis'
+  | 'Vendor-Intelligence'
+  | 'Emerging-Tech'
+  | 'Customer-Market'
+  | 'Policy-Regulation'
+  | 'Capital-Investment';
+
+const INTELLIGENCE_DOMAINS: IntelligenceDomain[] = [
   'Threat-Landscape',
   'Industry-Analysis',
   'Vendor-Intelligence',
@@ -80,12 +133,63 @@ const INTELLIGENCE_DOMAINS = [
   'Capital-Investment'
 ];
 
+// === 运行时类型验证辅助函数 ===
+
+/**
+ * 安全获取字符串值
+ */
+function safeString(value: unknown, fallback: string = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+/**
+ * 安全获取字符串数组值
+ */
+function safeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === 'string');
+  }
+  return [];
+}
+
+/**
+ * 安全获取可选字符串值
+ */
+function safeOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * 安全获取可选数值
+ */
+function safeOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+/**
+ * 验证日期格式 (YYYY-MM-DD)
+ */
+function isValidDateFormat(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+
 /**
  * 计算时间范围
  */
-function calculateDateRange(period: string, param?: string): { start: string; end: string } {
+function calculateDateRange(period: string, param?: string, dateParam?: string): { start: string; end: string } {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
+
+  if (period === 'daily') {
+    // Daily mode: single date
+    // Priority: --date > --param > today
+    const targetDate = dateParam || param || todayStr;
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+      throw new Error(`Invalid date format: ${targetDate}. Expected YYYY-MM-DD`);
+    }
+    return { start: targetDate, end: targetDate };
+  }
 
   if (!param) {
     // 默认：当前周/当前月
@@ -213,14 +317,15 @@ async function scanCards(
           const content = await fs.readFile(filePath, 'utf-8');
           const { data: frontmatter } = parseFrontmatter(content);
 
-          const createdDate = frontmatter.created_date as string;
+          const createdDate = safeString(frontmatter.created_date);
           if (!createdDate) {
-            // 没有 created_date 字段，跳过
+            // 没有 created_date 字段，跳过并记录
+            console.warn(`Info: Skipping ${filePath} - missing or invalid created_date`);
             continue;
           }
 
           // 验证日期格式
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(createdDate)) {
+          if (!isValidDateFormat(createdDate)) {
             console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
             continue;
           }
@@ -230,7 +335,7 @@ async function scanCards(
             cards.push({
               path: `${domain}/${file}`,
               metadata: {
-                title: (frontmatter.title as string) || file.replace('.md', ''),
+                title: safeString(frontmatter.title) || file.replace('.md', ''),
                 created_date: createdDate,
                 primary_domain: domain
               }
@@ -243,11 +348,103 @@ async function scanCards(
         }
       }
     } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      // 目录不存在是预期情况，静默跳过
-      if (err.code !== 'ENOENT') {
-        // 其他错误（权限、I/O等）打印警告
-        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${err.message}`);
+      // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
+      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+      if (isEnoent) {
+        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
+      } else {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
+      }
+    }
+  }
+
+  return cards;
+}
+
+/**
+ * 扫描卡片（现有实现，保持不变）
+ */
+async function scanCardsFull(
+  outputDir: string,
+  dateRange: { start: string; end: string }
+): Promise<CardMetadataFull[]> {
+  const cards: CardMetadataFull[] = [];
+
+  for (const domain of INTELLIGENCE_DOMAINS) {
+    const domainPath = join(outputDir, domain);
+
+    try {
+      const files = await glob('**/*.md', { cwd: domainPath, absolute: false });
+
+      for (const file of files) {
+        const filePath = join(domainPath, file);
+
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          const { data: frontmatter, content: body } = parseFrontmatter(content);
+
+          const createdDate = safeString(frontmatter.created_date);
+          if (!createdDate) {
+            // 没有 created_date 字段，跳过（与 scanCards 保持一致）
+            continue;
+          }
+
+          // 验证日期格式（与 scanCards 保持一致，添加警告日志）
+          if (!isValidDateFormat(createdDate)) {
+            console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
+            continue;
+          }
+
+          if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
+            // Extract body summary (first 500 chars, excluding frontmatter)
+            const bodySummary = body.slice(0, 500).trim();
+
+            cards.push({
+              intelligence_id: safeString(frontmatter.intelligence_id),
+              title: safeString(frontmatter.title) || file.replace('.md', ''),
+              created_date: createdDate,
+              primary_domain: domain,
+              secondary_domains: safeStringArray(frontmatter.secondary_domains),
+              security_relevance: safeString(frontmatter.security_relevance) || 'medium',
+              tags: safeStringArray(frontmatter.tags),
+              published_at: safeOptionalString(frontmatter.published_at),
+              source_name: safeOptionalString(frontmatter.source_name),
+              source_tier: safeOptionalString(frontmatter.source_tier),
+              item_id: safeOptionalString(frontmatter.item_id),
+              item_title: safeOptionalString(frontmatter.item_title),
+              original_url: safeOptionalString(frontmatter.original_url),
+              completeness_score: safeOptionalNumber(frontmatter.completeness_score),
+              archived_file: safeOptionalString(frontmatter.archived_file),
+              converted_file: safeOptionalString(frontmatter.converted_file),
+              card_path: `${domain}/${file}`,
+              body_summary: bodySummary,
+              // Domain-specific fields
+              threat_type: safeOptionalString(frontmatter.threat_type),
+              threat_actor: safeOptionalString(frontmatter.threat_actor),
+              target_sector: safeOptionalString(frontmatter.target_sector),
+              target_region: safeOptionalString(frontmatter.target_region),
+              vendor_name: safeOptionalString(frontmatter.vendor_name),
+              tech_name: safeOptionalString(frontmatter.tech_name),
+              policy_name: safeOptionalString(frontmatter.policy_name),
+              company: safeOptionalString(frontmatter.company),
+              investors: safeOptionalString(frontmatter.investors),
+              event_type: safeOptionalString(frontmatter.event_type),
+            });
+          }
+        } catch (fileErr) {
+          const errMsg = fileErr instanceof Error ? fileErr.message : String(fileErr);
+          console.warn(`Warning: Failed to process file ${filePath}: ${errMsg}`);
+        }
+      }
+    } catch (error) {
+      // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
+      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+      if (isEnoent) {
+        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
+      } else {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
       }
     }
   }
@@ -288,59 +485,123 @@ async function main() {
   program
     .name('scan-cards')
     .description('Scan intelligence cards within a time range')
-    .option('--period <type>', 'Period type: weekly or monthly', 'weekly')
-    .option('--param <value>', 'Period parameter: 2026-W10 or 2026-03')
+    .option('--period <type>', 'Period type: weekly, monthly, or daily', 'weekly')
+    .option('--param <value>', 'Period parameter: 2026-W10, 2026-03, or 2026-04-06 (for daily)')
+    .option('--date <date>', 'Specific date for daily report (YYYY-MM-DD), takes priority over --param')
+    .option('--format <format>', 'Output format: list or json', 'list')
     .option('--output-dir <dir>', 'Intelligence cards output directory', '.')
     .parse(process.argv);
 
   const options = program.opts();
 
   // 验证 period 参数
-  if (options.period !== 'weekly' && options.period !== 'monthly') {
+  if (!['weekly', 'monthly', 'daily'].includes(options.period)) {
     console.error(JSON.stringify({
       error: true,
-      message: `Invalid period type: ${options.period}. Must be 'weekly' or 'monthly'`
+      message: `Invalid period type: ${options.period}. Must be 'weekly', 'monthly', or 'daily'`
+    }));
+    process.exit(1);
+  }
+
+  // 验证 format 参数
+  if (options.format !== 'list' && options.format !== 'json') {
+    console.error(JSON.stringify({
+      error: true,
+      message: `Invalid format: ${options.format}. Must be 'list' or 'json'`
     }));
     process.exit(1);
   }
 
   const period = options.period as string;
   const periodParam = options.param as string | undefined;
+  const dateParam = options.date as string | undefined;
+  const format = options.format as string;
   const outputDir = options.outputDir as string;
 
+  // 验证 outputDir 目录是否存在且可访问
   try {
-    // 计算时间范围
-    const dateRange = calculateDateRange(period, periodParam);
+    await fs.access(outputDir);
+  } catch (error) {
+    const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+    const message = isEnoent
+      ? `Output directory does not exist: ${outputDir}`
+      : `Cannot access output directory: ${outputDir}. ${error instanceof Error ? error.message : String(error)}`;
+    console.error(JSON.stringify({
+      error: true,
+      message
+    }));
+    process.exit(1);
+  }
 
-    // 扫描卡片
-    const cards = await scanCards(outputDir, dateRange);
+  try {
+    // 计算时间范围，传入 dateParam
+    const dateRange = calculateDateRange(period, periodParam, dateParam);
 
-    // 统计
-    const stats = {
-      total: cards.length,
-      by_domain: {} as Record<string, number>
-    };
+    if (format === 'json') {
+      // === JSON 输出格式（供 Agent 使用）===
+      const fullCards = await scanCardsFull(outputDir, dateRange);
 
-    for (const card of cards) {
-      const domain = card.metadata.primary_domain;
-      stats.by_domain[domain] = (stats.by_domain[domain] || 0) + 1;
+      // Build stats
+      const domainsDistribution: Record<string, number> = {};
+      const sourcesDistribution: Record<string, number> = {};
+
+      for (const card of fullCards) {
+        domainsDistribution[card.primary_domain] = (domainsDistribution[card.primary_domain] || 0) + 1;
+        if (card.source_name) {
+          sourcesDistribution[card.source_name] = (sourcesDistribution[card.source_name] || 0) + 1;
+        }
+      }
+
+      // Determine output date
+      let outputDate: string;
+      if (period === 'daily') {
+        outputDate = dateParam || periodParam || new Date().toISOString().split('T')[0];
+      } else {
+        outputDate = formatPeriodParam(period, periodParam, dateRange);
+      }
+
+      const jsonResult: ScanResultJson = {
+        date: outputDate,
+        intelligence_cards: fullCards.sort((a, b) => b.created_date.localeCompare(a.created_date)),
+        stats: {
+          total_count: fullCards.length,
+          domains_distribution: domainsDistribution,
+          sources_distribution: sourcesDistribution
+        }
+      };
+
+      console.log(JSON.stringify(jsonResult, null, 2));
+    } else {
+      // === 现有 list 格式（保持不变）===
+      const cards = await scanCards(outputDir, dateRange);
+
+      // 统计
+      const stats = {
+        total: cards.length,
+        by_domain: {} as Record<string, number>
+      };
+
+      for (const card of cards) {
+        const domain = card.metadata.primary_domain;
+        stats.by_domain[domain] = (stats.by_domain[domain] || 0) + 1;
+      }
+
+      // 按日期排序（倒序）
+      cards.sort((a, b) => {
+        return b.metadata.created_date.localeCompare(a.metadata.created_date);
+      });
+
+      // 输出结果
+      const result: ScanResult = {
+        period,
+        period_param: formatPeriodParam(period, periodParam, dateRange),
+        date_range: dateRange,
+        cards,
+        stats
+      };
+
+      console.log(JSON.stringify(result, null, 2));
     }
-
-    // 按日期排序（倒序）
-    cards.sort((a, b) => {
-      return b.metadata.created_date.localeCompare(a.metadata.created_date);
-    });
-
-    // 输出结果
-    const result: ScanResult = {
-      period,
-      period_param: formatPeriodParam(period, periodParam, dateRange),
-      date_range: dateRange,
-      cards,
-      stats
-    };
-
-    console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     console.error(JSON.stringify({
       error: true,

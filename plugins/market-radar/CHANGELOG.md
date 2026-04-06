@@ -2,6 +2,38 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.8.0] - 2026-04-06
+
+### 新增
+
+- **情报日报功能**：从现有情报卡片生成每日情报监测报告
+  - 支持 `--report daily` 生成日报（按 `created_date` 过滤当日卡片）
+  - 支持 `--date YYYY-MM-DD` 指定日期，生成历史日报
+  - 日报包含：执行摘要、情报概览、重点关注、工作统计四部分
+  - 有机聚合 8 种维度：主体聚合、事件链条聚合、商业模式聚合、跨领域关联聚合、主题聚合、地域聚合、时间序列聚合、独立展示
+  - 重点关注筛选高价值情报（最多 5 条），包含研究问题
+
+- **新增组件**：
+  - `agents/intelligence-daily-writer.md`：情报日报撰写 Agent
+  - `skills/intelligence-output-templates/references/daily-report-template.md`：日报模板
+
+- **scan-cards.ts 扩展**：
+  - 新增 `--date` 参数：过滤指定日期的情报卡片
+  - 新增 `--format json` 参数：输出完整元数据给 Agent（含 `body_summary`、聚合字段）
+  - 新增 `--preview` 参数：预览模式，输出到终端不写文件
+
+### 变更
+
+- **报告文件命名规范统一**：
+  - 周报：`YYYY-WXX-briefing.md` → `YYYY-WXX-weekly.md`
+  - 月报：`YYYY-MM-briefing.md` → `YYYY-MM-monthly.md`
+  - 日报：`YYYY-MM-DD-daily.md`
+
+- **intel-distill 命令增强**：
+  - 参数表新增 `--date` 参数说明
+  - 新增日报生成流程文档
+  - 报告模式区分日报/周报/月报的不同处理逻辑
+
 ## [1.7.6] - 2026-04-06
 
 ### 修复
@@ -580,6 +612,7 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.8.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.6...v1.8.0
 [1.7.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.5...v1.7.6
 [1.7.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.3...v1.7.4

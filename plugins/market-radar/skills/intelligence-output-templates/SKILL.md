@@ -1,11 +1,13 @@
 ---
 name: intelligence-output-templates
-description: Markdown templates and output structure for intelligence cards. Use when generating final markdown output from agent JSON results.
+description: This skill should be used when generating intelligence card markdown, creating daily/weekly/monthly reports, formatting agent JSON output, or the user asks to "create an intelligence card", "generate report template", "format report output".
 ---
 
 ## 概述
 
-此 skill 提供情报卡片的输出模板。
+此 skill 提供情报卡片和情报报告的输出模板。
+
+## 情报卡片模板
 
 ## 四组层次结构
 
@@ -96,3 +98,37 @@ tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 
 - **`../cybersecurity-domain-knowledge/SKILL.md`** - 领域定义
 - **`../intelligence-analysis-methodology/SKILL.md`** - 提取方法论
+
+---
+
+## 报告模板
+
+情报报告包括日报、周报、月报三种类型。
+
+### 报告目录结构
+
+```
+{output_dir}/reports/
+├── daily/
+│   └── 2026-04-06-daily.md    # 日报
+├── weekly/
+│   └── 2026-W15-weekly.md     # 周报
+└── monthly/
+│   └── 2026-03-monthly.md     # 月报
+```
+
+### 日报模板
+
+完整的日报 frontmatter 和正文模板，参见：
+
+- **`references/daily-report-template.md`**
+
+日报生成使用 `intelligence-daily-writer` Agent，参见：
+
+- **`../../agents/intelligence-daily-writer.md`**
+
+### 周报/月报模板
+
+周报和月报沿用现有模板格式，参见：
+
+- **`references/templates.md`** 中的报告输出结构
