@@ -2,6 +2,15 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.8.1] - 2026-04-06
+
+### 变更
+
+- **Obsidian Bases 索引改为手工维护**：
+  - 移除 intelligence-analyzer Agent 的自动生成步骤
+  - 已存在的 `_index.base` 文件不受影响，用户可继续手动编辑
+  - obsidian-cli skill 保留，支持手动创建和查询 Bases
+
 ## [1.8.0] - 2026-04-06
 
 ### 新增
