@@ -101,7 +101,7 @@ if (args.length < 2) {
   console.log('');
   console.log('Examples:');
   console.log('  pnpm exec tsx validate-json.ts agent-result ./temp/result.json');
-  console.log('  pnpm exec tsx validate-json.ts state ./.intel/state.json');
+  console.log('  pnpm exec tsx validate-json.ts pending ./.intel/pending.json');
   process.exit(1);
 }
 

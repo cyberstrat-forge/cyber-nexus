@@ -22,8 +22,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PulseState, PulseCursorState, PulseError } from './types';
 
-/** Current state file version */
-const STATE_VERSION = '3.0.0';
+/** Current state file version (aligned with pending.json schema) */
+const STATE_VERSION = '1.0.0';
 
 /** Default pulse state structure */
 const DEFAULT_PULSE_STATE: PulseState = {

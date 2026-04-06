@@ -113,7 +113,9 @@ function loadPending(pendingPath: string): {
   try {
     const content = fs.readFileSync(pendingPath, 'utf-8');
     return JSON.parse(content);
-  } catch {
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot read pending.json at ${pendingPath}: ${errMsg}`);
     return null;
   }
 }
@@ -150,8 +152,9 @@ function scanIntelligenceCards(sourceDir: string): Map<string, string> {
               frontmatter.converted_content_hash || ''
             );
           }
-        } catch {
-          // Skip files that can't be read
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          console.warn(`Warning: Cannot read intelligence card ${fullPath}: ${errMsg}`);
         }
       }
     }
@@ -235,7 +238,9 @@ function scanAndBuildQueue(
     let content: string;
     try {
       content = fs.readFileSync(filePath, 'utf-8');
-    } catch {
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Cannot read file ${relativePath}: ${errMsg}`);
       continue;
     }
 
