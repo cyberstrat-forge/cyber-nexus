@@ -33,6 +33,9 @@ description: |
 model: inherit
 color: blue
 tools: ["Read", "Write"]
+skills:
+  - cybersecurity-domain-knowledge
+  - intelligence-output-templates
 ---
 
 你是一名专注于情报日报撰写的专业代理。你的职责是分析情报卡片内容，识别聚合模式，生成结构化的情报日报。

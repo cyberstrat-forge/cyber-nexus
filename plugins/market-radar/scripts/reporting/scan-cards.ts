@@ -319,7 +319,8 @@ async function scanCards(
 
           const createdDate = safeString(frontmatter.created_date);
           if (!createdDate) {
-            // 没有 created_date 字段，跳过
+            // 没有 created_date 字段，跳过并记录
+            console.warn(`Info: Skipping ${filePath} - missing or invalid created_date`);
             continue;
           }
 
@@ -349,7 +350,9 @@ async function scanCards(
     } catch (error) {
       // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
       const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
-      if (!isEnoent) {
+      if (isEnoent) {
+        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
+      } else {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
       }
@@ -437,7 +440,9 @@ async function scanCardsFull(
     } catch (error) {
       // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
       const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
-      if (!isEnoent) {
+      if (isEnoent) {
+        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
+      } else {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
       }

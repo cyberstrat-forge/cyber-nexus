@@ -24,7 +24,7 @@ high_priority_count: N
 | `generated_by` | string | 生成 Agent ID |
 | `intelligence_count` | number | 当日情报卡片总数 |
 | `domains_covered` | array | 覆盖的情报领域列表 |
-| `high_priority_count` | number | 重点关注情报数量（最多 5） |
+| `high_priority_count` | number | 重点关注情报数量（最多 4） |
 
 ---
 
