@@ -78,7 +78,7 @@ output_dir = --output 参数或 ./inbox
 
 # 固定位置（始终在 root_dir 下）
 config_file = root_dir/.intel/pulse-sources.json
-state_file = root_dir/.intel/state.json
+state_file = root_dir/.intel/pending.json
 ```
 
 ```
@@ -209,7 +209,7 @@ Done in 262ms using pnpm v10.33.0
 
 检查配置文件是否存在：
 
-**配置文件位置**：`${root_dir}/.intel/pulse-sources.json`（与 state.json 同目录）
+**配置文件位置**：`${root_dir}/.intel/pulse-sources.json`（与 pending.json 同目录）
 
 **如果不存在**，显示错误提示和配置示例，退出：
 
@@ -344,7 +344,7 @@ pnpm exec tsx pulse/index.ts --root {root_dir} --all [--output {dir}]
 
 ### 配置文件
 
-**位置**：`{root_dir}/.intel/pulse-sources.json`（项目根目录下，与 state.json 同目录）
+**位置**：`{root_dir}/.intel/pulse-sources.json`（项目根目录下，与 pending.json 同目录）
 
 ```json
 {
@@ -378,34 +378,27 @@ API Key 直接存储在配置文件中，简化用户配置流程：
 
 ### 状态文件
 
-**位置**：`{root_dir}/.intel/state.json`
+**位置**：`{root_dir}/.intel/pending.json`
 
-与 `intel-distill` 共享同一状态文件，在现有结构中维护 `pulse` 字段：
+与 `intel-distill` 共享同一状态文件，在现有结构中维护 `pulse.cursors` 字段：
 
 ```json
 {
-  "version": "2.3.0",
-  "updated_at": "2026-04-01T10:30:00+08:00",
-
+  "version": "1.0.0",
+  "updated_at": "2026-04-06T12:00:00Z",
+  "review": {
+    "items": [ ... ]
+  },
   "pulse": {
-    "sources": {
+    "cursors": {
       "cyber-pulse": {
-        "last_fetched_at": "2026-04-01T10:00:00Z",
-        "last_item_id": "item_0050",
-        "last_sync_at": "2026-04-01T10:30:00Z"
-      },
-      "local": {
-        "last_fetched_at": "2026-04-01T09:30:00Z",
-        "last_item_id": "item_0030",
-        "last_sync_at": "2026-04-01T09:45:00Z"
+        "last_fetched_at": "2026-04-06T09:00:00Z",
+        "last_item_id": "item_abc12345",
+        "last_pull": "2026-04-06T10:00:00Z",
+        "total_synced": 150
       }
     }
-  },
-
-  "queue": { ... },
-  "review": { ... },
-  "processed": { ... },
-  "stats": { ... }
+  }
 }
 ```
 
@@ -413,10 +406,11 @@ API Key 直接存储在配置文件中，简化用户配置流程：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `pulse.sources.{source}` | object | 各情报源的同步状态 |
-| `pulse.sources.{source}.last_fetched_at` | string | API 返回的最后一条数据的 fetched_at 时间（ISO 8601） |
-| `pulse.sources.{source}.last_item_id` | string | API 返回的最后一条数据的 ID（格式 `item_{8位hex}`） |
-| `pulse.sources.{source}.last_sync_at` | string | 本地同步完成时间（ISO 8601） |
+| `pulse.cursors.{source}` | object | 各情报源的同步状态 |
+| `pulse.cursors.{source}.last_fetched_at` | string | API 返回的最后一条数据的 fetched_at 时间（ISO 8601） |
+| `pulse.cursors.{source}.last_item_id` | string | API 返回的最后一条数据的 ID（格式 `item_{8位hex}`） |
+| `pulse.cursors.{source}.last_pull` | string | 本地同步完成时间（ISO 8601） |
+| `pulse.cursors.{source}.total_synced` | number | 累计同步数量 |
 
 ### 状态更新规则
 
@@ -426,10 +420,28 @@ API Key 直接存储在配置文件中，简化用户配置流程：
 | `--init` | `since=beginning` | `since={ts}&cursor={last_item_id}` | 清空 → 重建 |
 
 **设计说明**：
-- 复用 `.intel/state.json`，避免多个状态文件
-- `pulse` 字段独立，不影响 intel-distill 现有字段
+- 使用 `.intel/pending.json`，与 intel-distill 共享状态
+- `pulse.cursors` 字段独立，不影响 intel-distill 的 `review` 字段
 - `last_fetched_at` 作为增量同步的时间锚点
 - `last_item_id` 作为分页游标，避免重复拉取同页数据
+- `total_synced` 用于统计累计同步数量
+
+### 迁移说明
+
+如果首次运行时检测到旧版 `state.json` 且没有 `pending.json`，会提示用户执行迁移：
+
+```
+⚠️  检测到旧版状态文件 state.json
+
+请执行迁移脚本：
+
+cd ${CLAUDE_PLUGIN_ROOT}/scripts
+pnpm exec tsx preprocess/migrate-state.ts --root {root_dir}
+
+迁移完成后重新执行 intel-pull 命令。
+```
+
+迁移脚本会将旧版 `state.json` 中的 `pulse.sources` 字段转换为新版 `pending.json` 的 `pulse.cursors` 结构。
 
 ### 去重策略
 
@@ -589,7 +601,7 @@ archived_path: ""
 ## 注意事项
 
 - 配置文件存储在插件目录，API Key 直接配置在文件中
-- 状态文件与 intel-distill 共享，位于输出目录的 `.intel/` 下
+- 状态文件与 intel-distill 共享，位于输出目录的 `.intel/pending.json`
 - 输出文件采用统一 frontmatter 格式，兼容 intel-distill
 - 建议将 `.intel/` 添加到 `.gitignore`
 - 使用 `/intel-distill` 处理拉取后的情报文件
