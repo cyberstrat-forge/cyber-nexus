@@ -1,7 +1,7 @@
 ---
 name: intel-distill
 description: Extract strategic intelligence from source documents and generate intelligence cards
-argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [pending_id] [--reason <原因>]] [--report <weekly|monthly> [周期]]"
+argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [pending_id] [--reason <原因>]] [--report <daily|weekly|monthly> [--date <日期>|周期]]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 
 执行情报提取工作流：扫描源文档，分析战略价值，并在输出目录生成情报卡片。
 
-支持从现有情报卡片生成周报/月报简报。
+支持从现有情报卡片生成日报/周报/月报简报。
 
 支持审核机制：对待复核的情报进行批准或拒绝。
 
@@ -21,7 +21,9 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 | `--output <dir>` | 否 | 情报卡片输出目录（默认：./intelligence） |
 | `--review <action>` | 否 | 审核操作：`list`/`approve`/`reject` |
 | `--reason <text>` | 条件 | 审核原因（approve/reject 时推荐） |
-| `--report <type> [period]` | 否 | 生成情报简报：`weekly`/`monthly` |
+| `--report <type>` | 否 | 生成情报简报：`daily`/`weekly`/`monthly` |
+| `--date <YYYY-MM-DD>` | 否 | 日报日期（仅 daily 模式，默认当天） |
+| `<period>` | 否 | 周期参数：日报用 `--date`，周报 `YYYY-Wnn`，月报 `YYYY-MM` |
 | `--help` | 否 | 显示使用帮助 |
 
 ```bash
@@ -51,6 +53,12 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 /intel-distill --review reject pending-emerging-20260313-002 --reason "信息来源不可靠"
 
 # === 报告模式 ===
+
+# 生成当天日报（从现有卡片，按 created_date）
+/intel-distill --report daily
+
+# 生成指定日期日报
+/intel-distill --report daily --date 2026-04-05
 
 # 生成当前周报（从现有卡片）
 /intel-distill --report weekly
@@ -836,6 +844,18 @@ Done in 262ms using pnpm v10.33.0
 
 ### 步骤 R1：调用扫描脚本
 
+根据报告类型选择不同的参数：
+
+**日报模式**：
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
+  --period daily \
+  --date "{date_param}" \
+  --format json \
+  --output-dir {output}
+```
+
+**周报/月报模式**：
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
   --period {report_type} \
@@ -843,19 +863,34 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
   --output-dir {output}
 ```
 
+**参数说明**：
+- 日报使用 `--date YYYY-MM-DD` 指定日期，输出 JSON 格式给 Agent
+- 周报/月报使用 `--param` 指定周期参数
+
 ### 步骤 R2：解析扫描结果
 
 读取扫描脚本输出的 JSON 结果，提取情报卡片列表。
+
+**日报模式**：解析 JSON 输出的完整元数据（含 `body_summary`、`vendor_name` 等聚合字段）。
 
 ### 步骤 R3：检查卡片列表
 
 | 条件 | 操作 |
 |------|------|
-| `cards.length == 0` | 输出"本周/月无情报卡片"，结束流程 |
+| `cards.length == 0` | 输出"今日/本周/月无情报卡片"，结束流程 |
 | `cards.length > 0` | 继续生成报告 |
 
-### 步骤 R4：调用情报简报 Agent
+### 步骤 R4：调用情报报告 Agent
 
+根据报告类型选择不同的 Agent：
+
+**日报模式**：
+```
+使用 Agent 工具，subagent_type="intelligence-daily-writer"
+参数: cards_data（扫描结果 JSON）, output_dir, date
+```
+
+**周报/月报模式**：
 ```
 使用 Agent 工具，subagent_type="intelligence-briefing-writer"
 参数: card_list（扫描结果）, output_dir, report_date（当前日期）
@@ -863,15 +898,25 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 
 ### 步骤 R5：显示报告位置和内容
 
-1. 显示报告文件位置
-2. 使用 Read 工具读取报告内容并展示给用户
+根据报告类型显示不同的输出路径：
 
+**日报**：
+```
+✅ 情报日报已生成
+
+报告文件: {output}/reports/daily/{date}-daily.md
+
+--- 报告内容 ---
+```
+
+**周报/月报**：
 ```
 ✅ 情报简报已生成
 
 报告文件: {output}/reports/{period}/{period_param}-briefing.md
 
 --- 报告内容 ---
+```
 
 [展示报告 Markdown 内容]
 ```
