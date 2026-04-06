@@ -124,7 +124,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 │    - 明确有价值 → 生成情报卡片                              │
 │    - 明确无价值 → 跳过（intelligence_count = 0）            │
 │    - 需要复核 → 加入 review.pending 队列（不生成卡片）      │
-│  • 更新 state.json 状态文件                                 │
+│  • 更新 pending.json 状态文件                              │
 └─────────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -139,12 +139,12 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 **核心设计原则**：
 - **情报卡片独立性**：情报卡片一旦生成，完全独立于源文件和中间产物
-- **状态集中管理**：所有状态集中在 `state.json`，无冗余队列
+- **状态集中管理**：运行时状态集中在 `pending.json`，已处理状态通过文件系统追踪
 - **审核分离机制**：待审核不生成卡片，批准后才生成，拒绝后不生成
 
 ---
 
-## 目录结构（v2.3）
+## 目录结构（v3.0）
 
 ### 推荐目录布局
 
@@ -187,7 +187,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 │   └── Capital-Investment/
 │
 └── .intel/                         # ⭐️ 管理目录（固定位置）
-    └── state.json                  # ⭐️ 状态文件
+    └── pending.json                 # ⭐️ 运行时状态文件
 ```
 
 ### 目录说明
@@ -349,7 +349,7 @@ output_dir = --output 参数或 ./intelligence
 archive_dir = root_dir/archive/YYYY/MM/
 converted_dir = root_dir/converted/YYYY/MM/
 intel_dir = root_dir/.intel/
-state_file = intel_dir/state.json
+pending_file = intel_dir/pending.json
 ```
 
 ### 步骤 3：检查并安装脚本依赖
@@ -373,14 +373,14 @@ Done in 262ms using pnpm v10.33.0
 ✅ 依赖安装完成
 ```
 
-### 步骤 4：加载或创建状态文件
+### 步骤 4：检查 pending.json
 
-读取 `state.json`，如不存在则创建默认结构（v2.0.0）。
+检查 `.intel/pending.json` 是否存在，如不存在则创建默认结构（v3.0.0）。
 
-**状态文件版本迁移**：
-- 如果 `version` 为 `1.0` 或 `1.x`，执行迁移到 `2.0.0`
-- 添加 `review.pending` 数组
-- 更新 `processed` 条目格式（添加 `intelligence_ids` 数组）
+**状态文件迁移**（首次运行时）：
+- 如果存在旧的 `state.json`，提示用户执行迁移
+- 迁移命令：`/intel-migrate`
+- 迁移脚本会处理 `state.processed` 和 `state.stats` 数据，转换为文件系统状态追踪
 
 ### 步骤 5：预处理（格式转换与内容清洗）
 
@@ -461,7 +461,7 @@ inbox/
 glob pattern: {source_dir}/converted/**/*.md
 ```
 
-然后逐个读取文件、解析 frontmatter 提取 `sourceHash`、计算内容 Hash、对比 state。
+然后逐个读取文件、解析 frontmatter 提取 `sourceHash`、计算内容 Hash、对比情报卡片 frontmatter。
 
 #### 6.3 策略 B：脚本处理（>= 50 个文件）
 
@@ -470,7 +470,6 @@ glob pattern: {source_dir}/converted/**/*.md
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
   --source {root_dir} \
-  --state {root_dir}/.intel/state.json \
   --output json
 ```
 
@@ -544,7 +543,7 @@ if (needs_processing + pending_review >= 50) {
 
 #### 7.4 去重检测
 
-扫描 `state.json` 中已记录的 `source_hash`，跳过已处理的相同源文件。
+扫描 `converted/**/*.md` 文件 frontmatter 中的 `sourceHash`，跳过已处理的相同源文件。
 
 #### 7.5 处理队列输出
 
@@ -598,8 +597,9 @@ if (needs_processing + pending_review >= 50) {
 **Agent 职责**：
 - 从 frontmatter 解析元数据（sourceHash、archivedSource）
 - 分析文档，提取情报
-- 写入情报卡片文件（frontmatter 包含 sourceHash、archivedSource）
-- 返回轻量级 JSON 结果（不更新 state.json）
+- 写入情报卡片文件（frontmatter 包含 sourceHash、archivedSource、converted_content_hash）
+- 更新转换文件 frontmatter（processed_status）
+- 返回轻量级 JSON 结果
 
 #### 8.3 收集结果并分类
 
@@ -622,57 +622,19 @@ if (needs_processing + pending_review >= 50) {
 - 分配临时 `pending_id`（格式：`pending-{domain}-{timestamp}`）
 - `review_status = "pending"`（待审核）
 
-#### 8.4 统一更新状态文件
+#### 8.4 更新状态
 
 **⚠️ 关键步骤：必须在所有 Agent 完成后执行**
 
-调用 `update-state.ts` 脚本更新 `state.json`：
+Agent 直接更新转换文件 frontmatter 和 pending.json：
 
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
-  --output {output_dir} \
-  --results '[{Agent结果JSON数组}]'
-```
+**转换文件 frontmatter 更新**：
+- 设置 `processed_status` 为 `passed` 或 `rejected`
+- 记录处理时间 `processed_at`
 
-**输入参数**：
-
-| 参数 | 说明 |
-|------|------|
-| `--output` | 输出目录（包含 .intel/state.json） |
-| `--results` | Agent 返回结果的 JSON 数组 |
-
-**Agent 结果 JSON 格式**：
-
-```json
-[
-  {
-    "source_file": "converted/2026/04/xxx.md",
-    "content_hash": "abc123...",
-    "source_hash": "def456...",
-    "archived_source": "archive/2026/04/xxx.pdf",
-    "has_strategic_value": true,
-    "intelligence_count": 2,
-    "intelligence_ids": ["industry-001", "emerging-001"],
-    "output_files": ["intelligence/Industry-Analysis/xxx.md"],
-    "domain": "Industry-Analysis"
-  }
-]
-```
-
-**脚本操作**：
-
-1. 更新 `processed` 记录：
-   - 以 `source_file` 为键
-   - 写入 `content_hash`、`source_hash`、`intelligence_ids` 等
-
-2. 更新 `review.pending` 队列：
-   - 对于 `has_strategic_value = null` 的结果
-   - 生成 `pending_id` 并加入队列
-
-3. 更新 `stats` 统计：
-   - `intelligence.processed` += 处理文件数
-   - `intelligence.cards_generated` += 新增卡片数
-   - `intelligence.pending_review` += 待审核数
+**pending.json 更新**（仅对于需要复核的文件）：
+- 添加到 `review.pending` 队列
+- 设置 `processed_status` 为 `pending`
 
 **执行时机**：在步骤 8.3 收集完所有 Agent 结果后，步骤 9 输出统计前执行。
 
@@ -721,7 +683,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 
 ### 步骤 A1：列出待审核（`--review list`）
 
-1. 读取 `state.json` 的 `review.pending` 队列
+1. 读取 `pending.json` 的 `review.pending` 队列
 2. 对每个待审核项，显示：
    - `pending_id`
    - 来源文件（归档路径）
@@ -753,7 +715,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 ### 步骤 A2：批准审核（`--review approve <pending_id> --reason`）
 
 1. **查找待审核项**
-   - 从 `state.review.pending` 中查找 `pending_id`
+   - 从 `pending.json` 的 `review.pending` 中查找 `pending_id`
    - 如果不存在，报错退出
 
 2. **检查转换文件**
@@ -764,19 +726,18 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
      - 保存转换文件到原路径
 
 3. **调用 Agent 生成情报卡片**
-   - 调用 `intelligence-analyzer` Agent
+   - 调用 `intelligence-analyzer` Agent（review mode）
    - 参数：`source`（转换文件路径）、`output`（输出目录）、`session_id`（会话 ID）
    - Agent 从转换文件 frontmatter 读取 `sourceHash` 和 `archivedSource`
    - Agent 返回正式 `intelligence_id`
 
-4. **更新状态文件**
-   - 在 `state.processed` 中更新：
-     - `intelligence_id`（正式 ID）
-     - `review_status = "approved"`
+4. **更新状态**
+   - 更新转换文件 frontmatter：
+     - `processed_status = "passed"`
      - `reviewed_at`（当前时间）
      - `approved_reason`
      - `reviewed_by = "user"`
-   - 从 `state.review.pending` 中移除该待审核项
+   - 从 `pending.json` 的 `review.pending` 中移除该待审核项
 
 **输出示例**：
 ```
@@ -794,19 +755,17 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 ### 步骤 A3：拒绝审核（`--review reject <pending_id> --reason`）
 
 1. **查找待审核项**
-   - 从 `state.review.pending` 中查找 `pending_id`
+   - 从 `pending.json` 的 `review.pending` 中查找 `pending_id`
    - 如果不存在，报错退出
 
-2. **更新状态文件**
+2. **更新状态**
    - 不调用 Agent（不生成情报卡片）
-   - 在 `state.processed` 中更新：
-     - `intelligence_id = null`
-     - `intelligence_count = 0`
-     - `review_status = "rejected"`
+   - 更新转换文件 frontmatter：
+     - `processed_status = "rejected"`
      - `reviewed_at`（当前时间）
      - `rejected_reason`
      - `reviewed_by = "user"`
-   - 从 `state.review.pending` 中移除该待审核项
+   - 从 `pending.json` 的 `review.pending` 中移除该待审核项
 
 **输出示例**：
 ```
@@ -935,83 +894,39 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 ### 内容变更检测（情报提取阶段）
 
 1. 计算转换文件的 content_hash（正文内容的 MD5）
-2. 对比 `state.json` 中记录的 `content_hash`
+2. 对比情报卡片 frontmatter 中的 `converted_content_hash`
 3. 相同则跳过，不同则重新处理
 
 ---
 
-## 状态文件设计（v2.0）
+## 状态管理（v3.0）
 
-### 状态文件结构
+### 状态文件
 
-**文件位置**：`.intel/state.json`
+**位置**：`.intel/pending.json`
+
+仅存储运行时状态，不累积历史数据：
 
 ```json
 {
-  "$schema": "https://cyberstrat-forge.github.io/cyber-nexus/schemas/state.schema.json",
-  "version": "2.1.0",
-  "updated_at": "2026-03-13T15:25:00+08:00",
-
-  "queue": {
-    "processing": {}
-  },
-
+  "version": "1.0.0",
+  "updated_at": "2026-04-06T12:00:00Z",
   "review": {
     "pending": [
       {
-        "pending_id": "pending-threat-intelligence-20260313-001",
-        "converted_file": "converted/2026/03/report-2026.md",
-        "archived_source": "archive/2026/03/report-2026.pdf",
-        "added_at": "2026-03-13T10:00:00Z",
+        "pending_id": "pending-threat-20260406-001",
+        "converted_file": "converted/2026/04/report.md",
+        "archived_source": "archive/2026/04/report.pdf",
+        "added_at": "2026-04-06T10:00:00Z",
         "reason": "检测到高风险威胁指标，需人工确认"
       }
     ]
   },
-
-  "processed": {
-    "converted/2026/03/report-2026.md": {
-      "content_hash": "abc123def456789...",
-      "source_hash": "fed987cba654321...",
-      "processed_at": "2026-03-13T15:18:00+08:00",
-      "intelligence_count": 2,
-      "intelligence_ids": [
-        "threat-intelligence-20260313-001",
-        "threat-intelligence-20260313-002"
-      ],
-      "output_files": [
-        "threat-intelligence/20260313-ransomware-trend.md",
-        "threat-intelligence/20260313-apt-activity.md"
-      ],
-      "session": "20260313-151800",
-      "archived_source": "archive/2026/03/report-2026.pdf",
-      "archived_exists": true,
-      "converted_exists": true,
-      "review_status": "passed"
+  "pulse": {
+    "cursors": {
+      "securityweekly": "abc123",
+      "threatpost": "def456"
     }
-  },
-
-  "stats": {
-    "preprocess": {
-      "scanned": 15,
-      "converted": 14,
-      "failed": 1,
-      "duplicates": 2
-    },
-    "intelligence": {
-      "processed": 14,
-      "cards_generated": 12,
-      "pending_review": 1,
-      "no_value": 2,
-      "failed": 0
-    },
-    "review": {
-      "pending": 1,
-      "approved": 0,
-      "rejected": 0
-    },
-    "archive_dir": "archive/2026/03/",
-    "converted_dir": "converted/2026/03/",
-    "last_run": "2026-03-13T15:25:00+08:00"
   }
 }
 ```
@@ -1020,34 +935,42 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `version` | string | 状态文件格式版本（语义化版本，如 "2.1.0"） |
+| `version` | string | 状态文件格式版本（如 "1.0.0"） |
 | `updated_at` | string | 最后更新时间（ISO 8601 格式） |
-| `queue.processing` | object | 正在处理中的文件（键为文件路径） |
-| `review.pending` | array | 待审核队列（未生成卡片） |
-| `review.pending[].pending_id` | string | 临时 ID（格式：`pending-{domain-prefix}-{YYYYMMDD}-{seq}`） |
+| `review.pending` | array | 待审核队列 |
+| `review.pending[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}`） |
 | `review.pending[].converted_file` | string | 转换文件路径 |
 | `review.pending[].archived_source` | string | 归档文件路径 |
 | `review.pending[].added_at` | string | 添加时间 |
 | `review.pending[].reason` | string | 审核原因 |
-| `processed` | object | 已处理文件映射（键为文件路径，值为处理结果） |
-| `processed[].content_hash` | string | 转换文件内容 MD5 哈希（用于变更检测） |
-| `processed[].source_hash` | string | 源文件 MD5 哈希（用于去重） |
-| `processed[].processed_at` | string | 处理完成时间 |
-| `processed[].intelligence_count` | number | 生成的情报卡片数量（不设上限） |
-| `processed[].intelligence_ids` | array | 情报卡片 ID 列表 |
-| `processed[].output_files` | array | 输出文件路径列表 |
-| `processed[].session` | string | 会话 ID（YYYYMMDD-HHMMSS） |
-| `processed[].archived_source` | string | 归档源文件路径 |
-| `processed[].archived_exists` | boolean | 归档文件是否存在 |
-| `processed[].converted_exists` | boolean | 转换文件是否存在 |
-| `processed[].review_status` | string | 审核状态（`passed`/`pending`/`approved`/`rejected`） |
-| `stats` | object | 统计信息 |
-| `stats.preprocess` | object | 预处理统计（scanned, converted, failed, duplicates） |
-| `stats.intelligence` | object | 情报提取统计（processed, cards_generated, pending_review, no_value, failed） |
-| `stats.review` | object | 审核统计（pending, approved, rejected） |
-| `stats.archive_dir` | string | 当前归档目录 |
-| `stats.converted_dir` | string | 当前转换目录 |
-| `stats.last_run` | string | 最后运行时间 |
+| `pulse.cursors` | object | cyber-pulse API 游标（用于增量拉取） |
+
+### 已处理状态追踪
+
+已处理状态通过文件系统追踪：
+
+1. **转换文件 frontmatter**：`processed_status` 字段
+   - `pending`：待处理（新文件）
+   - `passed`：已处理，有情报卡片
+   - `rejected`：已拒绝（无价值或用户拒绝）
+
+2. **情报卡片 frontmatter**：`converted_file` + `converted_content_hash`
+   - `converted_file`：确认卡片来源
+   - `converted_content_hash`：检测转换文件内容变更
+
+### 状态迁移
+
+从旧版 `state.json` 迁移到 `pending.json`：
+
+```bash
+/intel-migrate
+```
+
+迁移脚本会：
+- 将 `state.review.pending` 转移到 `pending.json`
+- 将 `state.pulse.cursors` 转移到 `pending.json`
+- 将 `state.processed` 数据写入转换文件 frontmatter
+- 删除旧的 `state.json`（用户确认后）
 
 ---
 
@@ -1056,11 +979,11 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 | 场景 | 处理策略 | 说明 |
 |------|---------|------|
 | **转换失败** | 保留源文件在 `inbox/`，不归档 | 用户可见，便于排查 |
-| **归档文件被删除** | 记录警告，不影响其他文件处理 | 状态文件中的路径失效，但不影响流程 |
+| **归档文件被删除** | 记录警告，不影响其他文件处理 | frontmatter 中的路径失效，但不影响流程 |
 | **转换文件被删除** | 审核时从 `archive/` 恢复并重新转换 | 自动恢复，无需用户干预 |
 | **同名文件** | 基于哈希判断：相同 = 跳过，不同 = 覆盖 | 避免冲突 |
 | **用户删除 `inbox/`** | 向后兼容，支持根目录文件 | 不强制使用 `inbox/` |
-| **状态文件损坏** | 备份旧文件，创建新状态文件 | 从现有文件重建 |
+| **pending.json 损坏** | 备份旧文件，创建新状态文件 | 从现有文件重建 |
 | **Agent 超时** | 重试一次，然后标记为失败 | 记录失败原因 |
 
 ---
@@ -1073,7 +996,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 | 权限被拒绝 | 记录错误，标记为失败 |
 | Agent 返回 error | 记录错误信息，标记为失败 |
 | Agent 超时 | 重试一次，然后标记为失败 |
-| 状态文件读取失败 | 备份旧文件，创建新状态 |
+| pending.json 读取失败 | 备份旧文件，创建新状态 |
 
 ## 关联 Skills
 
@@ -1090,8 +1013,8 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 # 校验 Agent 返回结果
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts agent-result ./temp/result.json
 
-# 校验状态文件
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts state ./.intel/state.json
+# 校验 pending.json
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts pending ./.intel/pending.json
 ```
 
 **校验时机**：
@@ -1099,23 +1022,23 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts state ./.inte
 | 时机 | Schema | 说明 |
 |------|--------|------|
 | Agent 返回后 | `agent-result` | 校验轻量返回格式 |
-| 启动时 | `state` | 校验现有状态文件 |
-| 写入前 | `state` | 校验新状态 |
+| 启动时 | `pending` | 校验现有 pending.json |
+| 写入前 | `pending` | 校验新状态 |
 
 **支持的 Schema**：
 
 | Schema 名称 | 文件 | 说明 |
 |------------|------|------|
 | `agent-result` | `agent-result.schema.json` | Agent 返回结果格式 |
-| `state` | `state.schema.json` | 状态文件格式 |
+| `pending` | `pending.schema.json` | pending.json 状态文件格式 |
 | `intelligence-output` | `intelligence-output.schema.json` | 情报卡片输出格式 |
 | `themes-config` | `themes-config.schema.json` | 主题配置格式 |
 | `theme-state` | `theme-state.schema.json` | 主题状态格式 |
 
 ## 注意事项
 
-- Agent 负责完整的文件处理流程（分析、写入情报卡片、返回结果）
-- 命令层统一更新 state.json，确保状态一致性
+- Agent 负责完整的文件处理流程（分析、写入情报卡片、更新 frontmatter）
+- 状态通过文件系统追踪，pending.json 仅存储运行时数据
 - 删除源文件或转换文件后，情报卡片仍保留（frontmatter 包含追溯信息）
 - 重新加入历史文件时会检测重复（基于转换文件 frontmatter 的 sourceHash）
 - 建议将 `.intel/` 添加到 `.gitignore`
