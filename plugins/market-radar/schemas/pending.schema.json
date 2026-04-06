@@ -54,8 +54,8 @@
       "properties": {
         "pending_id": {
           "type": "string",
-          "pattern": "^pending-[a-z][a-z-]*-\\d{8}-\\d{3}$",
-          "description": "Temporary ID for pending review (format: pending-{domain}-{YYYYMMDD}-{seq})"
+          "pattern": "^pending-[a-z][a-z-]*-\\d{8}-[a-f0-9]{4}$",
+          "description": "Temporary ID for pending review (format: pending-{domain}-{timestamp}-{random_hex})"
         },
         "converted_file": {
           "type": "string",
