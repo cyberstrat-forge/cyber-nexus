@@ -6,6 +6,17 @@
 
 ---
 
+## [1.0.27] - 2026-04-06
+
+### 插件更新
+
+#### market-radar v1.7.6
+
+**修复**
+- Obsidian 嵌套标签格式：将冒号分隔符改为斜杠分隔符，符合 Obsidian 规范
+
+---
+
 ## [1.0.26] - 2026-04-05
 
 ### 插件更新
@@ -432,6 +443,7 @@
 
 ---
 
+[1.0.27]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.26...v1.0.27
 [1.0.26]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.25...v1.0.26
 [1.0.25]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.24...v1.0.25
 [1.0.24]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.23...v1.0.24

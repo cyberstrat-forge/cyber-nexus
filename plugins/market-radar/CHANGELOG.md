@@ -2,6 +2,12 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.7.6] - 2026-04-06
+
+### 修复
+
+- **Obsidian 嵌套标签格式**：将冒号分隔符 `geo:china` 改为斜杠分隔符 `geo/china`，符合 Obsidian 规范
+
 ## [1.7.5] - 2026-04-05
 
 ### 修复
@@ -574,6 +580,7 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.7.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.5...v1.7.6
 [1.7.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.2...v1.7.3
