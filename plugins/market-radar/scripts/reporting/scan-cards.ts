@@ -317,14 +317,14 @@ async function scanCards(
           const content = await fs.readFile(filePath, 'utf-8');
           const { data: frontmatter } = parseFrontmatter(content);
 
-          const createdDate = frontmatter.created_date as string;
+          const createdDate = safeString(frontmatter.created_date);
           if (!createdDate) {
             // 没有 created_date 字段，跳过
             continue;
           }
 
           // 验证日期格式
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(createdDate)) {
+          if (!isValidDateFormat(createdDate)) {
             console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
             continue;
           }
@@ -334,7 +334,7 @@ async function scanCards(
             cards.push({
               path: `${domain}/${file}`,
               metadata: {
-                title: (frontmatter.title as string) || file.replace('.md', ''),
+                title: safeString(frontmatter.title) || file.replace('.md', ''),
                 created_date: createdDate,
                 primary_domain: domain
               }
@@ -513,13 +513,17 @@ async function main() {
   const format = options.format as string;
   const outputDir = options.outputDir as string;
 
-  // 验证 outputDir 目录是否存在
+  // 验证 outputDir 目录是否存在且可访问
   try {
     await fs.access(outputDir);
-  } catch {
+  } catch (error) {
+    const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+    const message = isEnoent
+      ? `Output directory does not exist: ${outputDir}`
+      : `Cannot access output directory: ${outputDir}. ${error instanceof Error ? error.message : String(error)}`;
     console.error(JSON.stringify({
       error: true,
-      message: `Output directory does not exist: ${outputDir}`
+      message
     }));
     process.exit(1);
   }
