@@ -26,6 +26,7 @@ const SCHEMA_FILES: Record<string, string> = {
   'themes-config': 'themes-config.schema.json',
   'theme-state': 'theme-state.schema.json',
   'pulse-sources': 'pulse-sources.schema.json',
+  'pending': 'pending.schema.json',
 };
 
 interface ValidationResult {

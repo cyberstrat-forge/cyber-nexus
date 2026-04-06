@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "pending.schema.json",
+  "title": "Pending State Schema",
+  "description": "JSON Schema for pending.json - lightweight runtime state for intel-distill and intel-pull",
+  "type": "object",
+  "required": ["version", "updated_at", "review", "pulse"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "State file format version (e.g., 1.0.0)"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp (ISO 8601 format)"
+    },
+    "review": {
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pending_item"
+          },
+          "description": "Items pending user review"
+        }
+      }
+    },
+    "pulse": {
+      "type": "object",
+      "required": ["cursors"],
+      "additionalProperties": false,
+      "properties": {
+        "cursors": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/cursor_state"
+          },
+          "description": "Cursors for each intel source"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "pending_item": {
+      "type": "object",
+      "required": ["pending_id", "converted_file", "archived_source", "added_at", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "pending_id": {
+          "type": "string",
+          "pattern": "^pending-[a-z][a-z-]*-\\d{8}-\\d{3}$",
+          "description": "Temporary ID for pending review (format: pending-{domain}-{YYYYMMDD}-{seq})"
+        },
+        "converted_file": {
+          "type": "string",
+          "description": "Path to converted markdown file (relative to root_dir)"
+        },
+        "archived_source": {
+          "type": "string",
+          "description": "Path to archived source file (relative to root_dir)"
+        },
+        "added_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When added to pending queue (ISO 8601)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requiring review"
+        }
+      }
+    },
+    "cursor_state": {
+      "type": "object",
+      "required": ["last_fetched_at", "last_item_id"],
+      "additionalProperties": false,
+      "properties": {
+        "last_fetched_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp of last fetched item from API (ISO 8601)"
+        },
+        "last_item_id": {
+          "type": ["string", "null"],
+          "description": "ID of last fetched item for cursor pagination"
+        },
+        "last_pull": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "When last pull completed (ISO 8601)"
+        },
+        "total_synced": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Total items synced for this source"
+        }
+      }
+    }
+  }
+}
