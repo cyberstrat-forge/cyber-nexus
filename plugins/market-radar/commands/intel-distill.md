@@ -381,8 +381,7 @@ Done in 262ms using pnpm v10.33.0
 #### 5.1 调用预处理脚本
 
 ```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx preprocess/index.ts --source {source_dir} --root {root_dir}
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/index.ts --source {source_dir} --root {root_dir}
 ```
 
 **输出位置**：
@@ -463,8 +462,7 @@ glob pattern: {source_dir}/converted/**/*.md
 调用扫描队列脚本，一次性完成扫描、frontmatter 解析、Hash 计算、状态对比：
 
 ```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx preprocess/scan-queue.ts \
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
   --source {root_dir} \
   --state {root_dir}/.intel/state.json \
   --output json
@@ -623,8 +621,7 @@ if (needs_processing + pending_review >= 50) {
 调用 `update-state.ts` 脚本更新 `state.json`：
 
 ```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx preprocess/update-state.ts \
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
   --output {output_dir} \
   --results '[{Agent结果JSON数组}]'
 ```
@@ -840,8 +837,7 @@ Done in 262ms using pnpm v10.33.0
 ### 步骤 R1：调用扫描脚本
 
 ```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx reporting/scan-cards.ts \
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
   --period {report_type} \
   --param "{period_param}" \
   --output-dir {output}
@@ -1046,13 +1042,11 @@ pnpm exec tsx reporting/scan-cards.ts \
 使用 `validate-json.ts` 脚本进行 JSON Schema 校验：
 
 ```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts
-
 # 校验 Agent 返回结果
-pnpm exec tsx validate-json.ts agent-result ./temp/result.json
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts agent-result ./temp/result.json
 
 # 校验状态文件
-pnpm exec tsx validate-json.ts state ./.intel/state.json
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts state ./.intel/state.json
 ```
 
 **校验时机**：
