@@ -620,22 +620,19 @@ function scanAndBuildQueue(
 
 - [ ] **Step 5: 更新 CLI 参数处理**
 
-在 main 函数中，将 `--state` 参数改为 `--pending`：
+在 main 函数中，保持参数命名一致性：
 
 ```typescript
 function main(): void {
   const args = process.argv.slice(2);
   let sourceDir = '.';
-  let pendingPath: string | undefined;
   let outputFormat: 'json' | 'text' = 'json';
 
   // Parse arguments
+  // Note: pending.json path is derived from sourceDir automatically
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--source' && i + 1 < args.length) {
       sourceDir = args[i + 1];
-      i++;
-    } else if (args[i] === '--pending' && i + 1 < args.length) {
-      pendingPath = args[i + 1];
       i++;
     } else if (args[i] === '--output' && i + 1 < args.length) {
       outputFormat = args[i + 1] as 'json' | 'text';
@@ -643,10 +640,20 @@ function main(): void {
     }
   }
 
-  const result = scanAndBuildQueue(sourceDir, pendingPath);
-  // ... rest of main function
+  const result = scanAndBuildQueue(sourceDir);
+  
+  if (outputFormat === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(formatAsText(result));
+  }
 }
 ```
+
+**参数说明**：
+- `--source <dir>`: 源目录（默认当前目录）
+- `--output <format>`: 输出格式 `json` 或 `text`（默认 `json`）
+- pending.json 路径自动从源目录推导（`{source}/.intel/pending.json`）
 
 - [ ] **Step 6: 验证编译**
 
@@ -866,6 +873,9 @@ function main(): void {
   const args = process.argv.slice(2);
   let outputDir = '.';
   let resultsJson = '';
+  let reviewAction = '';
+  let pendingId = '';
+  let reviewReason = '';
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--output' && i + 1 < args.length) {
@@ -874,9 +884,25 @@ function main(): void {
     } else if (args[i] === '--results' && i + 1 < args.length) {
       resultsJson = args[i + 1];
       i++;
+    } else if (args[i] === '--review' && i + 1 < args.length) {
+      reviewAction = args[i + 1];
+      i++;
+    } else if (args[i] === '--pending-id' && i + 1 < args.length) {
+      pendingId = args[i + 1];
+      i++;
+    } else if (args[i] === '--reason' && i + 1 < args.length) {
+      reviewReason = args[i + 1];
+      i++;
     }
   }
 
+  // Handle review mode
+  if (reviewAction) {
+    handleReviewAction(outputDir, reviewAction, pendingId, reviewReason);
+    return;
+  }
+
+  // Handle normal processing mode
   if (!resultsJson) {
     console.error('Error: --results parameter required');
     process.exit(1);
@@ -906,6 +932,93 @@ function main(): void {
 
   console.log(`✅ State updated successfully`);
   console.log(`   Processed: ${results.length} files`);
+}
+```
+
+- [ ] **Step 5.1: 添加审核模式处理函数**
+
+在 main 函数之前添加：
+
+```typescript
+/**
+ * Handle review action (approve/reject)
+ */
+function handleReviewAction(
+  outputDir: string,
+  action: string,
+  pendingId: string,
+  reason: string
+): void {
+  if (action === 'list') {
+    listPendingReviews(outputDir);
+    return;
+  }
+
+  if (!pendingId) {
+    console.error('Error: --pending-id required for approve/reject');
+    process.exit(1);
+  }
+
+  if (!reason) {
+    console.warn('Warning: No --reason provided');
+  }
+
+  const pendingPath = getPendingPath(outputDir);
+  const pending = loadOrCreatePending(pendingPath);
+
+  // Find pending item
+  const itemIndex = pending.review.items.findIndex(
+    item => item.pending_id === pendingId
+  );
+
+  if (itemIndex === -1) {
+    console.error(`Error: Pending ID not found: ${pendingId}`);
+    process.exit(1);
+  }
+
+  const item = pending.review.items[itemIndex];
+
+  if (action === 'approve') {
+    // Note: Agent invocation is handled by the command layer
+    // This function only updates the pending.json and converted file status
+    updateConvertedFileStatus(outputDir, item.converted_file, 'passed');
+    pending.review.items.splice(itemIndex, 1);
+    savePending(pendingPath, pending);
+    console.log(`✅ Approved: ${pendingId}`);
+    console.log(`   Reason: ${reason || '(none)'}`);
+  } else if (action === 'reject') {
+    updateConvertedFileStatus(outputDir, item.converted_file, 'rejected');
+    pending.review.items.splice(itemIndex, 1);
+    savePending(pendingPath, pending);
+    console.log(`✅ Rejected: ${pendingId}`);
+    console.log(`   Reason: ${reason || '(none)'}`);
+  } else {
+    console.error(`Error: Unknown review action: ${action}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * List pending reviews
+ */
+function listPendingReviews(outputDir: string): void {
+  const pendingPath = getPendingPath(outputDir);
+  const pending = loadOrCreatePending(pendingPath);
+
+  if (pending.review.items.length === 0) {
+    console.log('No pending reviews');
+    return;
+  }
+
+  console.log(`📋 Pending Reviews (${pending.review.items.length})\n`);
+  for (const item of pending.review.items) {
+    console.log(`ID: ${item.pending_id}`);
+    console.log(`  Converted: ${item.converted_file}`);
+    console.log(`  Archived: ${item.archived_source}`);
+    console.log(`  Reason: ${item.reason}`);
+    console.log(`  Added: ${item.added_at}`);
+    console.log('');
+  }
 }
 ```
 
@@ -1228,15 +1341,78 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 - [ ] **Step 2: 更新 scan-queue 脚本调用说明**
 
-将 `--state` 参数改为 `--pending`：
+将脚本调用中的参数说明更新：
 
 ```markdown
+#### 6.3 策略 B：脚本处理（>= 50 个文件）
+
+调用扫描队列脚本，一次性完成扫描、frontmatter 解析、状态对比：
+
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
   --source {root_dir} \
-  --pending {root_dir}/.intel/pending.json \
   --output json
 ```
+
+**注意**：脚本自动检测 `pending.json` 位置（`.intel/pending.json`），无需指定状态文件路径。
+
+**脚本输出格式**：
+...
+```
+
+- [ ] **Step 2.1: 更新 update-state 脚本调用说明**
+
+更新 Agent 结果处理和审核模式的脚本调用：
+
+```markdown
+#### 8.4 统一更新状态文件
+
+调用 `update-state.ts` 脚本更新状态：
+
+**处理模式**：
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
+  --output {output_dir} \
+  --results '[{Agent结果JSON数组}]'
+```
+
+**审核模式**：
+```bash
+# 列出待审核
+pnpm exec tsx preprocess/update-state.ts --output {output_dir} --review list
+
+# 批准审核
+pnpm exec tsx preprocess/update-state.ts --output {output_dir} \
+  --review approve \
+  --pending-id {pending_id} \
+  --reason "批准原因"
+
+# 拒绝审核
+pnpm exec tsx preprocess/update-state.ts --output {output_dir} \
+  --review reject \
+  --pending-id {pending_id} \
+  --reason "拒绝原因"
+```
+```
+
+- [ ] **Step 2.2: 添加迁移触发流程**
+
+在步骤 4（加载或创建状态文件）之后添加迁移检测：
+
+```markdown
+### 步骤 4.5：检测并执行迁移
+
+检查是否存在旧的 `state.json`：
+
+```bash
+if [ -f "{root_dir}/.intel/state.json" ] && [ ! -f "{root_dir}/.intel/pending.json" ]; then
+  echo "🔄 检测到旧版状态文件，执行迁移..."
+  cd ${CLAUDE_PLUGIN_ROOT}/scripts
+  pnpm exec tsx preprocess/migrate-state.ts --root {root_dir}
+fi
+```
+
+迁移完成后继续正常流程。
 ```
 
 - [ ] **Step 3: 删除 processed 和 stats 字段说明**
