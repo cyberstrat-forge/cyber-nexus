@@ -1,14 +1,11 @@
 ---
 name: obsidian-cli
-description: This skill should be used when the user wants to interact with Obsidian from Claude Code. Triggers when the user asks to "search obsidian", "query bases", "read note properties", "set note properties", "create notes in obsidian", or when commands need to generate Obsidian-specific files like .base files.
+description: This skill should be used when the user wants to interact with Obsidian from Claude Code. Triggers when the user asks to "search obsidian", "query bases", "read note properties", "set note properties", "create notes in obsidian", or work with Obsidian-specific files like .base files.
 ---
 
 ## 概述
 
-此 skill 提供通过 Obsidian CLI 操作 Obsidian 的能力，支持两类使用场景：
-
-1. **命令内部使用**：如 intel-distill 生成 Bases 索引文件
-2. **用户直接使用**：在 Claude Code 中查询、搜索、操作 Obsidian vault
+此 skill 提供通过 Obsidian CLI 操作 Obsidian 的能力，支持用户在 Claude Code 中查询、搜索、操作 Obsidian vault。
 
 ## 前置条件
 
