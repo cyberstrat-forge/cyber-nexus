@@ -221,7 +221,11 @@ export function clearCursorState(
 }
 
 /**
- * Save state to file
+ * Save state to file with atomic write pattern
+ *
+ * Uses temp file + rename for atomicity:
+ * - If write fails, original file is preserved
+ * - If process crashes during write, temp file is left (not corrupt original)
  *
  * @param state - State object to save
  * @param rootDir - Project root directory
@@ -243,7 +247,19 @@ export function saveState(
   }
 
   state.updated_at = new Date().toISOString();
-  fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
+  const tempPath = `${statePath}.tmp.${process.pid}`;
+
+  try {
+    fs.writeFileSync(tempPath, JSON.stringify(state, null, 2), 'utf-8');
+    fs.renameSync(tempPath, statePath);
+  } catch (writeError) {
+    // Cleanup temp file on failure
+    if (fs.existsSync(tempPath)) {
+      try { fs.unlinkSync(tempPath); } catch { /* ignore cleanup errors */ }
+    }
+    const message = writeError instanceof Error ? writeError.message : String(writeError);
+    throw new PulseError('STATE_ERROR', `无法保存状态文件 ${statePath}: ${message}`, { path: statePath, error: writeError });
+  }
 }
 
 /**

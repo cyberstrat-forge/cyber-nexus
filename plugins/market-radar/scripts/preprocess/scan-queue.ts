@@ -22,6 +22,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { parseFrontmatter } from '../utils/frontmatter';
+import { PendingItem } from './types/pending';
 
 // Threshold for recommending script usage
 const RECOMMENDED_SCRIPT_THRESHOLD = 50;
@@ -82,17 +83,6 @@ interface IntelligenceFrontmatter {
 }
 
 /**
- * Pending review item
- */
-interface PendingReviewItem {
-  pending_id: string;
-  converted_file: string;
-  archived_source: string;
-  added_at: string;
-  reason: string;
-}
-
-/**
  * Get pending.json path
  */
 function getPendingPath(sourceDir: string): string {
@@ -103,7 +93,7 @@ function getPendingPath(sourceDir: string): string {
  * Load pending.json
  */
 function loadPending(pendingPath: string): {
-  review: { items: PendingReviewItem[] };
+  review: { items: PendingItem[] };
   pulse: { cursors: Record<string, unknown> };
 } | null {
   if (!fs.existsSync(pendingPath)) {

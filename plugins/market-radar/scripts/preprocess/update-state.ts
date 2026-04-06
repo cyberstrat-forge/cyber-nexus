@@ -35,6 +35,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { PendingItem, PendingFile, PulseCursorState, createDefaultPending } from './types/pending';
 
 // ==================== Type Definitions ====================
 
@@ -49,36 +50,6 @@ interface AgentResult {
   output_files: string[];
   review_reason?: string | null;
   domain?: string;
-}
-
-/**
- * Pending item for review
- */
-interface PendingItem {
-  pending_id: string;
-  converted_file: string;
-  archived_source: string;
-  added_at: string;
-  reason: string;
-}
-
-/**
- * Pending.json structure
- */
-interface PendingFile {
-  version: string;
-  updated_at: string;
-  review: {
-    items: PendingItem[];
-  };
-  pulse: {
-    cursors: Record<string, {
-      last_fetched_at: string | null;
-      last_item_id: string | null;
-      last_pull: string | null;
-      total_synced: number;
-    }>;
-  };
 }
 
 // ==================== Validation Functions ====================
@@ -97,11 +68,13 @@ function validateAgentResult(result: unknown, index: number): { valid: true; dat
   if (typeof r.source_file !== 'string' || r.source_file.length === 0) {
     return { valid: false, error: `Result[${index}].source_file must be a non-empty string` };
   }
-  if (typeof r.content_hash !== 'string' || r.content_hash.length === 0) {
-    return { valid: false, error: `Result[${index}].content_hash must be a non-empty string` };
+  // MD5 hash format validation (32 hex chars)
+  const MD5_PATTERN = /^[a-f0-9]{32}$/;
+  if (typeof r.content_hash !== 'string' || !MD5_PATTERN.test(r.content_hash)) {
+    return { valid: false, error: `Result[${index}].content_hash must be a 32-char hex MD5 hash` };
   }
-  if (typeof r.source_hash !== 'string' || r.source_hash.length === 0) {
-    return { valid: false, error: `Result[${index}].source_hash must be a non-empty string` };
+  if (typeof r.source_hash !== 'string' || !MD5_PATTERN.test(r.source_hash)) {
+    return { valid: false, error: `Result[${index}].source_hash must be a 32-char hex MD5 hash` };
   }
 
   // has_strategic_value: must be boolean or null
@@ -181,24 +154,25 @@ function loadOrCreatePending(pendingPath: string): PendingFile {
     }
   }
 
-  return {
-    version: '1.0.0',
-    updated_at: new Date().toISOString(),
-    review: { items: [] },
-    pulse: { cursors: {} },
-  };
+  return createDefaultPending();
 }
 
 /**
- * Save pending.json
+ * Save pending.json with error handling
  */
 function savePending(pendingPath: string, pending: PendingFile): void {
   pending.updated_at = new Date().toISOString();
   const dir = path.dirname(pendingPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(pendingPath, JSON.stringify(pending, null, 2) + '\n', 'utf-8');
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to save pending.json to ${pendingPath}: ${errMsg}`);
   }
-  fs.writeFileSync(pendingPath, JSON.stringify(pending, null, 2) + '\n', 'utf-8');
 }
 
 /**
