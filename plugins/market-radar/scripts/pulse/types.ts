@@ -197,8 +197,8 @@ export interface PullResult {
 export interface PullOptions {
   /** Project root directory (for state file location) */
   root?: string;
-  /** Source name to pull from */
-  source?: string;
+  /** Source name to pull from (alias: --from) */
+  from?: string;
   /** Pull from all sources */
   all: boolean;
   /** Output directory (relative to root, defaults to ./inbox) */

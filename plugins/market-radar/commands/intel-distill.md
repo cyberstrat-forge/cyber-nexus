@@ -470,7 +470,7 @@ glob pattern: {source_dir}/converted/**/*.md
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
-  --source {root_dir} \
+  --root {root_dir} \
   --output json
 ```
 

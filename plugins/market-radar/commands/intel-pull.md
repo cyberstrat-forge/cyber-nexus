@@ -1,7 +1,7 @@
 ---
 name: intel-pull
 description: Pull intelligence content from cyber-pulse API with incremental sync support
-argument-hint: "[--source <name>] [--all] [--output <dir>] [--init] [--list-sources] [--add-source] [--remove-source <name>] [--set-default <name>]"
+argument-hint: "[--from <name>] [--all] [--output <dir>] [--init] [--list-sources] [--add-source] [--remove-source <name>] [--set-default <name>]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -27,7 +27,7 @@ intelligence/ (情报卡片)
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `--source <name>` | 否 | 指定情报源名称（默认使用 default_source） |
+| `--from <name>` | 否 | 指定情报源名称（默认使用 default_source） |
 | `--all` | 否 | 顺序拉取所有配置的情报源 |
 | `--output <dir>` | 否 | 输出目录（默认 `inbox/`） |
 | `--init` | 否 | 全量同步，从头遍历所有历史数据 |
@@ -240,7 +240,7 @@ Done in 262ms using pnpm v10.33.0
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --root {root_dir} [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --root {root_dir} [--from {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：
@@ -260,7 +260,7 @@ pnpm exec tsx pulse/index.ts --root {root_dir} [--source {name}] [--output {dir}
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts
-pnpm exec tsx pulse/index.ts --root {root_dir} --init [--source {name}] [--output {dir}]
+pnpm exec tsx pulse/index.ts --root {root_dir} --init [--from {name}] [--output {dir}]
 ```
 
 **脚本执行逻辑**：

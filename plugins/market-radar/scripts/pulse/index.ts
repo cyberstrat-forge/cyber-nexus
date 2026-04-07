@@ -333,7 +333,7 @@ async function executePull(options: PullOptions): Promise<PullResult> {
   // Determine sources to pull
   const sources: PulseSource[] = options.all
     ? config.sources
-    : [getSource(config, options.source)];
+    : [getSource(config, options.from)];
 
   // Ensure state directory exists (in root)
   ensureStateDir(rootDir);
@@ -498,7 +498,7 @@ program
   .description('从 cyber-pulse API 拉取情报内容')
   .version('2.1.0')
   .option('-r, --root <dir>', '项目根目录（状态文件位置）')
-  .option('-s, --source <name>', '指定情报源名称')
+  .option('-f, --from <name>', '指定情报源名称')
   .option('-a, --all', '拉取所有配置的情报源')
   .option('-o, --output <dir>', '输出目录（相对于根目录）', DEFAULT_OUTPUT_DIR)
   .option('--init', '全量同步（从头开始）')
@@ -553,11 +553,11 @@ program
       }
 
       // Pull mode - no explicit source specified, will use default_source from config
-      // options.source remains undefined, which triggers default behavior in getSource()
+      // options.from remains undefined, which triggers default behavior in getSource()
 
       // Validate conflicting options
-      if (options.source && options.all) {
-        console.error('错误: --source 和 --all 不能同时使用');
+      if (options.from && options.all) {
+        console.error('错误: --from 和 --all 不能同时使用');
         process.exit(1);
       }
 
