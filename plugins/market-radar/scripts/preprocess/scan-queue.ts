@@ -339,31 +339,31 @@ function formatAsText(result: ScanQueueResult): string {
  */
 function main(): void {
   const args = process.argv.slice(2);
-  let sourceDir = '.';
+  let rootDir = '.';
   let outputFormat: 'json' | 'text' = 'json';
 
   // Parse arguments
-  // Note: pending.json path is derived from sourceDir automatically
+  // Note: pending.json path is derived from rootDir automatically
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--source' && i + 1 < args.length) {
-      sourceDir = args[i + 1];
+    if (args[i] === '--root' && i + 1 < args.length) {
+      rootDir = args[i + 1];
       i++;
     } else if (args[i] === '--output' && i + 1 < args.length) {
       outputFormat = args[i + 1] as 'json' | 'text';
       i++;
     } else if (args[i] === '--help') {
       console.log(`
-Usage: pnpm exec tsx scan-queue.ts --source <dir> [--output json|text]
+Usage: pnpm exec tsx scan-queue.ts --root <dir> [--output json|text]
 
 Scan converted files and build processing queue for intel-distill.
 
 Options:
-  --source <dir>   Source directory (default: current directory)
+  --root <dir>     Project root directory (default: current directory)
   --output <fmt>   Output format: json or text (default: json)
   --help           Show this help message
 
-Note: pending.json path is automatically derived from source directory
-      ({source}/.intel/pending.json)
+Note: pending.json path is automatically derived from root directory
+      ({root}/.intel/pending.json)
 
 Threshold: ${RECOMMENDED_SCRIPT_THRESHOLD} files
   - < ${RECOMMENDED_SCRIPT_THRESHOLD}: Recommend using Glob tool directly
@@ -385,7 +385,7 @@ Output JSON structure:
     }
   }
 
-  const result = scanAndBuildQueue(sourceDir);
+  const result = scanAndBuildQueue(rootDir);
 
   if (outputFormat === 'json') {
     console.log(JSON.stringify(result, null, 2));

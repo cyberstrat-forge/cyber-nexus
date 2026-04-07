@@ -124,7 +124,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 │  • 处理三种情况：                                            │
 │    - 明确有价值 → 生成情报卡片                              │
 │    - 明确无价值 → 跳过（intelligence_count = 0）            │
-│    - 需要复核 → 加入 review.pending 队列（不生成卡片）      │
+│    - 需要复核 → 加入 review.items 队列（不生成卡片）        │
 │  • 更新 pending.json 状态文件                              │
 └─────────────────────────────────────────────────────────────┘
                         ↓
@@ -470,7 +470,7 @@ glob pattern: {source_dir}/converted/**/*.md
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
-  --source {root_dir} \
+  --root {root_dir} \
   --output json
 ```
 
@@ -634,7 +634,7 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
 - 记录处理时间 `processed_at`
 
 **pending.json 更新**（仅对于需要复核的文件）：
-- 添加到 `review.pending` 队列
+- 添加到 `review.items` 队列
 - 设置 `processed_status` 为 `pending`
 
 **执行时机**：在步骤 8.3 收集完所有 Agent 结果后，步骤 9 输出统计前执行。
@@ -684,7 +684,7 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
 
 ### 步骤 A1：列出待审核（`--review list`）
 
-1. 读取 `pending.json` 的 `review.pending` 队列
+1. 读取 `pending.json` 的 `review.items` 队列
 2. 对每个待审核项，显示：
    - `pending_id`
    - 来源文件（归档路径）
@@ -715,38 +715,70 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
 
 ### 步骤 A2：批准审核（`--review approve --pending-id <id> --reason`）
 
-1. **查找待审核项**
-   - 从 `pending.json` 的 `review.pending` 中查找 `pending_id`
-   - 如果不存在，报错退出
+**⚠️ 重要：批准审核需要命令层按顺序执行多个操作**
 
-2. **检查转换文件**
-   - 检查 `converted_file` 是否存在
-   - 如果不存在，执行转换文件恢复流程：
-     - 从 `archived_source` 复制归档文件到临时位置
-     - 重新执行转换（调用 `preprocess/index.ts`）
-     - 保存转换文件到原路径
+#### 步骤 A2.1：列出待审核项
 
-3. **调用 Agent 生成情报卡片**
-   - 调用 `intelligence-analyzer` Agent（review mode）
-   - 参数：`source`（转换文件路径）、`output`（输出目录）、`session_id`（会话 ID）
-   - Agent 从转换文件 frontmatter 读取 `sourceHash` 和 `archivedSource`
-   - Agent 返回正式 `intelligence_id`
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
+  --root {root_dir} \
+  --review list
+```
 
-4. **更新状态**
-   - 更新转换文件 frontmatter：
-     - `processed_status = "passed"`
-     - `reviewed_at`（当前时间）
-     - `approved_reason`
-     - `reviewed_by = "user"`
-   - 从 `pending.json` 的 `review.pending` 中移除该待审核项
+从输出中获取 `pending_id`、`converted_file`、`archived_source`。
+
+#### 步骤 A2.2：检查并恢复转换文件
+
+检查转换文件是否存在：
+
+```bash
+# 检查文件
+ls -la {root_dir}/{converted_file}
+```
+
+如果文件不存在，从归档恢复：
+
+```bash
+# 从归档重新转换
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/index.ts \
+  --source {archived_source 的父目录} \
+  --root {root_dir}
+```
+
+#### 步骤 A2.3：调用 Agent 生成情报卡片
+
+```
+使用 Agent 工具，subagent_type="intelligence-analyzer"
+
+参数:
+- source: {converted_file}（转换文件路径）
+- output: {output_dir}（情报卡片输出目录）
+- session_id: {session_id}
+```
+
+Agent 会：
+- 分析转换文件内容
+- 生成情报卡片到 `{output}/{domain}/{YYYY}/{MM}/`
+- 返回 `intelligence_id` 和 `output_files`
+
+#### 步骤 A2.4：更新状态
+
+Agent 成功后，更新 pending.json 和 frontmatter：
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
+  --root {root_dir} \
+  --review approve \
+  --pending-id {pending_id} \
+  --reason "{reason}"
+```
+
+此命令会：
+- 更新转换文件 frontmatter: `processed_status = "passed"`
+- 从 `pending.json` 的 `review.items` 中移除该项
 
 **输出示例**：
 ```
-⚠️  转换文件不存在: converted/2026/03/report-2026.md
-   尝试从归档文件恢复...
-   重新转换: report-2026.pdf
-   ✅ 转换文件已恢复: converted/2026/03/report-2026.md
-
 ✅ 已批准: pending-threat-20260313-001
    • 情报卡片已生成: threat-20260313-001
    • 输出位置: ./intelligence/threat-intelligence/20260313-ransomware-trend.md
@@ -755,18 +787,20 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
 
 ### 步骤 A3：拒绝审核（`--review reject --pending-id <id> --reason`）
 
-1. **查找待审核项**
-   - 从 `pending.json` 的 `review.pending` 中查找 `pending_id`
-   - 如果不存在，报错退出
+拒绝审核直接调用脚本更新状态，不需要调用 Agent：
 
-2. **更新状态**
-   - 不调用 Agent（不生成情报卡片）
-   - 更新转换文件 frontmatter：
-     - `processed_status = "rejected"`
-     - `reviewed_at`（当前时间）
-     - `rejected_reason`
-     - `reviewed_by = "user"`
-   - 从 `pending.json` 的 `review.pending` 中移除该待审核项
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
+  --root {root_dir} \
+  --review reject \
+  --pending-id {pending_id} \
+  --reason "{reason}"
+```
+
+此命令会：
+- 更新转换文件 frontmatter: `processed_status = "rejected"`
+- 从 `pending.json` 的 `review.items` 中移除该项
+- **不生成情报卡片**
 
 **输出示例**：
 ```
@@ -913,7 +947,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
   "version": "1.0.0",
   "updated_at": "2026-04-06T12:00:00Z",
   "review": {
-    "pending": [
+    "items": [
       {
         "pending_id": "pending-threat-20260406-001",
         "converted_file": "converted/2026/04/report.md",
@@ -925,8 +959,12 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
   },
   "pulse": {
     "cursors": {
-      "securityweekly": "abc123",
-      "threatpost": "def456"
+      "securityweekly": {
+        "last_fetched_at": "2026-04-06T10:00:00Z",
+        "last_item_id": "abc123",
+        "last_pull": "2026-04-06T10:05:00Z",
+        "total_synced": 42
+      }
     }
   }
 }
@@ -938,12 +976,12 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 |------|------|------|
 | `version` | string | 状态文件格式版本（如 "1.0.0"） |
 | `updated_at` | string | 最后更新时间（ISO 8601 格式） |
-| `review.pending` | array | 待审核队列 |
-| `review.pending[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}`） |
-| `review.pending[].converted_file` | string | 转换文件路径 |
-| `review.pending[].archived_source` | string | 归档文件路径 |
-| `review.pending[].added_at` | string | 添加时间 |
-| `review.pending[].reason` | string | 审核原因 |
+| `review.items` | array | 待审核队列 |
+| `review.items[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}-{random}`） |
+| `review.items[].converted_file` | string | 转换文件路径 |
+| `review.items[].archived_source` | string | 归档文件路径 |
+| `review.items[].added_at` | string | 添加时间 |
+| `review.items[].reason` | string | 审核原因 |
 | `pulse.cursors` | object | cyber-pulse API 游标（用于增量拉取） |
 
 ### 已处理状态追踪
@@ -968,7 +1006,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 ```
 
 迁移脚本会：
-- 将 `state.review.pending` 转移到 `pending.json`
+- 将 `state.review.pending` 转移到 `pending.json` 的 `review.items`
 - 将 `state.pulse.cursors` 转移到 `pending.json`
 - 将 `state.processed` 数据写入转换文件 frontmatter
 - 删除旧的 `state.json`（用户确认后）

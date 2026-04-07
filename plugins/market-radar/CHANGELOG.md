@@ -123,9 +123,9 @@
 ### 新增
 
 - **update-state.ts 脚本**：实现 intel-distill 步骤 8.4 状态更新
-  - 更新 `processed` 记录（intelligence_ids, output_files 等）
-  - 更新 `review.pending` 队列（has_strategic_value = null 时）
-  - 更新 `stats.intelligence` 统计计数器
+  - 更新转换文件 frontmatter（processed_status）
+  - 更新 `review.items` 队列（has_strategic_value = null 时）
+  - 写入 `.intel/pending.json` 状态文件
 
 ### 修复
 
