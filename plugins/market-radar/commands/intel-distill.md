@@ -1,7 +1,7 @@
 ---
 name: intel-distill
 description: Extract strategic intelligence from source documents and generate intelligence cards
-argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [pending_id] [--reason <原因>]] [--report <daily|weekly|monthly> [--date <日期>|周期]]"
+argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [--pending-id <id>] [--reason <原因>]] [--report <daily|weekly|monthly> [--date <日期>|周期]]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -20,6 +20,7 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 | `--source <dir>` | 否 | 待扫描的源文件目录（默认：./inbox） |
 | `--output <dir>` | 否 | 情报卡片输出目录（默认：./intelligence） |
 | `--review <action>` | 否 | 审核操作：`list`/`approve`/`reject` |
+| `--pending-id <id>` | 条件 | 待审核项 ID（approve/reject 时必填） |
 | `--reason <text>` | 条件 | 审核原因（approve/reject 时推荐） |
 | `--report <type>` | 否 | 生成情报简报：`daily`/`weekly`/`monthly` |
 | `--date <YYYY-MM-DD>` | 否 | 日报日期（仅 daily 模式，默认当天） |
@@ -47,10 +48,10 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 /intel-distill --review list
 
 # 批准待审核项
-/intel-distill --review approve pending-threat-20260313-001 --reason "情报准确"
+/intel-distill --review approve --pending-id pending-threat-20260313-001 --reason "情报准确"
 
 # 拒绝待审核项
-/intel-distill --review reject pending-emerging-20260313-002 --reason "信息来源不可靠"
+/intel-distill --review reject --pending-id pending-emerging-20260313-002 --reason "信息来源不可靠"
 
 # === 报告模式 ===
 
@@ -276,7 +277,7 @@ intel-pull 采集 → inbox/*.md frontmatter → 预处理转换 → converted/*
 - source_dir = --source 参数或 ./inbox
 - output_dir = --output 参数或 ./intelligence
 - review_action = --review 参数值（list/approve/reject 或无）
-- review_target = 审核目标 pending_id
+- pending_id = --pending-id 参数值（approve/reject 时需要）
 - review_reason = --reason 参数值
 - report_type = --report 参数值（weekly/monthly 或无）
 - period_param = 周期参数
@@ -708,11 +709,11 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
    添加时间: 2026-03-13 10:05:00
 
 💡 操作:
-   /intel-distill --review approve <pending_id> --reason "原因"
-   /intel-distill --review reject <pending_id> --reason "原因"
+   /intel-distill --review approve --pending-id <pending_id> --reason "原因"
+   /intel-distill --review reject --pending-id <pending_id> --reason "原因"
 ```
 
-### 步骤 A2：批准审核（`--review approve <pending_id> --reason`）
+### 步骤 A2：批准审核（`--review approve --pending-id <id> --reason`）
 
 1. **查找待审核项**
    - 从 `pending.json` 的 `review.pending` 中查找 `pending_id`
@@ -752,7 +753,7 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
    • 批准原因已记录（正样本反馈）
 ```
 
-### 步骤 A3：拒绝审核（`--review reject <pending_id> --reason`）
+### 步骤 A3：拒绝审核（`--review reject --pending-id <id> --reason`）
 
 1. **查找待审核项**
    - 从 `pending.json` 的 `review.pending` 中查找 `pending_id`
