@@ -2,6 +2,40 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.0] - 2026-04-07
+
+### 新增
+
+- **四层情报报告体系**：层级聚合模型，高级别报告从低级别报告聚合生成
+  - 日报（信号导向）：指导情报分析人员关注特定情报
+  - 周报（主题导向）：通过语义分析发现跨日主题模式
+  - 月报（变化导向）：识别态势变化，支持跨月追踪
+  - 年报（趋势导向）：回答行业演进方向、竞争格局变化、战略机会
+
+- **变化类型系统**：6 种变化类型支撑周报主题标注和月报聚合
+  - 新威胁出现、市场格局变化、技术突破与应用
+  - 客户需求演变、合规压力变化、资本动向
+
+- **态势追踪机制**：
+  - 态势 ID 规则：`S-{年份}-{月份}-{序号}`
+  - 态势状态：新态势（🆕）、持续、减弱（⬇️）、消退（⏹️）
+  - 支持跨月追踪，为年报提供趋势分析基础
+
+- **新增组件**：
+  - `scripts/reporting/types/`：类型定义（change-type, situation, report）
+  - `scripts/reporting/scan-reports.ts`：报告扫描脚本
+  - `agents/intelligence-weekly-writer.md`：周报撰写 Agent
+  - `agents/intelligence-monthly-writer.md`：月报撰写 Agent
+  - `agents/intelligence-annual-writer.md`：年报撰写 Agent
+  - `references/weekly-report-template.md`：周报模板
+  - `references/monthly-report-template.md`：月报模板
+  - `references/annual-report-template.md`：年报模板
+
+### 变更
+
+- **intel-distill 命令**：区分四种报告类型的数据源和 Agent 调用
+- **intelligence-briefing-writer Agent**：标记为 legacy，建议使用新的专用 Agent
+
 ## [1.8.2] - 2026-04-07
 
 ### 修复
