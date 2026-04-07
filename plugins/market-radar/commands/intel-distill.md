@@ -235,7 +235,7 @@ processed_at: null
 | `archivedSource` | string | ✅ | 归档文件路径 |
 | `processed_status` | string | ❌ | 处理状态：pending/passed/rejected |
 | `processed_at` | datetime | ❌ | 处理时间（ISO 8601） |
-| `content_hash` | string | ❌ | 转换文件内容哈希（处理后写入） |
+| `content_hash` | string | ❌ | 转换文件 body 内容哈希（预处理时写入，用于变更检测） |
 
 **注意**：情报卡片的 frontmatter 格式参见 `intelligence-output-templates` skill。
 

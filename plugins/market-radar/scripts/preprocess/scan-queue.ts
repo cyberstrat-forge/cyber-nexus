@@ -46,6 +46,11 @@ export interface QueueItem {
 }
 
 /**
+ * Processed status in converted file frontmatter
+ */
+type ProcessedStatus = 'pending' | 'passed' | 'rejected';
+
+/**
  * Result of scan and queue building
  */
 export interface ScanQueueResult {
@@ -57,17 +62,16 @@ export interface ScanQueueResult {
   queue: QueueItem[];
   threshold: number;
   recommendation: 'glob' | 'script';
+  /** Files with state inconsistency requiring automatic status fix */
   auto_fix?: Array<{
+    /** Relative path from source_dir */
     file: string;
-    current_status: string | null;
+    /** Current processed_status in frontmatter (may be inconsistent) */
+    current_status: ProcessedStatus | null;
+    /** Suggested status based on intelligence card existence */
     suggested_status: 'passed';
   }>;
 }
-
-/**
- * Processed status in converted file frontmatter
- */
-type ProcessedStatus = 'pending' | 'passed' | 'rejected';
 
 /**
  * Converted file frontmatter (new fields)
@@ -241,8 +245,11 @@ function scanAndBuildQueue(
       continue;
     }
 
-    // Calculate content hash
-    const contentHash = createHash('md5').update(content).digest('hex');
+    // Calculate content hash (body only, excluding frontmatter)
+    // This matches the preprocessing script's approach in preprocess/index.ts
+    const frontmatterMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+    const bodyContent = frontmatterMatch ? content.slice(frontmatterMatch[0].length) : content;
+    const contentHash = createHash('md5').update(bodyContent).digest('hex');
 
     // Parse frontmatter
     const frontmatter = parseFrontmatter(content) as ConvertedFrontmatter | null;
@@ -290,9 +297,8 @@ function scanAndBuildQueue(
     }
 
     if (processedStatus === 'passed') {
-      // Intelligence card check was already done above
-      // If we reach here, it means card doesn't exist or content doesn't match
-      // Needs reprocessing
+      // Card existence already verified above; reaching here means card missing or content changed.
+      // File needs reprocessing despite 'passed' status.
     }
 
     // pending, missing status, or needs reprocessing
@@ -350,6 +356,17 @@ function formatAsText(result: ScanQueueResult): string {
       if (item.status === 'needs_processing') {
         lines.push(`  - ${item.file}`);
       }
+    }
+  }
+
+  // Show auto-fix suggestions for state inconsistency
+  if (result.auto_fix && result.auto_fix.length > 0) {
+    lines.push('');
+    lines.push('【状态修复建议】');
+    lines.push(`⚠️ 检测到 ${result.auto_fix.length} 个状态不一致的文件（有卡片但未标记）`);
+    lines.push('   这些文件已被跳过，建议运行修复命令更新状态');
+    for (const item of result.auto_fix) {
+      lines.push(`  - ${item.file} (当前状态: ${item.current_status ?? '无'})`);
     }
   }
 
