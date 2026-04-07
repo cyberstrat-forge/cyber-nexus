@@ -359,6 +359,19 @@ function formatAsText(result: ScanQueueResult): string {
     }
   }
 
+  // Show pending review files
+  if (result.pending_review > 0) {
+    lines.push('');
+    lines.push('【待审核文件】');
+    lines.push(`📋 ${result.pending_review} 个文件待人工审核`);
+    for (const item of result.queue) {
+      if (item.status === 'pending_review') {
+        lines.push(`  - ${item.file}`);
+      }
+    }
+    lines.push('💡 使用 /intel-distill --review list 查看详情');
+  }
+
   // Show auto-fix suggestions for state inconsistency
   if (result.auto_fix && result.auto_fix.length > 0) {
     lines.push('');
