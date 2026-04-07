@@ -295,8 +295,9 @@ tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 | AI 安全平台兴起 | ai-security | platform-rise | `20251013-ai-security-platform-rise.md` |
 
 **ID 序号分配**：
-- 同一日期、同一领域的卡片按处理顺序递增序号
-- 例如：`industry-20251013-001`, `industry-20251013-002`
+- ID 格式：`{domain_prefix}-{filename_without_extension}`
+- 文件名已保证唯一性，无需额外序号检查
+- 例如：文件 `20260406-lazarus-malware.md` → ID `threat-20260406-lazarus-malware`
 
 **内容生成**：
 - Frontmatter：四组层次结构（核心标识 + item追溯 + 情报源追溯 + 处理状态）
@@ -309,7 +310,7 @@ tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 # ============================================
 # 第一组：核心标识（生成）
 # ============================================
-intelligence_id: "threat-20260402-001"
+intelligence_id: "threat-20260406-lazarus-malware"
 title: "APT组织Lazarus利用新型恶意软件攻击金融机构"
 created_date: "2026-04-02"
 primary_domain: "Threat-Landscape"
@@ -360,7 +361,7 @@ generated_session: "20260402-151800"
 
 ### 步骤 6：去重与冲突检测
 
-#### 6.1 去重规则
+#### 6.1 内容去重
 
 使用 Glob 检查输出目录中现有文件，按以下规则判断重复：
 
@@ -378,12 +379,14 @@ generated_session: "20260402-151800"
 
 #### 6.2 文件名冲突处理
 
-当文件名相同但内容不同时：
+当文件名相同但内容不同时，追加序号：
 
 ```
 原文件: 20260310-threat-actor-analysis.md
 冲突:   20260310-threat-actor-analysis-2.md
 ```
+
+**注意**：`intelligence_id` 基于文件名生成，文件名唯一则 ID 唯一，无需额外检查。
 
 #### 6.3 冲突检测流程
 
@@ -519,7 +522,7 @@ Write 工具会自动创建父目录。
 - [ ] tags 已填写 — **必填字段**，包含 `geo/` 前缀的地域标签
 - [ ] 业务模式标签已提取并添加 `business/` 前缀（仅 Industry-Analysis）
 - [ ] 情报卡片已按模板生成
-- [ ] 每张卡片有独立的 intelligence_id
+- [ ] 每张卡片有独立的 intelligence_id（基于文件名：`{domain_prefix}-{filename}`）
 - [ ] 每张卡片有独立的文件名（subject-feature 格式）
 - [ ] 四组元数据字段已正确填写（核心标识 + item追溯 + 情报源追溯 + 处理状态）
 - [ ] 文件已成功写入对应年月子目录（{domain}/{YYYY}/{MM}/）
