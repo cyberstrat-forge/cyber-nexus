@@ -69,6 +69,7 @@ type ProcessedStatus = 'pending' | 'passed' | 'rejected';
  */
 interface ConvertedFrontmatter {
   sourceHash?: string;
+  content_hash?: string; // Hash of converted file content
   processed_status?: ProcessedStatus;
   processed_at?: string | null;
   archivedSource?: string;
@@ -242,6 +243,7 @@ function scanAndBuildQueue(
     const sourceHash = frontmatter?.sourceHash;
     const archivedSource = frontmatter?.archivedSource;
     const processedStatus = frontmatter?.processed_status;
+    const convertedContentHash = frontmatter?.content_hash; // Hash from converted file frontmatter
 
     // Check if in pending review
     if (pendingReviewSet.has(relativePath)) {
@@ -266,7 +268,8 @@ function scanAndBuildQueue(
     if (processedStatus === 'passed') {
       // Verify intelligence card exists with matching hash
       const recordedHash = convertedToHash.get(relativePath);
-      if (recordedHash && recordedHash === contentHash) {
+      // Compare the converted file's content_hash with intelligence card's converted_content_hash
+      if (recordedHash && convertedContentHash && recordedHash === convertedContentHash) {
         // Already processed, content unchanged
         alreadyProcessed++;
         continue;
