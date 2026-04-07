@@ -20,14 +20,12 @@
  * [
  *   {
  *     "source_file": "converted/2026/04/xxx.md",
- *     "content_hash": "abc123...",
- *     "source_hash": "def456...",
- *     "archived_source": "archive/2026/04/xxx.pdf",
  *     "has_strategic_value": true,
  *     "intelligence_count": 2,
  *     "intelligence_ids": ["industry-001", "emerging-001"],
  *     "output_files": ["intelligence/Industry-Analysis/xxx.md"],
- *     "review_reason": null
+ *     "review_reason": null,
+ *     "archived_source": "archive/2026/04/xxx.pdf"  // Optional, for pending review only
  *   }
  * ]
  */
@@ -41,15 +39,13 @@ import { PendingFile, createDefaultPending } from './types/pending';
 
 interface AgentResult {
   source_file: string;
-  content_hash: string;
-  source_hash: string;
-  archived_source: string;
   has_strategic_value: boolean | null;
   intelligence_count: number;
   intelligence_ids: string[];
   output_files: string[];
   review_reason?: string | null;
   domain?: string;
+  archived_source?: string;  // Optional, for pending review only
 }
 
 // ==================== Validation Functions ====================
@@ -67,14 +63,6 @@ function validateAgentResult(result: unknown, index: number): { valid: true; dat
   // Required string fields
   if (typeof r.source_file !== 'string' || r.source_file.length === 0) {
     return { valid: false, error: `Result[${index}].source_file must be a non-empty string` };
-  }
-  // MD5 hash format validation (32 hex chars)
-  const MD5_PATTERN = /^[a-f0-9]{32}$/;
-  if (typeof r.content_hash !== 'string' || !MD5_PATTERN.test(r.content_hash)) {
-    return { valid: false, error: `Result[${index}].content_hash must be a 32-char hex MD5 hash` };
-  }
-  if (typeof r.source_hash !== 'string' || !MD5_PATTERN.test(r.source_hash)) {
-    return { valid: false, error: `Result[${index}].source_hash must be a 32-char hex MD5 hash` };
   }
 
   // has_strategic_value: must be boolean or null
@@ -99,15 +87,13 @@ function validateAgentResult(result: unknown, index: number): { valid: true; dat
     valid: true,
     data: {
       source_file: r.source_file,
-      content_hash: r.content_hash,
-      source_hash: r.source_hash,
-      archived_source: typeof r.archived_source === 'string' ? r.archived_source : '',
       has_strategic_value: r.has_strategic_value as boolean | null,
       intelligence_count: r.intelligence_count,
       intelligence_ids: r.intelligence_ids as string[],
       output_files: r.output_files as string[],
       review_reason: r.review_reason as string | null | undefined,
       domain: typeof r.domain === 'string' ? r.domain : undefined,
+      archived_source: typeof r.archived_source === 'string' ? r.archived_source : undefined,
     },
   };
 }
@@ -291,7 +277,7 @@ function updateStateWithResults(
       pending.review.items.push({
         pending_id: pendingId,
         converted_file: source_file,
-        archived_source: result.archived_source,
+        archived_source: result.archived_source || '',
         added_at: new Date().toISOString(),
         reason: review_reason || '需人工审核',
       });

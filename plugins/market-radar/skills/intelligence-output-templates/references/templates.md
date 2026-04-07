@@ -75,7 +75,7 @@ tags: ["geo/china", "business/MSSP", "APT", "ransomware", "cloud-security"]
 
 ```yaml
 ---
-intelligence_id: "threat-20260402-001"
+intelligence_id: "threat-20260402-ransomware-surge"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Threat-Landscape"
@@ -159,7 +159,7 @@ impact_scale:                   # 影响规模
 
 ```yaml
 ---
-intelligence_id: "industry-20260402-001"
+intelligence_id: "industry-20260402-cybersecurity-trends"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Industry-Analysis"
@@ -247,7 +247,7 @@ segment:                        # 细分领域
 
 ```yaml
 ---
-intelligence_id: "vendor-20260402-001"
+intelligence_id: "vendor-20260402-crowdstrike-threat-report"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Vendor-Intelligence"
@@ -332,7 +332,7 @@ business_area:                  # 业务领域
 
 ```yaml
 ---
-intelligence_id: "emerging-20260402-001"
+intelligence_id: "emerging-20260402-ai-security-platform"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Emerging-Tech"
@@ -419,7 +419,7 @@ maturity:                       # 概念/早期/成长/成熟
 
 ```yaml
 ---
-intelligence_id: "customer-20260402-001"
+intelligence_id: "customer-20260402-ciso-ai-adoption"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Customer-Market"
@@ -503,7 +503,7 @@ region:                         # 地区
 
 ```yaml
 ---
-intelligence_id: "policy-20260402-001"
+intelligence_id: "policy-20260402-zero-trust-framework"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Policy-Regulation"
@@ -589,7 +589,7 @@ effective_date:                 # 生效时间
 
 ```yaml
 ---
-intelligence_id: "capital-20260402-001"
+intelligence_id: "capital-20260402-security-funding"
 title: "情报标题"
 created_date: "2026-04-02"
 primary_domain: "Capital-Investment"
