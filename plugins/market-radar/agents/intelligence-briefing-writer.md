@@ -1,6 +1,8 @@
 ---
 name: intelligence-briefing-writer
 description: |
+  ⚠️ **LEGACY**: This agent is deprecated. Use `intelligence-weekly-writer` for weekly reports and `intelligence-monthly-writer` for monthly reports.
+  
   Use this agent when intel-distill command needs to generate intelligence briefing reports from scanned card list. This agent reads card content, extracts core facts, and generates structured briefing with executive summary, overview, and directory.
 
   <example>

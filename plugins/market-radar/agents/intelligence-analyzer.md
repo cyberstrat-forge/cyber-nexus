@@ -452,8 +452,8 @@ Agent 完成分析 → 返回 JSON 结果
   "has_strategic_value": true,
   "intelligence_count": 2,
   "intelligence_ids": [
-    "industry-20251013-001",
-    "emerging-20251013-001"
+    "industry-20251013-cybersecurity-trends-2026",
+    "emerging-20251013-ai-security-platform-rise"
   ],
   "output_files": [
     "intelligence/Industry-Analysis/2025/10/20251013-cybersecurity-trends-2026.md",
@@ -462,14 +462,14 @@ Agent 完成分析 → 返回 JSON 结果
   "domain": "Industry-Analysis",
   "cards": [
     {
-      "intelligence_id": "industry-20251013-001",
+      "intelligence_id": "industry-20251013-cybersecurity-trends-2026",
       "primary_domain": "Industry-Analysis",
       "secondary_domains": [],
       "output_file": "intelligence/Industry-Analysis/2025/10/20251013-cybersecurity-trends-2026.md",
       "title": "Gartner发布2026年网络安全规划指南：六大趋势定义未来方向"
     },
     {
-      "intelligence_id": "emerging-20251013-001",
+      "intelligence_id": "emerging-20251013-ai-security-platform-rise",
       "primary_domain": "Emerging-Tech",
       "secondary_domains": [],
       "output_file": "intelligence/Emerging-Tech/2025/10/20251013-ai-security-platform-rise.md",

@@ -1,7 +1,7 @@
 ---
 name: intel-distill
 description: Extract strategic intelligence from source documents and generate intelligence cards
-argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [--pending-id <id>] [--reason <原因>]] [--report <daily|weekly|monthly> [--date <日期>|周期]]"
+argument-hint: "[--source <目录>] [--output <目录>] [--review <list|approve|reject> [--pending-id <id>] [--reason <原因>]] [--report <daily|weekly|monthly|annual> [--date <日期>|周期]]"
 allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 ---
 
@@ -22,7 +22,7 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 | `--review <action>` | 否 | 审核操作：`list`/`approve`/`reject` |
 | `--pending-id <id>` | 条件 | 待审核项 ID（approve/reject 时必填） |
 | `--reason <text>` | 条件 | 审核原因（approve/reject 时推荐） |
-| `--report <type>` | 否 | 生成情报简报：`daily`/`weekly`/`monthly` |
+| `--report <type>` | 否 | 生成情报报告：`daily`/`weekly`/`monthly`/`annual` |
 | `--date <YYYY-MM-DD>` | 否 | 日报日期（仅 daily 模式，默认当天） |
 | `<period>` | 否 | 周期参数：日报用 `--date`，周报 `YYYY-Wnn`，月报 `YYYY-MM` |
 | `--help` | 否 | 显示使用帮助 |
@@ -69,6 +69,12 @@ allowed-tools: Read, Write, Grep, Glob, Bash, Agent
 
 # 生成当前月报
 /intel-distill --report monthly
+
+# 生成年报
+/intel-distill --report annual
+
+# 生成指定年份年报
+/intel-distill --report annual 2026
 
 # 显示帮助
 /intel-distill --help
@@ -979,7 +985,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 
 当 `--report` 参数存在时，执行以下流程：
 
-### 步骤 R0：检查并安装脚本依赖
+### 步骤 R1：检查脚本依赖
 
 在执行脚本前，检查 `node_modules` 是否存在：
 
@@ -1000,47 +1006,37 @@ Done in 262ms using pnpm v10.33.0
 ✅ 依赖安装完成
 ```
 
-### 步骤 R1：调用扫描脚本
+### 步骤 R2：确定报告类型和周期
 
-根据报告类型选择不同的参数：
+根据 `--report` 参数确定：
+
+| 报告类型 | 主输入 | Agent |
+|----------|--------|-------|
+| daily | 情报卡片 | intelligence-daily-writer |
+| weekly | 日报集合 | intelligence-weekly-writer |
+| monthly | 周报集合 | intelligence-monthly-writer |
+| annual | 月报+周报集合 | intelligence-annual-writer |
+
+### 步骤 R3：扫描输入数据
 
 **日报模式**：
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
-  --period daily \
-  --date "{date_param}" \
-  --format json \
-  --output-dir {output}
-```
+- 使用 scan-cards.ts 扫描当日情报卡片
 
-**周报/月报模式**：
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
-  --period {report_type} \
-  --param "{period_param}" \
-  --output-dir {output}
-```
+**周报模式**：
+- 使用 scan-reports.ts 扫描本周日报
+- 如果日报缺失，回退到情报卡片
 
-**参数说明**：
-- 日报使用 `--date YYYY-MM-DD` 指定日期，输出 JSON 格式给 Agent
-- 周报/月报使用 `--param` 指定周期参数
+**月报模式**：
+- 使用 scan-reports.ts 扫描本月周报
+- 加载态势索引（.intel/situations.json）
 
-### 步骤 R2：解析扫描结果
+**年报模式**：
+- 使用 scan-reports.ts 扫描本年月报和周报
+- 加载态势索引
 
-读取扫描脚本输出的 JSON 结果，提取情报卡片列表。
+### 步骤 R4：调用 Agent 生成报告
 
-**日报模式**：解析 JSON 输出的完整元数据（含 `body_summary`、`vendor_name` 等聚合字段）。
-
-### 步骤 R3：检查卡片列表
-
-| 条件 | 操作 |
-|------|------|
-| `cards.length == 0` | 输出"今日/本周/月无情报卡片"，结束流程 |
-| `cards.length > 0` | 继续生成报告 |
-
-### 步骤 R4：调用情报报告 Agent
-
-根据报告类型选择不同的 Agent：
+使用 Agent 工具调用对应的报告撰写 Agent。
 
 **日报模式**：
 ```
@@ -1048,15 +1044,27 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 参数: cards_data（扫描结果 JSON）, output_dir, date
 ```
 
-**周报/月报模式**：
+**周报模式**：
 ```
-使用 Agent 工具，subagent_type="intelligence-briefing-writer"
-参数: card_list（扫描结果）, output_dir, report_date（当前日期）
+使用 Agent 工具，subagent_type="intelligence-weekly-writer"
+参数: reports_data（扫描结果）, output_dir, week_param
 ```
 
-### 步骤 R5：显示报告位置和内容
+**月报模式**：
+```
+使用 Agent 工具，subagent_type="intelligence-monthly-writer"
+参数: reports_data（扫描结果）, situations_index, output_dir, month_param
+```
 
-根据报告类型显示不同的输出路径：
+**年报模式**：
+```
+使用 Agent 工具，subagent_type="intelligence-annual-writer"
+参数: reports_data（月报+周报扫描结果）, situations_index, output_dir, year_param
+```
+
+### 步骤 R5：显示报告
+
+将生成的报告内容展示给用户。
 
 **日报**：
 ```
@@ -1067,11 +1075,29 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
 --- 报告内容 ---
 ```
 
-**周报/月报**：
+**周报**：
 ```
-✅ 情报简报已生成
+✅ 情报周报已生成
 
-报告文件: {output}/reports/{period}/{period_param}-{period}.md
+报告文件: {output}/reports/weekly/{week_param}-weekly.md
+
+--- 报告内容 ---
+```
+
+**月报**：
+```
+✅ 情报月报已生成
+
+报告文件: {output}/reports/monthly/{month_param}-monthly.md
+
+--- 报告内容 ---
+```
+
+**年报**：
+```
+✅ 情报年报已生成
+
+报告文件: {output}/reports/annual/{year_param}-annual.md
 
 --- 报告内容 ---
 ```

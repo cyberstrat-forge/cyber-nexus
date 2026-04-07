@@ -103,7 +103,7 @@ tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 
 ## 报告模板
 
-情报报告包括日报、周报、月报三种类型。
+情报报告包括日报、周报、月报、年报四种类型。
 
 ### 报告目录结构
 
@@ -113,22 +113,36 @@ tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 │   └── 2026-04-06-daily.md    # 日报
 ├── weekly/
 │   └── 2026-W15-weekly.md     # 周报
-└── monthly/
+├── monthly/
 │   └── 2026-03-monthly.md     # 月报
+└── annual/
+    └── 2026-annual.md         # 年报
 ```
 
-### 日报模板
+### 日报
 
-完整的日报 frontmatter 和正文模板，参见：
-
-- **`references/daily-report-template.md`**
+参见 `references/daily-report-template.md`
 
 日报生成使用 `intelligence-daily-writer` Agent，参见：
 
 - **`../../agents/intelligence-daily-writer.md`**
 
-### 周报/月报模板
+### 周报
 
-周报和月报沿用现有模板格式，参见：
+参见 `references/weekly-report-template.md`
 
-- **`references/templates.md`** 中的报告输出结构
+周报生成使用 `intelligence-weekly-writer` Agent，参见：
+
+- **`../../agents/intelligence-weekly-writer.md`**
+
+### 月报
+
+参见 `references/monthly-report-template.md`
+
+月报生成使用 `intelligence-monthly-writer` Agent，参见：
+
+- **`../../agents/intelligence-monthly-writer.md`**
+
+### 年报
+
+参见 `references/annual-report-template.md`
