@@ -682,14 +682,9 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 
 **命令层职责**：
 
-1. 从转换文件 frontmatter 提取元数据：
-   - `content_hash`: 内容哈希
-   - `source_hash`: 源文件哈希（来自 sourceHash 字段）
-   - `archived_source`: 归档文件路径
+1. 合并 Agent 结果，构造 JSON 数组
 
-2. 合并 Agent 结果与元数据，构造 JSON 数组
-
-3. 调用 update-state.ts 更新状态：
+2. 调用 update-state.ts 更新状态：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
@@ -697,27 +692,53 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
   --results '{json_array}'
 ```
 
-**输入 JSON 格式**：
+**输入 JSON 格式**（简化版，仅包含必要字段）：
 
 ```json
 [
   {
     "source_file": "converted/2026/04/xxx.md",
-    "content_hash": "abc123...",
-    "source_hash": "def456...",
-    "archived_source": "archive/2026/04/xxx.pdf",
     "has_strategic_value": true,
     "intelligence_count": 2,
-    "intelligence_ids": ["threat-001", "emerging-001"],
-    "output_files": ["intelligence/Threat-Landscape/xxx.md"],
-    "domain": "Threat-Landscape"
+    "intelligence_ids": ["threat-20260407-xxx", "emerging-20260407-xxx"],
+    "output_files": ["intelligence/Threat-Landscape/2026/04/20260407-xxx.md"]
+  },
+  {
+    "source_file": "converted/2026/04/notes.md",
+    "has_strategic_value": false,
+    "intelligence_count": 0,
+    "intelligence_ids": [],
+    "output_files": []
+  },
+  {
+    "source_file": "converted/2026/04/suspicious.md",
+    "has_strategic_value": null,
+    "intelligence_count": 0,
+    "intelligence_ids": [],
+    "output_files": [],
+    "review_reason": "检测到高风险威胁指标，需人工确认",
+    "domain": "Threat-Landscape",
+    "archived_source": "archive/2026/04/suspicious.pdf"
   }
 ]
 ```
 
+**字段说明**：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `source_file` | ✅ | 转换文件路径 |
+| `has_strategic_value` | ✅ | true=有价值，false=无价值，null=待审核 |
+| `intelligence_count` | ✅ | 生成的情报卡片数量 |
+| `intelligence_ids` | ✅ | 情报卡片 ID 数组 |
+| `output_files` | ✅ | 情报卡片文件路径数组 |
+| `review_reason` | 条件 | 待审核原因（has_strategic_value=null 时必填） |
+| `domain` | 条件 | 领域（待审核时用于生成 pending_id） |
+| `archived_source` | 条件 | 归档文件路径（待审核时记录） |
+
 **update-state.ts 执行内容**：
-- 更新转换文件 frontmatter: `processed_status`、`processed_at`
-- 更新 pending.json: 添加 `review.items`（如有待审核项）
+- 更新转换文件 frontmatter: `processed_status`（passed/rejected）、`processed_at`
+- 更新 pending.json: 添加 `review.items`（仅待审核项）
 
 #### 8.6 输出批次进度
 
@@ -1219,7 +1240,8 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts pending ./.in
 
 ## 注意事项
 
-- Agent 负责完整的文件处理流程（分析、写入情报卡片、更新 frontmatter）
+- Agent 负责分析文档、生成情报卡片、返回 JSON 结果（不更新状态）
+- 命令层负责调用 update-state.ts 更新转换文件 frontmatter 和 pending.json
 - 状态通过文件系统追踪，pending.json 仅存储运行时数据
 - 删除源文件或转换文件后，情报卡片仍保留（frontmatter 包含追溯信息）
 - 重新加入历史文件时会检测重复（基于转换文件 frontmatter 的 sourceHash）
