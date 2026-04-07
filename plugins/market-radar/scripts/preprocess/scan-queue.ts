@@ -57,6 +57,11 @@ export interface ScanQueueResult {
   queue: QueueItem[];
   threshold: number;
   recommendation: 'glob' | 'script';
+  auto_fix?: Array<{
+    file: string;
+    current_status: string | null;
+    suggested_status: 'passed';
+  }>;
 }
 
 /**
@@ -221,6 +226,7 @@ function scanAndBuildQueue(
   let alreadyProcessed = 0;
   let needsProcessing = 0;
   let pendingReview = 0;
+  const autoFixItems: ScanQueueResult['auto_fix'] = [];
 
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
@@ -243,7 +249,6 @@ function scanAndBuildQueue(
     const sourceHash = frontmatter?.sourceHash;
     const archivedSource = frontmatter?.archivedSource;
     const processedStatus = frontmatter?.processed_status;
-    const convertedContentHash = frontmatter?.content_hash; // Hash from converted file frontmatter
 
     // Check if in pending review
     if (pendingReviewSet.has(relativePath)) {
@@ -258,6 +263,25 @@ function scanAndBuildQueue(
       continue;
     }
 
+    // Check if intelligence card exists (regardless of processed_status)
+    // This is key for interruption recovery: if card exists and content matches, treat as processed
+    const recordedHash = convertedToHash.get(relativePath);
+    if (recordedHash && recordedHash === contentHash) {
+      // Intelligence card exists and content matches
+      // recordedHash is the converted_content_hash recorded in the intelligence card
+      // contentHash is the real-time calculated hash of the converted file content
+      if (processedStatus !== 'passed' && processedStatus !== 'rejected') {
+        // State inconsistency due to interruption, record fix suggestion
+        autoFixItems.push({
+          file: relativePath,
+          current_status: processedStatus ?? null,
+          suggested_status: 'passed'
+        });
+      }
+      alreadyProcessed++;
+      continue;
+    }
+
     // Check processed_status
     if (processedStatus === 'rejected') {
       // Skip rejected files
@@ -266,15 +290,9 @@ function scanAndBuildQueue(
     }
 
     if (processedStatus === 'passed') {
-      // Verify intelligence card exists with matching hash
-      const recordedHash = convertedToHash.get(relativePath);
-      // Compare the converted file's content_hash with intelligence card's converted_content_hash
-      if (recordedHash && convertedContentHash && recordedHash === convertedContentHash) {
-        // Already processed, content unchanged
-        alreadyProcessed++;
-        continue;
-      }
-      // Content changed or card missing - needs reprocessing
+      // Intelligence card check was already done above
+      // If we reach here, it means card doesn't exist or content doesn't match
+      // Needs reprocessing
     }
 
     // pending, missing status, or needs reprocessing
@@ -303,6 +321,7 @@ function scanAndBuildQueue(
     queue,
     threshold: RECOMMENDED_SCRIPT_THRESHOLD,
     recommendation,
+    auto_fix: autoFixItems.length > 0 ? autoFixItems : undefined,
   };
 }
 
