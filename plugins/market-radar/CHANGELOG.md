@@ -2,6 +2,18 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.8.2] - 2026-04-07
+
+### 修复
+
+- **字段名一致性**：修复 `review.pending` → `review.items` 字段名不一致问题，统一 Schema、类型定义、脚本和文档
+- **参数语义清晰化**：
+  - intel-pull：`--source` 重命名为 `--from`（API 源名称），避免与目录参数混淆
+  - scan-queue.ts：`--source` 重命名为 `--root`（项目根目录）
+  - update-state.ts：`--output` 重命名为 `--root`（项目根目录）
+- **文档更新**：重写审核批准流程（步骤 A2），更新所有遗留字段引用
+- **错误处理增强**：update-state.ts 区分 `rejected` 和 `passed` 状态的文件缺失处理
+
 ## [1.8.1] - 2026-04-06
 
 ### 变更
@@ -621,6 +633,8 @@ intel-distill → 处理 inbox/ → 生成情报卡片 → intelligence/
 - 支持 Markdown、PDF、Word 文档处理
 - 实现增量处理机制
 
+[1.8.2]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.8.1...v1.8.2
+[1.8.1]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.6...v1.8.0
 [1.7.6]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.5...v1.7.6
 [1.7.5]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.7.4...v1.7.5

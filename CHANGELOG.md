@@ -6,6 +6,22 @@
 
 ---
 
+## [1.0.30] - 2026-04-07
+
+### 插件更新
+
+#### market-radar v1.8.2
+
+**修复**
+- 字段名一致性：修复 `review.pending` → `review.items` 字段名不一致问题
+- 参数语义清晰化：
+  - intel-pull：`--source` 重命名为 `--from`（API 源名称）
+  - scan-queue.ts：`--source` 重命名为 `--root`（项目根目录）
+  - update-state.ts：`--output` 重命名为 `--root`（项目根目录）
+- 错误处理增强：update-state.ts 区分 `rejected` 和 `passed` 状态的文件缺失处理
+
+---
+
 ## [1.0.29] - 2026-04-06
 
 ### 插件更新
