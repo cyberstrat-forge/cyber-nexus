@@ -401,15 +401,15 @@ function listPendingReviews(outputDir: string): void {
 
 function main(): void {
   const args = process.argv.slice(2);
-  let outputDir = '.';
+  let rootDir = '.';
   let resultsJson = '';
   let reviewAction = '';
   let pendingId = '';
   let reviewReason = '';
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--output' && i + 1 < args.length) {
-      outputDir = args[i + 1];
+    if (args[i] === '--root' && i + 1 < args.length) {
+      rootDir = args[i + 1];
       i++;
     } else if (args[i] === '--results' && i + 1 < args.length) {
       resultsJson = args[i + 1];
@@ -428,7 +428,7 @@ function main(): void {
 
   // Handle review mode
   if (reviewAction) {
-    handleReviewAction(outputDir, reviewAction, pendingId, reviewReason);
+    handleReviewAction(rootDir, reviewAction, pendingId, reviewReason);
     return;
   }
 
@@ -458,8 +458,8 @@ function main(): void {
     results[i] = validation.data;
   }
 
-  const pendingPath = getPendingPath(outputDir);
-  updateStateWithResults(outputDir, pendingPath, results);
+  const pendingPath = getPendingPath(rootDir);
+  updateStateWithResults(rootDir, pendingPath, results);
 }
 
 main();

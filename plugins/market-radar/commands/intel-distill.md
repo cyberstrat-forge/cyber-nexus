@@ -721,7 +721,7 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
-  --output {output_dir} \
+  --root {root_dir} \
   --review list
 ```
 
@@ -767,7 +767,7 @@ Agent 成功后，更新 pending.json 和 frontmatter：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
-  --output {output_dir} \
+  --root {root_dir} \
   --review approve \
   --pending-id {pending_id} \
   --reason "{reason}"
@@ -791,7 +791,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
-  --output {output_dir} \
+  --root {root_dir} \
   --review reject \
   --pending-id {pending_id} \
   --reason "{reason}"
