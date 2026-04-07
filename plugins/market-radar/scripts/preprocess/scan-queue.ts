@@ -46,6 +46,11 @@ export interface QueueItem {
 }
 
 /**
+ * Processed status in converted file frontmatter
+ */
+type ProcessedStatus = 'pending' | 'passed' | 'rejected';
+
+/**
  * Result of scan and queue building
  */
 export interface ScanQueueResult {
@@ -57,12 +62,16 @@ export interface ScanQueueResult {
   queue: QueueItem[];
   threshold: number;
   recommendation: 'glob' | 'script';
+  /** Files with state inconsistency requiring automatic status fix */
+  auto_fix?: Array<{
+    /** Relative path from source_dir */
+    file: string;
+    /** Current processed_status in frontmatter (may be inconsistent) */
+    current_status: ProcessedStatus | null;
+    /** Suggested status based on intelligence card existence */
+    suggested_status: 'passed';
+  }>;
 }
-
-/**
- * Processed status in converted file frontmatter
- */
-type ProcessedStatus = 'pending' | 'passed' | 'rejected';
 
 /**
  * Converted file frontmatter (new fields)
@@ -221,6 +230,7 @@ function scanAndBuildQueue(
   let alreadyProcessed = 0;
   let needsProcessing = 0;
   let pendingReview = 0;
+  const autoFixItems: ScanQueueResult['auto_fix'] = [];
 
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
@@ -235,15 +245,17 @@ function scanAndBuildQueue(
       continue;
     }
 
-    // Calculate content hash
-    const contentHash = createHash('md5').update(content).digest('hex');
+    // Calculate content hash (body only, excluding frontmatter)
+    // This matches the preprocessing script's approach in preprocess/index.ts
+    const frontmatterMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+    const bodyContent = frontmatterMatch ? content.slice(frontmatterMatch[0].length) : content;
+    const contentHash = createHash('md5').update(bodyContent).digest('hex');
 
     // Parse frontmatter
     const frontmatter = parseFrontmatter(content) as ConvertedFrontmatter | null;
     const sourceHash = frontmatter?.sourceHash;
     const archivedSource = frontmatter?.archivedSource;
     const processedStatus = frontmatter?.processed_status;
-    const convertedContentHash = frontmatter?.content_hash; // Hash from converted file frontmatter
 
     // Check if in pending review
     if (pendingReviewSet.has(relativePath)) {
@@ -258,6 +270,25 @@ function scanAndBuildQueue(
       continue;
     }
 
+    // Check if intelligence card exists (regardless of processed_status)
+    // This is key for interruption recovery: if card exists and content matches, treat as processed
+    const recordedHash = convertedToHash.get(relativePath);
+    if (recordedHash && recordedHash === contentHash) {
+      // Intelligence card exists and content matches
+      // recordedHash is the converted_content_hash recorded in the intelligence card
+      // contentHash is the real-time calculated hash of the converted file content
+      if (processedStatus !== 'passed' && processedStatus !== 'rejected') {
+        // State inconsistency due to interruption, record fix suggestion
+        autoFixItems.push({
+          file: relativePath,
+          current_status: processedStatus ?? null,
+          suggested_status: 'passed'
+        });
+      }
+      alreadyProcessed++;
+      continue;
+    }
+
     // Check processed_status
     if (processedStatus === 'rejected') {
       // Skip rejected files
@@ -266,15 +297,8 @@ function scanAndBuildQueue(
     }
 
     if (processedStatus === 'passed') {
-      // Verify intelligence card exists with matching hash
-      const recordedHash = convertedToHash.get(relativePath);
-      // Compare the converted file's content_hash with intelligence card's converted_content_hash
-      if (recordedHash && convertedContentHash && recordedHash === convertedContentHash) {
-        // Already processed, content unchanged
-        alreadyProcessed++;
-        continue;
-      }
-      // Content changed or card missing - needs reprocessing
+      // Card existence already verified above; reaching here means card missing or content changed.
+      // File needs reprocessing despite 'passed' status.
     }
 
     // pending, missing status, or needs reprocessing
@@ -303,6 +327,7 @@ function scanAndBuildQueue(
     queue,
     threshold: RECOMMENDED_SCRIPT_THRESHOLD,
     recommendation,
+    auto_fix: autoFixItems.length > 0 ? autoFixItems : undefined,
   };
 }
 
@@ -331,6 +356,30 @@ function formatAsText(result: ScanQueueResult): string {
       if (item.status === 'needs_processing') {
         lines.push(`  - ${item.file}`);
       }
+    }
+  }
+
+  // Show pending review files
+  if (result.pending_review > 0) {
+    lines.push('');
+    lines.push('【待审核文件】');
+    lines.push(`📋 ${result.pending_review} 个文件待人工审核`);
+    for (const item of result.queue) {
+      if (item.status === 'pending_review') {
+        lines.push(`  - ${item.file}`);
+      }
+    }
+    lines.push('💡 使用 /intel-distill --review list 查看详情');
+  }
+
+  // Show auto-fix suggestions for state inconsistency
+  if (result.auto_fix && result.auto_fix.length > 0) {
+    lines.push('');
+    lines.push('【状态修复建议】');
+    lines.push(`⚠️ 检测到 ${result.auto_fix.length} 个状态不一致的文件（有卡片但未标记）`);
+    lines.push('   这些文件已被跳过，建议运行修复命令更新状态');
+    for (const item of result.auto_fix) {
+      lines.push(`  - ${item.file} (当前状态: ${item.current_status ?? '无'})`);
     }
   }
 

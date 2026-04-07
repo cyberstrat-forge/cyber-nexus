@@ -210,11 +210,48 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 ### 转换文件格式（v3.0）
 
-转换后的 Markdown 文件包含 frontmatter 元数据，继承采集阶段的元数据：
+转换后的 Markdown 文件包含 frontmatter 元数据：
 
 ```markdown
 ---
-# 第二组：item 来源追溯
+sourceHash: "abc123def456..."
+originalPath: "inbox/report-2026.pdf"
+archivedAt: "2026-03-15T10:00:00Z"
+archivedSource: "archive/2026/04/report-2026.pdf"
+processed_status: "pending"
+processed_at: null
+---
+
+# 文档内容...
+```
+
+**转换文件 frontmatter 字段说明**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `sourceHash` | string | ✅ | 源文件 MD5 哈希（用于去重） |
+| `originalPath` | string | ✅ | 源文件原始路径 |
+| `archivedAt` | datetime | ✅ | 归档时间（ISO 8601） |
+| `archivedSource` | string | ✅ | 归档文件路径 |
+| `processed_status` | string | ❌ | 处理状态：pending/passed/rejected |
+| `processed_at` | datetime | ❌ | 处理时间（ISO 8601） |
+| `content_hash` | string | ❌ | 转换文件 body 内容哈希（预处理时写入，用于变更检测） |
+
+**注意**：情报卡片的 frontmatter 格式参见 `intelligence-output-templates` skill。
+
+对于来自 cyber-pulse API 的采集文件，转换文件会继承采集阶段的元数据：
+
+```markdown
+---
+# 第一组：基础追溯字段
+sourceHash: "abc123def456..."
+originalPath: "inbox/report-2026.pdf"
+archivedAt: "2026-03-15T10:00:00Z"
+archivedSource: "archive/2026/04/report-2026.pdf"
+processed_status: "pending"
+processed_at: null
+
+# 第二组：item 来源追溯（继承自采集阶段）
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -222,13 +259,8 @@ original_url: "https://example.com/article"
 published_at: "2026-04-01T08:00:00Z"
 fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
-sourceHash: "abc123def456..."
-originalPath: "inbox/report-2026.pdf"
-archivedAt: "2026-03-15T10:00:00Z"
-archived_file: "[[archive/2026/04/report-2026.pdf]]"
-converted_file: "[[converted/2026/04/report-2026.md]]"
 
-# 第三组：情报源追溯
+# 第三组：情报源追溯（继承自采集阶段）
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
 source_url: "https://securityweekly.com"
@@ -239,35 +271,13 @@ source_score: 85
 # 文档内容...
 ```
 
-**frontmatter 字段说明（v3.0 四组结构）**：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `item_id` | string | ✅ | 采集阶段标识（格式：`item_{8位hex}`） |
-| `item_title` | string | ✅ | 采集阶段的原始标题 |
-| `author` | string | ❌ | 作者信息 |
-| `original_url` | string | ❌ | 原文链接 |
-| `published_at` | datetime | ❌ | 原文发布时间（ISO 8601） |
-| `fetched_at` | datetime | ✅ | 采集时间（ISO 8601） |
-| `completeness_score` | number | ❌ | 完整度 0-1 |
-| `sourceHash` | string | ✅ | 源文件 MD5 哈希（用于去重） |
-| `originalPath` | string | ✅ | 源文件原始路径 |
-| `archivedAt` | datetime | ✅ | 归档时间（ISO 8601） |
-| `archived_file` | string | ✅ | 归档文件路径（WikiLink 格式） |
-| `converted_file` | string | ✅ | 转换文件路径（WikiLink 格式） |
-| `source_id` | string | ❌ | 情报源 ID |
-| `source_name` | string | ❌ | 情报源名称 |
-| `source_url` | string | ❌ | 情报源 URL |
-| `source_tier` | string | ❌ | 情报源等级 T0-T3 |
-| `source_score` | number | ❌ | 情报源评分 0-100 |
-
 **元数据继承流程**：
 
 ```
 intel-pull 采集 → inbox/*.md frontmatter → 预处理转换 → converted/*.md frontmatter → Agent 分析 → 情报卡片
 ```
 
-对于本地文档（非 cyber-pulse 来源），第三组字段（情报源追溯）为空，这是预期行为。
+对于本地文档（非 cyber-pulse 来源），第二组和第三组字段为空，这是预期行为。
 
 ---
 
@@ -524,6 +534,40 @@ if (needs_processing + pending_review >= 50) {
 }
 ```
 
+#### 6.5 中断恢复机制
+
+**自动检测**：scan-queue.ts 会自动检测中断导致的状态不一致：
+
+| 场景 | 检测方式 | 处理 |
+|------|---------|------|
+| Agent 写入卡片后被中断 | 情报卡片存在但 processed_status ≠ passed | 自动跳过，记录修复建议 |
+| 批量处理中断 | 未处理的文件状态为 pending/null | 下次运行继续处理 |
+
+**状态一致性保证**：
+
+scan-queue.ts 在扫描时会检查情报卡片是否存在，无论 `processed_status` 是什么：
+
+```
+如果情报卡片存在 && 内容哈希匹配:
+    视为已处理，跳过
+    如果 processed_status 不是 passed/rejected:
+        记录到 auto_fix 数组（状态不一致，建议修复）
+```
+
+**修复建议输出**（如果有状态不一致）：
+
+```
+⚠️ 检测到 5 个状态不一致的文件（有卡片但未标记）
+   这些文件将被跳过，建议运行修复命令更新状态
+```
+
+**中断恢复流程**：
+
+1. 用户执行 `/intel-distill`
+2. scan-queue.ts 自动检测已存在的情报卡片
+3. 中断的文件被自动跳过
+4. 只处理真正需要处理的文件
+
 ### 步骤 7：构建处理队列
 
 #### 7.1 调用扫描队列脚本
@@ -688,9 +732,11 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 
 **命令层职责**：
 
-1. 合并 Agent 结果，构造 JSON 数组
+1. 从内存中保存的 scan-queue 结果获取 `archived_source`（如 Agent 未返回且需要）
 
-2. 调用 update-state.ts 更新状态：
+2. 合并 Agent 结果，构造 JSON 数组
+
+3. 调用 update-state.ts 更新状态：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
