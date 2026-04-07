@@ -1,3 +1,5 @@
+import type { ChangeType } from './change-type';
+
 /**
  * 态势状态定义
  */
@@ -32,7 +34,7 @@ export interface Situation {
   /** 态势标题 */
   title: string;
   /** 变化类型 */
-  change_type: string;
+  change_type: ChangeType;
   /** 当前状态 */
   status: SituationStatus;
   /** 首次出现的月份 */
