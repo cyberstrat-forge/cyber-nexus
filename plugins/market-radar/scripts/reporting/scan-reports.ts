@@ -69,7 +69,7 @@ function getReportDir(reportType: ReportType): string {
  */
 function filterReportsByPeriod(
   reports: ScannedReport[],
-  reportType: ReportType,
+  _reportType: ReportType,
   start: string,
   end: string
 ): ScannedReport[] {
