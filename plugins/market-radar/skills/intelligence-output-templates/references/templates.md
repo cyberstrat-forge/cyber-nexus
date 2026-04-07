@@ -31,6 +31,7 @@
 │ completeness_score - 完整度 0-1                               │
 │ archived_file      - 归档文件链接 WikiLink                    │
 │ converted_file     - 转换文件链接 WikiLink                    │
+│ converted_content_hash - 转换文件内容哈希（变更检测）        │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -91,6 +92,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
@@ -174,6 +176,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_gartner"
 source_name: "Gartner"
@@ -261,6 +264,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_techcrunch"
 source_name: "TechCrunch"
@@ -345,6 +349,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_gartner"
 source_name: "Gartner"
@@ -431,6 +436,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_idc"
 source_name: "IDC"
@@ -514,6 +520,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_official"
 source_name: "Government Official"
@@ -599,6 +606,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/report-2026.pdf]]"
 converted_file: "[[converted/2026/04/report-2026.md]]"
+converted_content_hash: "abc123def456789..."
 
 source_id: "src_crunchbase"
 source_name: "Crunchbase"

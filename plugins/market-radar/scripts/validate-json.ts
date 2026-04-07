@@ -22,10 +22,10 @@ const SCHEMAS_DIR = resolve(__dirname, '../schemas');
 const SCHEMA_FILES: Record<string, string> = {
   'agent-result': 'agent-result.schema.json',
   'intelligence-output': 'intelligence-output.schema.json',
-  'state': 'state.schema.json',
   'themes-config': 'themes-config.schema.json',
   'theme-state': 'theme-state.schema.json',
   'pulse-sources': 'pulse-sources.schema.json',
+  'pending': 'pending.schema.json',
 };
 
 interface ValidationResult {
@@ -101,7 +101,7 @@ if (args.length < 2) {
   console.log('');
   console.log('Examples:');
   console.log('  pnpm exec tsx validate-json.ts agent-result ./temp/result.json');
-  console.log('  pnpm exec tsx validate-json.ts state ./.intel/state.json');
+  console.log('  pnpm exec tsx validate-json.ts pending ./.intel/pending.json');
   process.exit(1);
 }
 

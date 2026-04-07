@@ -26,6 +26,10 @@ function getMtime(filePath: string): string {
 
 /**
  * 加载或创建状态文件
+ *
+ * Error handling strategy:
+ * - File not exists: create new structure
+ * - Read/parse error: backup corrupted file, then create new structure
  */
 function loadOrCreateState(statePath: string): ThemeState {
   if (existsSync(statePath)) {
@@ -33,7 +37,19 @@ function loadOrCreateState(statePath: string): ThemeState {
       const content = readFileSync(statePath, 'utf-8');
       return JSON.parse(content) as ThemeState;
     } catch (error) {
-      console.error(`状态文件损坏，将重新创建: ${error}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      // Backup corrupted file to prevent silent data loss (only if content was read)
+      const backupPath = statePath + '.corrupted';
+      try {
+        // Try to read again for backup (may fail if read error)
+        const content = readFileSync(statePath, 'utf-8');
+        writeFileSync(backupPath, content, 'utf-8');
+        console.error(`  备份已保存至: ${backupPath}`);
+      } catch (backupError) {
+        const backupErrMsg = backupError instanceof Error ? backupError.message : String(backupError);
+        console.error(`  Warning: Could not backup corrupted file: ${backupErrMsg}`);
+      }
+      console.error(`状态文件损坏，将重新创建: ${errMsg}`);
     }
   }
 

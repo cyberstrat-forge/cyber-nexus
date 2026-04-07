@@ -161,6 +161,8 @@ sourceHash: "${sourceHash}"
 originalPath: "${originalPath}"
 archivedAt: "${archivedAt}"
 archivedSource: "${archivedSource}"
+processed_status: "pending"
+processed_at: null
 ---
 
 `;

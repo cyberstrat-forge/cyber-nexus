@@ -4,6 +4,10 @@
  * Types for cyber-pulse API client and intel-pull command
  */
 
+// Import and re-export shared types from pending.ts for single source of truth
+import { PulseCursorState as SharedPulseCursorState } from '../preprocess/types/pending';
+export { PulseCursorState } from '../preprocess/types/pending';
+
 // ==================== Configuration Types ====================
 
 /**
@@ -119,25 +123,11 @@ export interface PulseErrorResponse {
 // ==================== State Types ====================
 
 /**
- * Cursor tracking for a single source (v3.0.0 format)
- */
-export interface PulseCursorState {
-  /** Last item's fetched_at timestamp, used for since parameter */
-  last_fetched_at: string | null;
-  /** Last item ID, used for cursor parameter */
-  last_item_id: string | null;
-  /** Last pull completion timestamp (ISO 8601) */
-  last_pull: string | null;
-  /** Total synced count (statistics) */
-  total_synced: number;
-}
-
-/**
- * Pulse state within state.json
+ * Pulse state within pending.json
  */
 export interface PulseState {
   /** Cursor tracking per source */
-  cursors: Record<string, PulseCursorState>;
+  cursors: Record<string, SharedPulseCursorState>;
 }
 
 // ==================== Pull Result Types ====================

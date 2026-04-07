@@ -75,6 +75,7 @@ skills:
 | `completeness_score` | 完整度 0-1 | ❌ |
 | `archived_file` | 归档文件链接（WikiLink） | ✅ |
 | `converted_file` | 转换文件链接（WikiLink） | ✅ |
+| `converted_content_hash` | 转换文件的 content_hash | ✅ |
 
 **第三组：情报源追溯（继承）**
 
@@ -100,6 +101,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/20260401-item_a1b2c3d4.md]]"
 converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md]]"
+converted_content_hash: "a1b2c3d4e5f6"
 
 # 第三组：情报源追溯
 source_id: "src_securityweekly"
@@ -121,6 +123,14 @@ source_score: 85
 - `archived_file` / `converted_file`：从预处理阶段获取
 
 所有第三组字段（情报源追溯）对于本地文档为空，这是预期行为。
+
+**步骤 1.3：提取 content_hash**
+
+从转换文件 frontmatter 中提取 `content_hash` 字段（如果存在），用于：
+- 写入情报卡片的 `converted_content_hash` 字段
+- 实现基于文件系统的变更检测
+
+如果 frontmatter 中没有 `content_hash`，则计算当前文件内容的 MD5 作为值。
 
 ### 步骤 2：提取发布日期
 
@@ -319,6 +329,7 @@ fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
 archived_file: "[[archive/2026/04/20260401-item_a1b2c3d4.md]]"
 converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md]]"
+converted_content_hash: "a1b2c3d4e5f6"
 
 # ============================================
 # 第三组：情报源追溯（继承）
