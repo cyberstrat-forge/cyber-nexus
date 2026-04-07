@@ -204,8 +204,14 @@ function updateConvertedFileStatus(
   const filePath = path.join(sourceDir, convertedFile);
 
   if (!fs.existsSync(filePath)) {
-    console.warn(`Warning: Converted file not found: ${convertedFile}`);
-    return;
+    // For 'rejected' status, missing file is acceptable (no agent call needed)
+    // For 'passed' status, this should not happen as Agent should have created the card
+    if (status === 'rejected') {
+      console.warn(`Warning: Converted file not found: ${convertedFile}`);
+      return;
+    }
+    // For 'passed', the Agent should have processed the file - this is unexpected
+    throw new Error(`Converted file not found: ${convertedFile}. Agent may have failed to process.`);
   }
 
   const content = fs.readFileSync(filePath, 'utf-8');
