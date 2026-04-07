@@ -520,58 +520,116 @@ if (needs_processing + pending_review >= 50) {
 
 ### 步骤 7：构建处理队列
 
-#### 7.1 解析 frontmatter 提取元数据
+#### 7.1 调用扫描队列脚本
 
-从转换文件的 frontmatter 中提取：
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
+  --root {root_dir} \
+  --output json
+```
 
-| 字段 | 来源 | 用途 |
-|------|------|------|
-| `sourceHash` | frontmatter | 去重检测、写入情报卡片 |
-| `archivedSource` | frontmatter | 传递给 Agent、写入情报卡片 |
+**脚本输出格式**：
 
-#### 7.2 计算文件内容 Hash
+```json
+{
+  "source_dir": "/path/to/docs",
+  "total": 100,
+  "already_processed": 85,
+  "needs_processing": 10,
+  "pending_review": 5,
+  "queue": [
+    {
+      "file": "converted/2026/03/report-2026.md",
+      "content_hash": "abc123...",
+      "source_hash": "def456...",
+      "archived_source": "archive/2026/03/report-2026.pdf",
+      "status": "needs_processing"
+    }
+  ]
+}
+```
 
-使用 MD5 算法计算转换后文件的内容哈希（用于变更检测）。
+#### 7.2 解析队列结果
 
-#### 7.3 变更检测逻辑
+从脚本输出提取：
 
-| 条件 | 操作 |
+| 字段 | 用途 |
 |------|------|
-| content_hash 相同 | 跳过（无变更） |
-| content_hash 不同 | 加入队列（内容变更） |
-| 新文件（无记录） | 加入队列 |
-| review_status = pending | 跳过（已在审核队列） |
+| `needs_processing` | 本次待处理文件数 |
+| `queue` | 处理队列详情（含 content_hash、source_hash、archived_source） |
 
-#### 7.4 去重检测
+**注意**：`total` 和 `already_processed` 是历史统计数据，**不展示给用户**。用户只关心本次待处理文件。
 
-扫描 `converted/**/*.md` 文件 frontmatter 中的 `sourceHash`，跳过已处理的相同源文件。
-
-#### 7.5 处理队列输出
+#### 7.3 处理队列输出
 
 ```
-【处理队列】
-• 已处理（跳过）: 10 个
-• 待处理: 4 个
-• 已在审核队列: 1 个
-• 转换失败: 1 个（见 inbox/*.error.md）
+【本次任务】
+• 待处理文件: 271 个
+• 批次大小: 5（预计 55 批次）
 ```
 
-### 步骤 8：处理文件
+### 步骤 8：分批处理文件
 
-#### 8.1 选择执行策略
+#### 8.1 批次配置
 
-根据待处理文件数量：
+**核心设计**：1 Agent = 1 文件，并发数 = 批次大小
 
-| 文件数量 | 执行策略 | 说明 |
-|---------|---------|------|
-| ≤ 3 个 | 顺序执行 | 开销小，无需并行 |
-| > 3 个 | 并行执行 | 在单个消息中发起多个 Agent 调用 |
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| 并发数 | 5 | 同时运行的 Agent 数量 |
+| 批次大小 | 5 | 每批次处理的文件数（= 并发数） |
+| Agent 粒度 | 1 文件 | 每个 Agent 只处理 1 个文件 |
 
-#### 8.2 调用情报分析 Agent
+**计算批次数量**：
+
+```
+总批次 = ceil(待处理文件数 / 批次大小) = ceil(待处理文件数 / 5)
+```
+
+**示例**：
+
+| 待处理文件 | 批次大小 | 总批次 |
+|-----------|---------|--------|
+| 271 个 | 5 | 55 批次 |
+| 15 个 | 5 | 3 批次 |
+| 3 个 | 5 | 1 批次 |
+
+#### 8.2 批次处理循环
+
+```
+初始化: 
+  队列 = scan-queue 返回的 queue 数组
+  已完成 = 0
+  当前批次 = 0
+  累计统计 = {cards: 0, rejected: 0, pending: 0}
+
+批次处理循环:
+  while 队列非空:
+    当前批次++
+    本批次文件 = 从队列取出最多 5 个文件
+    
+    ┌─────────────────────────────────────────────────────┐
+    │  步骤 A: 并行启动 5 个 Agent（每个处理 1 个文件）      │
+    │                                                      │
+    │  Agent 1 → 处理 file1                               │
+    │  Agent 2 → 处理 file2                               │
+    │  Agent 3 → 处理 file3                               │
+    │  Agent 4 → 处理 file4                               │
+    │  Agent 5 → 处理 file5                               │
+    └─────────────────────────────────────────────────────┘
+    
+    步骤 B: 等待所有 Agent 完成
+    步骤 C: 收集结果并更新状态
+    步骤 D: 累计统计，输出批次进度
+    
+    已完成 += 本批次文件数
+```
+
+#### 8.3 调用情报分析 Agent
 
 使用 Agent 工具，subagent_type="intelligence-analyzer"
 
-**并行执行时**：在单个消息中发起多个 Agent 调用，由 Claude Code 自动管理并发
+**并行执行时**：在单个消息中发起多个 Agent 调用（最多 5 个），由 Claude Code 自动管理并发
 
 > ⚠️ **禁止使用 `run_in_background=true`**
 >
@@ -589,55 +647,114 @@ if (needs_processing + pending_review >= 50) {
 - Bash: 执行辅助命令（如日期提取）
 
 **参数**:
-- `source`: 转换文件路径（Agent 从 frontmatter 读取 sourceHash、archivedSource）
-- `output`: 输出目录，值为 `output_dir`（默认 `./intelligence` 或用户指定的 `--output` 参数值）
-- `session_id`: 会话 ID
+- `source`: 转换文件路径
+- `output`: 输出目录（情报卡片根目录，如 `./intelligence`）
 
-**写入路径**：Agent 写入情报卡片到 `{output}/{domain}/{YYYY}/{MM}/{filename}`，因此 `output` 参数必须是情报卡片的根目录（如 `./intelligence`），而非项目根目录。
+**Agent 职责**（只负责情报提取，不管理状态）：
+- ✅ 读取并分析转换文件
+- ✅ 判断战略价值（true/false/null）
+- ✅ 生成并写入情报卡片（如有价值）
+- ✅ 返回轻量级 JSON 结果
+- ❌ **不更新转换文件 frontmatter**
+- ❌ **不更新 pending.json**
 
-**Agent 职责**：
-- 从 frontmatter 解析元数据（sourceHash、archivedSource）
-- 分析文档，提取情报
-- 写入情报卡片文件（frontmatter 包含 sourceHash、archivedSource、converted_content_hash）
-- 更新转换文件 frontmatter（processed_status）
-- 返回轻量级 JSON 结果
+#### 8.4 收集 Agent 结果
 
-#### 8.3 收集结果并分类
-
-等待所有 Agent 完成，收集返回结果并分类：
+等待本批次所有 Agent 完成，收集返回结果：
 
 **情况 1：明确有价值（`has_strategic_value = true`）**
 - 已生成情报卡片
 - 记录 `intelligence_ids` 和 `output_files`
-- `review_status = "passed"`（自动通过）
+- 后续设置 `processed_status = "passed"`
 
 **情况 2：明确无价值（`has_strategic_value = false`）**
 - 未生成情报卡片
 - `intelligence_ids = []`
-- `intelligence_count = 0`
-- `review_status = "rejected"`（自动拒绝）
+- 后续设置 `processed_status = "rejected"`
 
 **情况 3：需要复核（`has_strategic_value = null`）**
 - 未生成情报卡片
-- 添加到待审核队列
-- 分配临时 `pending_id`（格式：`pending-{domain}-{timestamp}`）
-- `review_status = "pending"`（待审核）
+- 后续添加到 `review.items` 队列
 
-#### 8.4 更新状态
+#### 8.5 更新状态
 
-**⚠️ 关键步骤：必须在所有 Agent 完成后执行**
+**执行时机**：每批次 Agent 完成后立即执行
 
-Agent 直接更新转换文件 frontmatter 和 pending.json：
+**命令层职责**：
 
-**转换文件 frontmatter 更新**：
-- 设置 `processed_status` 为 `passed` 或 `rejected`
-- 记录处理时间 `processed_at`
+1. 从转换文件 frontmatter 提取元数据：
+   - `content_hash`: 内容哈希
+   - `source_hash`: 源文件哈希（来自 sourceHash 字段）
+   - `archived_source`: 归档文件路径
 
-**pending.json 更新**（仅对于需要复核的文件）：
-- 添加到 `review.items` 队列
-- 设置 `processed_status` 为 `pending`
+2. 合并 Agent 结果与元数据，构造 JSON 数组
 
-**执行时机**：在步骤 8.3 收集完所有 Agent 结果后，步骤 9 输出统计前执行。
+3. 调用 update-state.ts 更新状态：
+
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
+  --root {root_dir} \
+  --results '{json_array}'
+```
+
+**输入 JSON 格式**：
+
+```json
+[
+  {
+    "source_file": "converted/2026/04/xxx.md",
+    "content_hash": "abc123...",
+    "source_hash": "def456...",
+    "archived_source": "archive/2026/04/xxx.pdf",
+    "has_strategic_value": true,
+    "intelligence_count": 2,
+    "intelligence_ids": ["threat-001", "emerging-001"],
+    "output_files": ["intelligence/Threat-Landscape/xxx.md"],
+    "domain": "Threat-Landscape"
+  }
+]
+```
+
+**update-state.ts 执行内容**：
+- 更新转换文件 frontmatter: `processed_status`、`processed_at`
+- 更新 pending.json: 添加 `review.items`（如有待审核项）
+
+#### 8.6 输出批次进度
+
+每批次完成后输出：
+
+```
+📊 批次 3/55 完成: 已处理 15/271 个文件
+   ✅ 生成情报卡片: 3 张
+   ⏭️ 无价值跳过: 1 个
+   📋 待审核: 1 个
+```
+
+#### 8.7 失败处理
+
+**Agent 失败处理**：
+
+| 场景 | 处理方式 | 状态更新 |
+|------|---------|---------|
+| Agent 返回 `status: "error"` | 标记为失败，继续处理其他文件 | `processed_status = "error"` |
+| Agent 超时（> 5 分钟） | 重试 1 次，仍失败则标记 error | `processed_status = "error"` |
+| Agent 写入情报卡片失败 | 返回 error 状态 | `processed_status = "error"` |
+
+**update-state.ts 失败处理**：
+
+| 场景 | 处理方式 |
+|------|---------|
+| 转换文件不存在 | 跳过该文件，输出警告 |
+| JSON 格式错误 | 输出错误信息，中断流程 |
+| 文件写入失败 | 输出错误信息，中断流程 |
+
+**错误输出示例**：
+
+```
+⚠️ Agent 处理失败: converted/2026/04/file5.md
+   错误: ANALYSIS_FAILED - Unable to extract meaningful content
+   操作: 已标记为 error，继续处理其他文件
+```
 
 ### 步骤 9：统一输出统计
 
@@ -647,33 +764,43 @@ Agent 直接更新转换文件 frontmatter 和 pending.json：
 📊 情报提取执行报告
 ════════════════════════════════════════════════════════
 
-【预处理统计】
-• 扫描到文件: 15 个
-• 转换成功: 14 个
-• 转换失败: 1 个（保留在 inbox/）
-• 重复文件: 2 个（已跳过）
-• 归档位置: ./archive/2026/03/
-• 转换文件: ./converted/2026/03/
+【本次任务】
+• 待处理文件: 271 个
+• 批次进度: 55/55 批次完成
+• 已处理: 271/271 个文件
 
-【情报提取统计】
-• 处理文件: 14 个
-• 生成情报卡片: 12 个  ⭐️（自动批准）
-• 待用户复核: 0 个
-• 无价值文件: 2 个
-• 情报卡片位置: ./intelligence/
+【处理结果】
+• 生成情报卡片: 252 张 ✅
+• 无价值跳过: 15 个
+• 待人工审核: 4 个
+• 处理失败: 0 个
 
 【领域分布】
-• threat-intelligence: 3 张
-• market-trends: 2 张
-• technology-innovation: 6 张
-• strategic-planning: 1 张
+• Threat-Landscape: 128 张
+• Emerging-Tech: 68 张
+• Industry-Analysis: 42 张
+• Vendor-Intelligence: 14 张
 
 💡 操作提示:
    /intel-distill --review list
    /intel-distill --report weekly
 
-⚠️ 转换失败的文件保留在 inbox/，请查看 .error.md 文件了解详情
 ════════════════════════════════════════════════════════
+```
+
+**如有处理失败的文件**：
+
+```
+【处理结果】
+• 生成情报卡片: 250 张 ✅
+• 无价值跳过: 15 个
+• 待人工审核: 4 个
+• 处理失败: 2 个 ⚠️
+
+⚠️ 处理失败的文件:
+   - converted/2026/04/file5.md: ANALYSIS_FAILED
+   - converted/2026/04/file12.md: TIMEOUT
+   请检查日志后手动处理
 ```
 
 ---
@@ -753,17 +880,32 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/index.ts \
 参数:
 - source: {converted_file}（转换文件路径）
 - output: {output_dir}（情报卡片输出目录）
-- session_id: {session_id}
 ```
 
-Agent 会：
-- 分析转换文件内容
-- 生成情报卡片到 `{output}/{domain}/{YYYY}/{MM}/`
-- 返回 `intelligence_id` 和 `output_files`
+**Agent 职责**（只负责情报提取，不更新状态）：
+- ✅ 分析转换文件内容
+- ✅ 生成情报卡片到 `{output}/{domain}/{YYYY}/{MM}/`
+- ✅ 返回 JSON 结果
+- ❌ **不更新转换文件 frontmatter**
+- ❌ **不更新 pending.json**
 
-#### 步骤 A2.4：更新状态
+**Agent 返回示例**：
 
-Agent 成功后，更新 pending.json 和 frontmatter：
+```json
+{
+  "status": "success",
+  "source_file": "converted/2026/04/file4.md",
+  "has_strategic_value": true,
+  "intelligence_count": 1,
+  "intelligence_ids": ["threat-20260407-003"],
+  "output_files": ["intelligence/Threat-Landscape/2026/04/20260407-apt-activity.md"],
+  "domain": "Threat-Landscape"
+}
+```
+
+#### 步骤 A2.4：命令层更新状态
+
+Agent 成功后，命令层调用 update-state.ts 更新状态：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
@@ -773,9 +915,10 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
   --reason "{reason}"
 ```
 
-此命令会：
+**update-state.ts 执行内容**：
 - 更新转换文件 frontmatter: `processed_status = "passed"`
 - 从 `pending.json` 的 `review.items` 中移除该项
+- 保存 pending.json
 
 **输出示例**：
 ```
@@ -787,7 +930,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 
 ### 步骤 A3：拒绝审核（`--review reject --pending-id <id> --reason`）
 
-拒绝审核直接调用脚本更新状态，不需要调用 Agent：
+拒绝审核不需要调用 Agent，直接更新状态：
 
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
@@ -797,7 +940,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
   --reason "{reason}"
 ```
 
-此命令会：
+**update-state.ts 执行内容**：
 - 更新转换文件 frontmatter: `processed_status = "rejected"`
 - 从 `pending.json` 的 `review.items` 中移除该项
 - **不生成情报卡片**
