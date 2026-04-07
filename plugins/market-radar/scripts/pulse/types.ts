@@ -4,9 +4,9 @@
  * Types for cyber-pulse API client and intel-pull command
  */
 
-// Import and re-export shared types from pending.ts for single source of truth
-import { PulseCursorState as SharedPulseCursorState } from '../preprocess/types/pending';
-export { PulseCursorState } from '../preprocess/types/pending';
+// Re-export shared types from pending.ts for single source of truth
+import type { PulseCursorState as SharedPulseCursorState } from '../preprocess/types/pending';
+export type { PulseCursorState } from '../preprocess/types/pending';
 
 // ==================== Configuration Types ====================
 
