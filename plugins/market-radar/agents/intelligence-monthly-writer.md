@@ -12,6 +12,15 @@ description: |
   </commentary>
   </example>
 
+  <example>
+  Context: User wants to generate monthly report for a specific month
+  user: "/intel-distill --report monthly 2026-03"
+  assistant: "I'll generate the monthly report for March 2026 using the intelligence-monthly-writer agent."
+  <commentary>
+  Specified month. Agent will look for weekly reports in that month.
+  </commentary>
+  </example>
+
 model: inherit
 color: blue
 tools: ["Read", "Write"]
