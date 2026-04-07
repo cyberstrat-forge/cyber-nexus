@@ -402,6 +402,31 @@ Write 工具会自动创建父目录。
 
 写入失败 → 重试 1 次 → 仍失败 → 记录错误信息。
 
+## 职责边界
+
+**Agent 只负责情报提取，不管理状态**：
+
+| 操作 | 是否负责 |
+|------|---------|
+| 读取并分析转换文件 | ✅ 负责 |
+| 判断战略价值 | ✅ 负责 |
+| 生成并写入情报卡片 | ✅ 负责 |
+| 返回 JSON 结果 | ✅ 负责 |
+| 更新转换文件 frontmatter | ❌ **不负责**（命令层负责） |
+| 更新 pending.json | ❌ **不负责**（命令层负责） |
+
+**状态管理流程**：
+
+```
+Agent 完成分析 → 返回 JSON 结果
+                        ↓
+              命令层收集结果
+                        ↓
+              命令层调用 update-state.ts
+                        ↓
+              update-state.ts 更新状态
+```
+
 ## 输出格式
 
 返回轻量 JSON，不包含情报内容详情。
@@ -431,6 +456,7 @@ Write 工具会自动创建父目录。
     "intelligence/Industry-Analysis/2025/10/20251013-cybersecurity-trends-2026.md",
     "intelligence/Emerging-Tech/2025/10/20251013-ai-security-platform-rise.md"
   ],
+  "domain": "Industry-Analysis",
   "cards": [
     {
       "intelligence_id": "industry-20251013-001",
@@ -463,8 +489,9 @@ Write 工具会自动创建父目录。
   "source_file": "converted/2026/03/general-notes.md",
   "has_strategic_value": false,
   "intelligence_count": 0,
-  "intelligence_ids": null,
+  "intelligence_ids": [],
   "output_files": [],
+  "domain": null,
   "cards": [],
   "source_meta": {
     "title": "一般性笔记",
@@ -482,6 +509,7 @@ Write 工具会自动创建父目录。
   "source_file": "converted/2026/03/suspicious-report.md",
   "has_strategic_value": null,
   "review_reason": "检测到高风险威胁指标，需人工确认",
+  "domain": "Threat-Landscape",
   "source_meta": {
     "title": "可疑报告",
     "published": "2026-03-10"
@@ -497,6 +525,7 @@ Write 工具会自动创建父目录。
   "status": "error",
   "source_file": "converted/2026/03/report.md",
   "has_strategic_value": false,
+  "domain": null,
   "source_meta": {
     "title": null,
     "published": null
@@ -506,6 +535,20 @@ Write 工具会自动创建父目录。
   "processing_notes": "分析失败"
 }
 ```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `source_file` | string | 转换文件路径（命令层需要） |
+| `has_strategic_value` | boolean/null | 战略价值判断（命令层需要） |
+| `intelligence_count` | number | 情报卡片数量 |
+| `intelligence_ids` | string[] | 情报卡片 ID 列表（命令层需要） |
+| `output_files` | string[] | 输出文件路径列表（命令层需要） |
+| `domain` | string/null | 主领域（命令层需要，用于生成 pending_id） |
+| `review_reason` | string | 审核原因（has_strategic_value 为 null 时必填） |
+| `cards` | array | 卡片详情（可选） |
+| `source_meta` | object | 源文件元数据（可选） |
 
 ## 最终检查清单
 
