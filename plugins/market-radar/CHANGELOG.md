@@ -2,6 +2,30 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.4] - 2026-04-08
+
+### 变更
+
+- **转换文件 Frontmatter 统一**：本地文件和 cyber-pulse 文件使用相同字段结构
+  - 新增 `item_id`、`item_title`、`fetched_at` 字段
+  - `archived_file` 使用 WikiLink 格式，支持 Obsidian 跳转
+  - 字段名统一为 snake_case（`sourceHash` → `source_hash`，`archivedAt` → `archived_at`）
+  - 移除 `originalPath`（不再需要）
+
+### 修复
+
+- **cyber-pulse 文件字段映射**：`title` → `item_title`，`url` → `original_url`
+- **intel-pull-guide.md 文档**：修复严重过时的 frontmatter 示例
+- **Agent 文档示例**：修正 cyber-pulse 文件的 `archived_file` 路径
+- **fromWikiLink 输入验证**：对非 WikiLink 格式返回 null，防止解析畸形输入
+- **loadPending 错误处理**：改进 JSON 解析失败时的错误日志，提示可能的文件损坏
+- **main() 错误处理**：添加 try-catch 包装器，捕获未预期的致命错误
+
+### 测试
+
+- 新增 `frontmatter.test.ts`，覆盖工具函数测试（13 个测试用例）
+- 新增畸形 WikiLink 格式测试用例
+
 ## [1.9.3] - 2026-04-08
 
 ### 修复

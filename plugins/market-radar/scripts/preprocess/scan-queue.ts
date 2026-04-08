@@ -22,6 +22,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { parseFrontmatter } from '../utils/frontmatter';
+import { fromWikiLink } from './types/frontmatter';
 import { PendingItem } from './types/pending';
 
 // Threshold for recommending script usage
@@ -41,7 +42,7 @@ export interface QueueItem {
   file: string;           // Relative path from source_dir
   content_hash: string;   // MD5 hash of file content
   source_hash?: string;   // MD5 hash of original source file (from frontmatter)
-  archived_source?: string; // Path to archived source file (from frontmatter)
+  archived_file?: string; // WikiLink path to archived/converted file (from frontmatter)
   status: QueueItemStatus;
 }
 
@@ -74,14 +75,21 @@ export interface ScanQueueResult {
 }
 
 /**
- * Converted file frontmatter (new fields)
+ * Converted file frontmatter (supports new unified fields and legacy fields)
  */
 interface ConvertedFrontmatter {
-  sourceHash?: string;
-  content_hash?: string; // Hash of converted file content
+  // New fields (unified format)
+  archived_file?: string;
+  content_hash?: string;
+  source_hash?: string;
+  archived_at?: string;
   processed_status?: ProcessedStatus;
   processed_at?: string | null;
+
+  // Legacy fields (for backward compatibility)
+  sourceHash?: string;
   archivedSource?: string;
+  archivedAt?: string;
 }
 
 /**
@@ -112,10 +120,17 @@ function loadPending(pendingPath: string): {
 
   try {
     const content = fs.readFileSync(pendingPath, 'utf-8');
-    return JSON.parse(content);
+    const data = JSON.parse(content);
+    // Validate expected structure
+    if (!data || typeof data !== 'object') {
+      console.warn(`Warning: Invalid pending.json structure at ${pendingPath}: expected object`);
+      return null;
+    }
+    return data;
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn(`Warning: Cannot read pending.json at ${pendingPath}: ${errMsg}`);
+    console.error(`Error: Cannot parse pending.json at ${pendingPath}: ${errMsg}`);
+    console.error('  This may indicate a corrupted state file. Consider backing up and reinitializing.');
     return null;
   }
 }
@@ -143,14 +158,17 @@ function scanIntelligenceCards(sourceDir: string): Map<string, string> {
           const content = fs.readFileSync(fullPath, 'utf-8');
           const frontmatter = parseFrontmatter(content) as IntelligenceFrontmatter | null;
           if (frontmatter?.converted_file) {
-            // Extract converted_file from WikiLink format: [[path]]
-            const convertedFile = frontmatter.converted_file
-              .replace(/^\[\[/, '')
-              .replace(/\]\]$/, '');
-            convertedToHash.set(
-              convertedFile,
-              frontmatter.converted_content_hash || ''
-            );
+            // Extract converted_file from WikiLink format
+            const convertedFileRaw = frontmatter.converted_file;
+            if (convertedFileRaw) {
+              const convertedFile = fromWikiLink(convertedFileRaw);
+              if (convertedFile !== null) {
+                convertedToHash.set(
+                  convertedFile,
+                  frontmatter.converted_content_hash || ''
+                );
+              } // else: malformed WikiLink, skip this entry
+            }
           }
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error);
@@ -253,8 +271,19 @@ function scanAndBuildQueue(
 
     // Parse frontmatter
     const frontmatter = parseFrontmatter(content) as ConvertedFrontmatter | null;
-    const sourceHash = frontmatter?.sourceHash;
-    const archivedSource = frontmatter?.archivedSource;
+
+    // Support both new and legacy field names for backward compatibility
+    const sourceHash = frontmatter?.source_hash || frontmatter?.sourceHash;
+
+    let archivedFile = frontmatter?.archived_file || frontmatter?.archivedSource;
+    // Extract path from WikiLink if present
+    if (archivedFile) {
+      const extractedPath = fromWikiLink(archivedFile);
+      if (extractedPath !== null) {
+        archivedFile = extractedPath;
+      } // else: malformed WikiLink, keep original value
+    }
+
     const processedStatus = frontmatter?.processed_status;
 
     // Check if in pending review
@@ -263,7 +292,7 @@ function scanAndBuildQueue(
         file: relativePath,
         content_hash: contentHash,
         source_hash: sourceHash,
-        archived_source: archivedSource,
+        archived_file: archivedFile,
         status: 'pending_review',
       });
       pendingReview++;
@@ -306,7 +335,7 @@ function scanAndBuildQueue(
       file: relativePath,
       content_hash: contentHash,
       source_hash: sourceHash,
-      archived_source: archivedSource,
+      archived_file: archivedFile,
       status: 'needs_processing',
     });
     needsProcessing++;
@@ -448,7 +477,13 @@ Output JSON structure:
 
 // Run if called directly
 if (process.argv[1]?.endsWith('scan-queue.ts') || process.argv[1]?.endsWith('scan-queue.js')) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Fatal error: ${errMsg}`);
+    process.exit(1);
+  }
 }
 
 export {

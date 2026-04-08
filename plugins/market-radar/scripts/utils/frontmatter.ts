@@ -16,6 +16,39 @@ function escapeYamlString(value: string): string {
 }
 
 /**
+ * Format a single YAML value
+ *
+ * @param value - Value to format (string, number, null, or array)
+ * @returns YAML-formatted value string
+ */
+function formatYamlValue(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return '[]';
+    }
+    // Format as YAML array
+    const items = value.map(item => {
+      if (typeof item === 'string') {
+        return `"${escapeYamlString(item)}"`;
+      }
+      return String(item);
+    });
+    return `[${items.join(', ')}]`;
+  }
+  if (typeof value === 'string') {
+    return `"${escapeYamlString(value)}"`;
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  // Fallback for other types
+  return `"${escapeYamlString(String(value))}"`;
+}
+
+/**
  * Parse frontmatter from markdown content
  * Returns key-value pairs from the frontmatter section
  *
@@ -45,14 +78,15 @@ export function parseFrontmatter(content: string): Record<string, string> | null
 
 /**
  * Generate frontmatter string from key-value pairs
+ * Supports string, number, null, and array values
  *
  * @param fields - Key-value pairs to include in frontmatter
  * @returns Formatted frontmatter string with opening/closing delimiters
  */
-export function generateFrontmatter(fields: Record<string, string>): string {
+export function generateFrontmatter(fields: Record<string, unknown>): string {
   const lines = ['---'];
   for (const [key, value] of Object.entries(fields)) {
-    lines.push(`${key}: "${escapeYamlString(value)}"`);
+    lines.push(`${key}: ${formatYamlValue(value)}`);
   }
   lines.push('---');
   lines.push(''); // Empty line after frontmatter

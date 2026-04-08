@@ -8,7 +8,9 @@
     "preprocess": "tsx preprocess/index.ts",
     "scan-cards": "tsx reporting/scan-cards.ts",
     "scan-queue": "tsx preprocess/scan-queue.ts",
-    "pulse": "tsx pulse/index.ts"
+    "pulse": "tsx pulse/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "ajv": "^8.17.1",
@@ -20,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.3"
   }
 }
