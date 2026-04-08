@@ -49,10 +49,12 @@ export function isPdfToTextAvailable(): boolean {
 
 /**
  * Check if PyMuPDF (fitz) is available for PDF conversion
+ * Note: Only caches successful checks; failures are re-checked on next call
  */
 export function isPyMuPdfAvailable(): boolean {
-  if (_pyMuPdfAvailable !== undefined) {
-    return _pyMuPdfAvailable;
+  // Return cached success result
+  if (_pyMuPdfAvailable === true) {
+    return true;
   }
   try {
     const result = spawnSync('uv', ['run', '--with', 'PyMuPDF', 'python3', '-c', 'import fitz; print(fitz.__version__)'], {
@@ -60,11 +62,15 @@ export function isPyMuPdfAvailable(): boolean {
       stdio: ['ignore', 'ignore', 'ignore'],
       timeout: 30000, // 30 seconds timeout
     });
-    _pyMuPdfAvailable = result.status === 0;
-    return _pyMuPdfAvailable;
+    // Only cache successful checks, let failures be re-checked
+    if (result.status === 0) {
+      _pyMuPdfAvailable = true;
+      return true;
+    }
+    return false;
   } catch (error) {
     console.warn('PyMuPDF check failed:', error);
-    _pyMuPdfAvailable = false;
+    // Don't cache failures - transient issues may resolve
     return false;
   }
 }
@@ -128,7 +134,7 @@ print("".join(text_parts))
   const result = execFileSync(
     'uv',
     ['run', '--with', 'PyMuPDF', 'python3', '-c', script, filePath],
-    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
+    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 } // 50MB buffer, 2min timeout
   );
   return result;
 }
