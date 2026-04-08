@@ -945,15 +945,15 @@ Options:
   if (!pdfConverter) {
     console.log('Note: No PDF converter available. PDF files will be skipped.');
     console.log('Install one of the following to process PDF files:');
-    console.log('  PyMuPDF (recommended, better structure): pip install PyMuPDF');
-    console.log('  pdftotext (lighter): brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
+    console.log('  PyMuPDF: auto-installed via "uv run --with PyMuPDF" (recommended)');
+    console.log('  pdftotext: brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
     console.log('');
   } else if (pdfConverter === 'pymupdf') {
     console.log('PDF converter: PyMuPDF (recommended)');
     console.log('');
   } else {
     console.log('PDF converter: pdftotext (consider installing PyMuPDF for better structure)');
-    console.log('  Install: pip install PyMuPDF');
+    console.log('  Install: uv run --with PyMuPDF (auto-installed)');
     console.log('');
   }
 
