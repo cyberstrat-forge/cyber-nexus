@@ -369,7 +369,7 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
 function processCyberPulseFile(
   sourcePath: string,
   convertedDir: string,
-  _sourceDir: string,
+  sourceDir: string,  // 改为使用此参数
   knownFiles: Set<string>,
   _dateRef: Date
 ): PreprocessResult {
@@ -387,9 +387,11 @@ function processCyberPulseFile(
   // Validate required fields
   const validationError = validateCyberPulseFile(sourcePath);
   if (validationError) {
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', validationError);
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: validationError },
+      errorLogPath,
     };
   }
 
@@ -399,18 +401,22 @@ function processCyberPulseFile(
     content = fs.readFileSync(sourcePath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'READ_FAILED', message);
     return {
       success: false,
       error: { code: 'READ_FAILED', message },
+      errorLogPath,
     };
   }
 
   // Parse frontmatter
   const frontmatter = parseFrontmatter(content);
   if (!frontmatter) {
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', 'Missing frontmatter');
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: 'Missing frontmatter' },
+      errorLogPath,
     };
   }
 
@@ -449,9 +455,12 @@ function processCyberPulseFile(
     fs.writeFileSync(convertedPath, newContent, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const errorMsg = `Failed to write converted file: ${message}`;
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
     return {
       success: false,
-      error: { code: 'WRITE_FAILED', message: `Failed to write converted file: ${message}` },
+      error: { code: 'WRITE_FAILED', message: errorMsg },
+      errorLogPath,
     };
   }
 
