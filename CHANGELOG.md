@@ -15,15 +15,19 @@
 **变更**
 - 转换文件 Frontmatter 统一：本地文件和 cyber-pulse 文件使用相同字段结构
 - archived_file 使用 WikiLink 格式，支持 Obsidian 跳转
-- 字段名统一为 snake_case
+- 字段名统一为 snake_case（`archivedAt` → `archived_at`）
 
 **修复**
 - cyber-pulse 文件字段映射问题
 - intel-pull-guide.md 文档过时问题
 - Agent 文档示例路径错误
+- fromWikiLink 畸形输入验证
+- loadPending 错误日志增强
+- main() 错误处理包装器
 
 **测试**
-- 新增 frontmatter 工具函数单元测试
+- 新增 frontmatter 工具函数单元测试（13 个测试用例）
+- 新增畸形 WikiLink 格式测试
 
 ---
 

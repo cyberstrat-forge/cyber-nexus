@@ -37,7 +37,7 @@ export interface FileTracingFields {
   archived_file: string;  // WikiLink format: [[path]]
   content_hash: string;   // MD5 of converted body
   source_hash: string;    // MD5 of source file (for deduplication)
-  archivedAt: string;
+  archived_at: string;    // snake_case, consistent with other fields
 }
 
 /**
@@ -75,7 +75,17 @@ export function toWikiLink(path: string): string {
 
 /**
  * Extract path from WikiLink format
+ * Returns null if input is not a valid WikiLink format
  */
-export function fromWikiLink(wikiLink: string): string {
-  return wikiLink.replace(/^\[\[/, '').replace(/\]\]$/, '');
+export function fromWikiLink(wikiLink: string): string | null {
+  // Validate WikiLink format: must be [[...]]
+  if (!wikiLink.startsWith('[[') || !wikiLink.endsWith(']]')) {
+    return null;
+  }
+  // Extract and validate non-empty content
+  const content = wikiLink.slice(2, -2);
+  if (content.length === 0) {
+    return null;
+  }
+  return content;
 }

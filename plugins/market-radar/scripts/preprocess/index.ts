@@ -235,7 +235,7 @@ source_score: null
 archived_file: "${archivedFile}"
 content_hash: "${contentHash}"
 source_hash: "${sourceHash}"
-archivedAt: "${fetchedAt}"
+archived_at: "${fetchedAt}"
 
 processed_status: "pending"
 processed_at: null
@@ -533,7 +533,7 @@ function processCyberPulseFile(
     archived_file: toWikiLink(convertedRelativePath),  // Points to self in converted/
     content_hash: contentHash,
     source_hash: sourceHash,
-    archivedAt: frontmatter.first_seen_at,
+    archived_at: frontmatter.first_seen_at,
 
     // Group 4: Processing status (add)
     processed_status: 'pending',

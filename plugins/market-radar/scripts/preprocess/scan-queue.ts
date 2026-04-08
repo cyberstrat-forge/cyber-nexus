@@ -82,13 +82,14 @@ interface ConvertedFrontmatter {
   archived_file?: string;
   content_hash?: string;
   source_hash?: string;
-  archivedAt?: string;
+  archived_at?: string;
   processed_status?: ProcessedStatus;
   processed_at?: string | null;
 
   // Legacy fields (for backward compatibility)
   sourceHash?: string;
   archivedSource?: string;
+  archivedAt?: string;
 }
 
 /**
@@ -119,10 +120,17 @@ function loadPending(pendingPath: string): {
 
   try {
     const content = fs.readFileSync(pendingPath, 'utf-8');
-    return JSON.parse(content);
+    const data = JSON.parse(content);
+    // Validate expected structure
+    if (!data || typeof data !== 'object') {
+      console.warn(`Warning: Invalid pending.json structure at ${pendingPath}: expected object`);
+      return null;
+    }
+    return data;
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn(`Warning: Cannot read pending.json at ${pendingPath}: ${errMsg}`);
+    console.error(`Error: Cannot parse pending.json at ${pendingPath}: ${errMsg}`);
+    console.error('  This may indicate a corrupted state file. Consider backing up and reinitializing.');
     return null;
   }
 }
@@ -151,11 +159,16 @@ function scanIntelligenceCards(sourceDir: string): Map<string, string> {
           const frontmatter = parseFrontmatter(content) as IntelligenceFrontmatter | null;
           if (frontmatter?.converted_file) {
             // Extract converted_file from WikiLink format
-            const convertedFile = fromWikiLink(frontmatter.converted_file);
-            convertedToHash.set(
-              convertedFile,
-              frontmatter.converted_content_hash || ''
-            );
+            const convertedFileRaw = frontmatter.converted_file;
+            if (convertedFileRaw) {
+              const convertedFile = fromWikiLink(convertedFileRaw);
+              if (convertedFile !== null) {
+                convertedToHash.set(
+                  convertedFile,
+                  frontmatter.converted_content_hash || ''
+                );
+              } // else: malformed WikiLink, skip this entry
+            }
           }
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error);
@@ -265,7 +278,10 @@ function scanAndBuildQueue(
     let archivedFile = frontmatter?.archived_file || frontmatter?.archivedSource;
     // Extract path from WikiLink if present
     if (archivedFile) {
-      archivedFile = fromWikiLink(archivedFile);
+      const extractedPath = fromWikiLink(archivedFile);
+      if (extractedPath !== null) {
+        archivedFile = extractedPath;
+      } // else: malformed WikiLink, keep original value
     }
 
     const processedStatus = frontmatter?.processed_status;
@@ -461,7 +477,13 @@ Output JSON structure:
 
 // Run if called directly
 if (process.argv[1]?.endsWith('scan-queue.ts') || process.argv[1]?.endsWith('scan-queue.js')) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Fatal error: ${errMsg}`);
+    process.exit(1);
+  }
 }
 
 export {

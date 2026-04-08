@@ -53,10 +53,10 @@ describe('frontmatter utilities', () => {
       expect(result).toBe('archive/2026/04/report.pdf');
     });
 
-    it('should handle path without WikiLink format', () => {
+    it('should return null for path without WikiLink format', () => {
       const path = 'archive/2026/04/report.pdf';
       const result = fromWikiLink(path);
-      expect(result).toBe('archive/2026/04/report.pdf');
+      expect(result).toBeNull();
     });
 
     it('should handle WikiLink with spaces', () => {
@@ -69,6 +69,24 @@ describe('frontmatter utilities', () => {
       const wikiLink = '[[archive/2026/04/报告.pdf]]';
       const result = fromWikiLink(wikiLink);
       expect(result).toBe('archive/2026/04/报告.pdf');
+    });
+
+    it('should return null for empty WikiLink', () => {
+      const wikiLink = '[[]]';
+      const result = fromWikiLink(wikiLink);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for malformed WikiLink (missing start)', () => {
+      const wikiLink = 'archive/2026/04/report.pdf]]';
+      const result = fromWikiLink(wikiLink);
+      expect(result).toBeNull();
+    });
+
+    it('should return null for malformed WikiLink (missing end)', () => {
+      const wikiLink = '[[archive/2026/04/report.pdf';
+      const result = fromWikiLink(wikiLink);
+      expect(result).toBeNull();
     });
   });
 });
