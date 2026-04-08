@@ -9,6 +9,9 @@ import * as path from 'path';
 import { execFileSync, spawnSync } from 'child_process';
 import { SupportedFormat, ConverterFn } from './types';
 
+// Cache for PyMuPDF availability check
+let _pyMuPdfAvailable: boolean | undefined;
+
 /**
  * Check if a dependency is available (using --version or -v)
  */
@@ -48,15 +51,20 @@ export function isPdfToTextAvailable(): boolean {
  * Check if PyMuPDF (fitz) is available for PDF conversion
  */
 export function isPyMuPdfAvailable(): boolean {
+  if (_pyMuPdfAvailable !== undefined) {
+    return _pyMuPdfAvailable;
+  }
   try {
-    // Use uv run --with PyMuPDF for automatic dependency management
     const result = spawnSync('uv', ['run', '--with', 'PyMuPDF', 'python3', '-c', 'import fitz; print(fitz.__version__)'], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
+      timeout: 30000, // 30 seconds timeout
     });
-    return result.status === 0;
+    _pyMuPdfAvailable = result.status === 0;
+    return _pyMuPdfAvailable;
   } catch (error) {
     console.warn('PyMuPDF check failed:', error);
+    _pyMuPdfAvailable = false;
     return false;
   }
 }
@@ -139,8 +147,8 @@ async function convertPdf(filePath: string): Promise<string> {
     return convertPdfWithPdftotext(filePath);
   }
 
-  throw new Error('No PDF converter available. Install one of the following:\n' +
-    '  - PyMuPDF: pip install PyMuPDF (recommended, better structure)\n' +
+  throw new Error('No PDF converter available. Ensure:\n' +
+    '  - PyMuPDF: auto-installed via "uv run --with PyMuPDF" (recommended)\n' +
     '  - pdftotext: brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
 }
 
