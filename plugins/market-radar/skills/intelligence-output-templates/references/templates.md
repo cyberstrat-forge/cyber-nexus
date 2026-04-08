@@ -148,8 +148,10 @@ impact_scale:                   # 影响规模
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 
@@ -236,8 +238,10 @@ segment:                        # 细分领域
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 
@@ -321,8 +325,10 @@ business_area:                  # 业务领域
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 
@@ -408,8 +414,10 @@ maturity:                       # 概念/早期/成长/成熟
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 
@@ -492,8 +500,10 @@ region:                         # 地区
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 
@@ -578,8 +588,10 @@ effective_date:                 # 生效时间
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 
@@ -667,8 +679,10 @@ investors:                     # 投资方/收购方
 > — 第 X-Y 行 / [章节名]
 
 ## 相关情报
-- [[相关情报文件路径]]
+- [[intelligence/{domain}/YYYY/MM/{filename}.md|{相关情报标题}]]
 ```
+
+**链接规范**：相关情报链接必须使用完整路径，包含 `intelligence/` 前缀。
 
 ---
 

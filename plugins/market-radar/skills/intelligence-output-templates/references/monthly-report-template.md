@@ -49,9 +49,9 @@ change_types_covered: [变化类型1, 变化类型2, ...]
 **变化类型**：{变化类型}
 
 **代表事件**：
-- [[YYYY-WXX-weekly|WXX]] — {一句话说明}
+- [[intelligence/reports/weekly/YYYY-WXX-weekly.md|WXX]] — {一句话说明}
 
-**关联情报**：[[{文件名}|{标题}]]
+**关联情报**：[[intelligence/{card_path}|{标题}]]
 ```
 
 #### 2.2 态势演进
@@ -66,7 +66,7 @@ change_types_covered: [变化类型1, 变化类型2, ...]
 **变化类型**：{变化类型}
 
 **代表事件**：
-- [[YYYY-WXX-weekly|WXX]] — {一句话说明}
+- [[intelligence/reports/weekly/YYYY-WXX-weekly.md|WXX]] — {一句话说明}
 ```
 
 #### 2.3 态势减弱
@@ -133,13 +133,13 @@ change_types_covered: [变化类型1, 变化类型2, ...]
 
 | 周次 | 主题焦点 | 涉及变化类型 |
 |------|----------|-------------|
-| [[YYYY-WXX-weekly|WXX]] | ... | {变化类型1}、{变化类型2} |
+| [[intelligence/reports/weekly/YYYY-WXX-weekly.md|WXX]] | ... | {变化类型1}、{变化类型2} |
 
 ### 日报链接（按变化类型）
 
-**新威胁出现**：[[YYYY-MM-DD-daily]]、[[YYYY-MM-DD-daily]]
+**新威胁出现**：[[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD]]、[[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD]]
 
-**市场格局变化**：[[YYYY-MM-DD-daily]]、[[YYYY-MM-DD-daily]]
+**市场格局变化**：[[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD]]、[[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD]]
 ```
 
 ---
