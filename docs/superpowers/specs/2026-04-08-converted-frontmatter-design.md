@@ -156,12 +156,17 @@ source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
 
-archived_file: "[[archive/2026/04/report.md]]"
+archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"  # 指向自身，非 archive
 content_hash: "def456abc123..."
-archivedAt: "2026-04-08T10:00:00Z"
+archivedAt: "2026-04-01T10:30:00Z"
 
 processed_status: "pending"
 processed_at: null
+
+# 保留原始字段
+source_type: "cyber-pulse"
+first_seen_at: "2026-04-01T10:30:00Z"
+tags: ["APT", "ransomware"]
 ---
 ```
 
