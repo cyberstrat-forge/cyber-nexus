@@ -49,8 +49,8 @@ export function isPdfToTextAvailable(): boolean {
  */
 export function isPyMuPdfAvailable(): boolean {
   try {
-    // Check if Python and PyMuPDF are available
-    const result = spawnSync('python3', ['-c', 'import fitz; print(fitz.__version__)'], {
+    // Use uv run --with PyMuPDF for automatic dependency management
+    const result = spawnSync('uv', ['run', '--with', 'PyMuPDF', 'python3', '-c', 'import fitz; print(fitz.__version__)'], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
     });
@@ -118,8 +118,8 @@ print("".join(text_parts))
 `;
 
   const result = execFileSync(
-    'python3',
-    ['-c', script, filePath],
+    'uv',
+    ['run', '--with', 'PyMuPDF', 'python3', '-c', script, filePath],
     { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
   );
   return result;
