@@ -239,12 +239,12 @@
         "archived_file": {
           "type": "string",
           "pattern": "^\\[\\[.+\\]\\]$",
-          "description": "Archived file path (WikiLink format: [[archive/YYYY/MM/filename]])"
+          "description": "Archived file path (WikiLink format: [[archive/YYYY/MM/filename|alias]])"
         },
         "converted_file": {
           "type": "string",
           "pattern": "^\\[\\[.+\\]\\]$",
-          "description": "Converted file path (WikiLink format: [[converted/YYYY/MM/filename.md]])"
+          "description": "Converted file path (WikiLink format: [[converted/YYYY/MM/filename.md|alias]])"
         },
         "converted_content_hash": {
           "type": "string",

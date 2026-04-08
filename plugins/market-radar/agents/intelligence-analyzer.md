@@ -99,8 +99,8 @@ original_url: "https://example.com/security/lazarus-malware-2026"
 published_at: "2026-04-01T08:00:00Z"
 fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"
-converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md]]"
+archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
+converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md|20260401-item_a1b2c3d4.md]]"
 converted_content_hash: "a1b2c3d4e5f6"
 
 # 第三组：情报源追溯
@@ -128,8 +128,8 @@ source_score: 85
 
 | 文件类型 | archived_file 指向 |
 |---------|-------------------|
-| 本地文件 | `[[archive/YYYY/MM/...]]` - 归档的源文件 |
-| cyber-pulse 文件 | `[[converted/YYYY/MM/...]]` - 自身（无源文件归档） |
+| 本地文件 | `[[archive/YYYY/MM/...|filename]]` - 归档的源文件 |
+| cyber-pulse 文件 | `[[converted/YYYY/MM/...|filename]]` - 自身（无源文件归档） |
 
 **步骤 1.3：提取 content_hash**
 
@@ -335,8 +335,8 @@ original_url: "https://example.com/security/lazarus-malware-2026"
 published_at: "2026-04-01T08:00:00Z"
 fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"
-converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md]]"
+archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
+converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md|20260401-item_a1b2c3d4.md]]"
 converted_content_hash: "a1b2c3d4e5f6"
 
 # ============================================

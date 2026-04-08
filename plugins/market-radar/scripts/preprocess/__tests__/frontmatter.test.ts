@@ -27,28 +27,46 @@ describe('frontmatter utilities', () => {
   });
 
   describe('toWikiLink', () => {
-    it('should convert path to WikiLink format', () => {
+    it('should convert path to WikiLink format with filename as alias', () => {
       const path = 'archive/2026/04/report.pdf';
       const result = toWikiLink(path);
-      expect(result).toBe('[[archive/2026/04/report.pdf]]');
+      expect(result).toBe('[[archive/2026/04/report.pdf|report.pdf]]');
+    });
+
+    it('should use custom alias when provided', () => {
+      const path = 'archive/2026/04/report.pdf';
+      const result = toWikiLink(path, 'My Report');
+      expect(result).toBe('[[archive/2026/04/report.pdf|My Report]]');
     });
 
     it('should handle path with spaces', () => {
       const path = 'archive/2026/04/my report.pdf';
       const result = toWikiLink(path);
-      expect(result).toBe('[[archive/2026/04/my report.pdf]]');
+      expect(result).toBe('[[archive/2026/04/my report.pdf|my report.pdf]]');
     });
 
     it('should handle path with Chinese characters', () => {
       const path = 'archive/2026/04/报告.pdf';
       const result = toWikiLink(path);
-      expect(result).toBe('[[archive/2026/04/报告.pdf]]');
+      expect(result).toBe('[[archive/2026/04/报告.pdf|报告.pdf]]');
+    });
+
+    it('should use filename from nested path as alias', () => {
+      const path = 'a/b/c/deep-file.md';
+      const result = toWikiLink(path);
+      expect(result).toBe('[[a/b/c/deep-file.md|deep-file.md]]');
     });
   });
 
   describe('fromWikiLink', () => {
-    it('should extract path from WikiLink format', () => {
+    it('should extract path from WikiLink format without alias', () => {
       const wikiLink = '[[archive/2026/04/report.pdf]]';
+      const result = fromWikiLink(wikiLink);
+      expect(result).toBe('archive/2026/04/report.pdf');
+    });
+
+    it('should extract path from WikiLink format with alias', () => {
+      const wikiLink = '[[archive/2026/04/report.pdf|My Report]]';
       const result = fromWikiLink(wikiLink);
       expect(result).toBe('archive/2026/04/report.pdf');
     });
@@ -60,13 +78,13 @@ describe('frontmatter utilities', () => {
     });
 
     it('should handle WikiLink with spaces', () => {
-      const wikiLink = '[[archive/2026/04/my report.pdf]]';
+      const wikiLink = '[[archive/2026/04/my report.pdf|my report.pdf]]';
       const result = fromWikiLink(wikiLink);
       expect(result).toBe('archive/2026/04/my report.pdf');
     });
 
     it('should handle WikiLink with Chinese characters', () => {
-      const wikiLink = '[[archive/2026/04/报告.pdf]]';
+      const wikiLink = '[[archive/2026/04/报告.pdf|报告.pdf]]';
       const result = fromWikiLink(wikiLink);
       expect(result).toBe('archive/2026/04/报告.pdf');
     });
@@ -87,6 +105,14 @@ describe('frontmatter utilities', () => {
       const wikiLink = '[[archive/2026/04/report.pdf';
       const result = fromWikiLink(wikiLink);
       expect(result).toBeNull();
+    });
+
+    it('should handle alias with pipe in path', () => {
+      // Edge case: if path contains |, this would be ambiguous
+      // Current implementation takes everything before first | as path
+      const wikiLink = '[[path/with|pipe|alias]]';
+      const result = fromWikiLink(wikiLink);
+      expect(result).toBe('path/with');
     });
   });
 });
