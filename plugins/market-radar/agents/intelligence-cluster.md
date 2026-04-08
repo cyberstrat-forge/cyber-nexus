@@ -166,3 +166,35 @@ confidence = min(1.0, 基础分 + 关键词分)
 - [ ] 边缘情况有明确说明
 - [ ] 新主题建议有足够支持
 - [ ] 返回 JSON 格式正确
+
+## 临时文件管理
+
+使用 Bash 工具时遵循以下原则：
+
+### 避免创建临时脚本
+
+优先使用管道和内联命令，而非创建临时文件：
+
+```bash
+# ✅ 推荐：使用管道，不创建文件
+cat cards.json | python3 -c "import sys, json; cards = json.load(sys.stdin); print(len(cards))"
+
+# ❌ 避免：创建临时脚本
+echo 'import json; ...' > /tmp/cluster.py
+python3 /tmp/cluster.py
+```
+
+### 必须创建时的规范
+
+如确需创建临时文件，必须：
+
+1. **使用 `mktemp`** 创建临时文件
+2. **任务完成后删除** 临时文件
+3. **使用 `trap`** 确保异常时也能清理
+
+```bash
+TEMP_FILE=$(mktemp /tmp/intel-cluster-XXXXXX)
+trap "rm -f '$TEMP_FILE'" EXIT
+# ... 使用文件 ...
+rm -f "$TEMP_FILE"
+```
