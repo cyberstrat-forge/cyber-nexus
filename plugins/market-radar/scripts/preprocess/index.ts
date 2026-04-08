@@ -184,9 +184,9 @@ function generateErrorLog(
       '如为扫描版 PDF，请使用 OCR 工具处理',
     ],
     DEPENDENCY_MISSING: [
-      '安装缺失的依赖工具',
-      'macOS: brew install pandoc poppler',
-      'Python: pip install PyMuPDF',
+      '确保 uv 已安装并可用',
+      'PDF 转换将自动通过 uv run --with PyMuPDF 处理',
+      'DOCX 转换需要 pandoc: brew install pandoc',
     ],
     READ_FAILED: [
       '检查文件是否存在',
