@@ -277,6 +277,217 @@ tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 |------|------|
 | `agents/intelligence-analyzer.md` | 已使用 `archived_file` 和 WikiLink 格式 |
 | `skills/intelligence-output-templates/references/templates.md` | 已使用正确格式 |
+| `scripts/pulse/output.ts` | **不修改**，字段映射在 preprocess 中处理 |
+
+---
+
+## cyber-pulse 文件特殊处理
+
+### 识别机制
+
+cyber-pulse 文件通过 `source_type: 'cyber-pulse'` 字段识别：
+
+```typescript
+// scripts/preprocess/index.ts
+function isCyberPulseFile(filePath: string): boolean {
+  const frontmatter = parseFrontmatter(content);
+  return frontmatter?.source_type === 'cyber-pulse';
+}
+```
+
+**必需字段**：`['item_id', 'source_type', 'first_seen_at', 'title']`
+
+### 与本地文件的关键差异
+
+| 差异点 | 本地文件 | cyber-pulse 文件 |
+|--------|---------|-----------------|
+| 归档 | 源文件移动到 `archive/YYYY/MM/` | 不归档，源文件直接删除 |
+| archived_file | 指向 `archive/` 目录 | 指向 `converted/` 目录（自身） |
+| source_type | 无（本地文件） | `cyber-pulse`（保留，用于识别） |
+| 元数据来源 | 预处理生成 | 继承自采集阶段 |
+
+### 设计影响评估
+
+#### ✅ 不会影响识别
+
+| 检查项 | 评估 |
+|--------|------|
+| `source_type` 字段 | ✅ 保留，识别逻辑不变 |
+| `item_id` 字段 | ✅ 已存在，继承即可 |
+| `first_seen_at` 字段 | ✅ 已存在，可映射为 `fetched_at` |
+
+#### ⚠️ 需要修改的字段
+
+| 字段 | 当前状态 | 设计修改 |
+|------|---------|---------|
+| `archived_path` | 空字符串 `""` | 改为 `archived_file: "[[converted/...]]"` |
+| `content_hash` | 空字符串 `""` | 已实现：填充 body MD5 |
+| `processed_status` | 不存在 | 添加，初始值 `"pending"` |
+| `processed_at` | 不存在 | 添加，初始值 `null` |
+
+### intel-pull 输出的 frontmatter（当前）
+
+```yaml
+---
+item_id: "item_a1b2c3d4"
+source_type: "cyber-pulse"
+first_seen_at: "2026-04-01T10:00:00Z"
+title: "Lazarus Group's New Malware"
+author: "Security Team"
+url: "https://..."
+published_at: "2026-04-01T08:00:00Z"
+tags: ["APT", "ransomware"]
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_tier: "T1"
+source_score: 85
+completeness_score: 0.92
+content_hash: ""      # 预处理填充
+archived_path: ""     # 预处理填充
+---
+```
+
+### 预处理后的 frontmatter（设计方案）
+
+```yaml
+---
+# 第一组：item 来源追溯（继承自 intel-pull）
+item_id: "item_a1b2c3d4"
+item_title: "Lazarus Group's New Malware"  # 从 title 映射
+author: "Security Team"
+original_url: "https://..."                 # 从 url 映射
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:00:00Z"          # 从 first_seen_at 映射
+completeness_score: 0.92
+
+# 第二组：情报源追溯（继承自 intel-pull）
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_url: "https://securityweekly.com"
+source_tier: "T1"
+source_score: 85
+
+# 第三组：文件追溯（预处理生成）
+archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"  # 指向自身
+content_hash: "def456abc123..."
+archivedAt: "2026-04-01T10:00:00Z"
+
+# 第四组：处理状态（预处理添加）
+processed_status: "pending"
+processed_at: null
+
+# 保留字段（用于识别和追溯）
+source_type: "cyber-pulse"    # 保留，识别标识
+first_seen_at: "2026-04-01T10:00:00Z"  # 保留，原始采集时间
+tags: ["APT", "ransomware"]   # 保留，采集阶段标签
+---
+```
+
+### 字段映射表
+
+| intel-pull 输出 | 转换文件字段 | 映射说明 |
+|----------------|-------------|---------|
+| `title` | `item_title` | 字段名统一 |
+| `url` | `original_url` | 字段名统一 |
+| `first_seen_at` | `fetched_at` | 字段名统一（同时保留原字段） |
+| `archived_path` | `archived_file` | 改为 WikiLink 格式 |
+
+**映射位置**：`processCyberPulseFile()` 函数中处理，保持 intel-pull 输出格式不变。
+
+---
+
+## intel-pull 输出脚本评估
+
+### 当前状态
+
+`scripts/pulse/output.ts` 生成的 frontmatter：
+
+```yaml
+---
+item_id: "item_a1b2c3d4"
+source_type: "cyber-pulse"
+first_seen_at: "2026-04-01T10:00:00Z"
+title: "..."
+url: "https://..."
+author: "..."
+tags: [...]
+published_at: "..."
+source_id: "..."
+source_name: "..."
+source_tier: "..."
+source_score: ...
+completeness_score: ...
+content_hash: ""      # 待预处理填充
+archived_path: ""     # 待预处理填充
+---
+```
+
+### 修改决策
+
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| **A: 修改 intel-pull 输出** | 字段名直接统一 | 影响范围大，需同步修改命令和文档 |
+| **B: 在 preprocess 映射** ✅ | 影响范围小，逻辑集中 | 多一层映射 |
+
+**选择方案 B**：在 `processCyberPulseFile()` 中做字段映射。
+
+### 理由
+
+1. intel-pull 输出格式已稳定，修改风险高
+2. 映射逻辑集中在 preprocess 脚本更清晰
+3. 减少对已发布功能的修改范围
+
+### 需要修改的脚本
+
+| 脚本 | 修改内容 |
+|------|---------|
+| `scripts/preprocess/index.ts` | `processCyberPulseFile()` 添加字段映射逻辑 |
+| `scripts/pulse/output.ts` | **不修改**，保持现有输出格式 |
+
+---
+
+## processCyberPulseFile() 修改要点
+
+```typescript
+// 当前逻辑：只更新 content_hash
+const updatedFrontmatter = {
+  ...frontmatter,
+  content_hash: contentHash,
+};
+
+// 设计方案：统一字段结构
+const updatedFrontmatter = {
+  // 第一组：item 来源追溯（字段名映射）
+  item_id: frontmatter.item_id,
+  item_title: frontmatter.title,
+  author: frontmatter.author || null,
+  original_url: frontmatter.url || null,
+  published_at: frontmatter.published_at || null,
+  fetched_at: frontmatter.first_seen_at,
+  completeness_score: frontmatter.completeness_score || null,
+
+  // 第二组：情报源追溯（继承）
+  source_id: frontmatter.source_id || null,
+  source_name: frontmatter.source_name || null,
+  source_url: frontmatter.source_url || null,
+  source_tier: frontmatter.source_tier || null,
+  source_score: frontmatter.source_score || null,
+
+  // 第三组：文件追溯
+  archived_file: `[[${convertedRelativePath}]]`,  // WikiLink，指向自身
+  content_hash: contentHash,
+  archivedAt: frontmatter.first_seen_at,
+
+  // 第四组：处理状态
+  processed_status: 'pending',
+  processed_at: null,
+
+  // 保留原始字段（用于识别和兼容）
+  source_type: frontmatter.source_type,
+  first_seen_at: frontmatter.first_seen_at,
+  tags: frontmatter.tags || [],
+};
+```
 
 ---
 
@@ -416,6 +627,40 @@ if (archivedFile) {
   archivedFile = archivedFile.replace(/^\[\[/, '').replace(/\]\]$/, '');
 }
 ```
+
+---
+
+## 识别机制影响评估
+
+### 关键识别逻辑
+
+```typescript
+// scripts/preprocess/index.ts
+function isCyberPulseFile(filePath: string): boolean {
+  const frontmatter = parseFrontmatter(content);
+  return frontmatter?.source_type === 'cyber-pulse';
+}
+
+const CYBER_PULSE_REQUIRED_FIELDS = ['item_id', 'source_type', 'first_seen_at', 'title'];
+```
+
+### 评估结论
+
+| 检查项 | 本地文件 | cyber-pulse 文件 | 结果 |
+|--------|---------|-----------------|------|
+| `source_type` 字段 | ❌ 不生成 | ✅ 保留 `cyber-pulse` | ✅ 识别正确 |
+| `isCyberPulseFile()` 返回 | `false` | `true` | ✅ 识别正确 |
+| 必需字段验证 | 不适用（非 cyber-pulse） | 全部存在 | ✅ 验证通过 |
+
+**结论**：设计不会影响 cyber-pulse 文件的识别机制。
+
+### 为什么不影响
+
+1. **本地文件**：不生成 `source_type` 字段，`isCyberPulseFile()` 返回 `false`，走本地文件处理流程
+
+2. **cyber-pulse 文件**：保留 `source_type: 'cyber-pulse'` 和所有必需字段，`isCyberPulseFile()` 返回 `true`，走 cyber-pulse 处理流程
+
+3. **字段映射**：只在 cyber-pulse 处理流程内部进行，不影响识别判断
 
 ---
 
