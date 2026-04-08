@@ -484,13 +484,12 @@ function processCyberPulseFile(
 
 /**
  * Scan directory for files to process
- * Priority: inbox/ first, then root directory (excluding special dirs)
  */
 function scanDirectory(sourceDir: string): string[] {
   const files: string[] = [];
   const excludeDirs = new Set(['inbox', 'archive', 'converted', 'intelligence', '.intel']);
 
-  function scan(dir: string, _isRoot: boolean = false) {
+  function scan(dir: string) {
     if (!fs.existsSync(dir)) {
       return;
     }
@@ -520,25 +519,8 @@ function scanDirectory(sourceDir: string): string[] {
     }
   }
 
-  // Priority 1: Scan inbox/ directory
-  const inboxDir = path.join(sourceDir, 'inbox');
-  if (fs.existsSync(inboxDir)) {
-    try {
-      const inboxEntries = fs.readdirSync(inboxDir, { withFileTypes: true });
-      for (const entry of inboxEntries) {
-        const fullPath = path.join(inboxDir, entry.name);
-        if (entry.isFile() && isSupportedFormat(fullPath)) {
-          files.push(fullPath);
-        }
-      }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      console.warn(`Warning: Cannot read inbox directory ${inboxDir}: ${errMsg}`);
-    }
-  }
-
-  // Priority 2: Scan root directory (for backward compatibility)
-  scan(sourceDir, true);
+  // Scan source directory directly
+  scan(sourceDir);
 
   return files;
 }
