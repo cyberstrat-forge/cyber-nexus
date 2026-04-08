@@ -91,6 +91,36 @@ interface CardMetadataFull {
   event_type?: string;
 }
 
+// 新增：Agent 格式元数据（轻量级，无正文摘要）
+// 用于传递给 Agent，由 Agent 决定读取哪些卡片
+interface CardMetadataAgent {
+  // === 核心标识 ===
+  intelligence_id: string;
+  card_path: string;          // 关键：用于 Agent Read
+
+  // === 基础元数据 ===
+  title: string;
+  created_date: string;       // YYYY-MM-DD
+  primary_domain: string;
+  secondary_domains: string[];
+  security_relevance: string; // critical/high/medium/low
+  tags: string[];
+
+  // === 来源追溯 ===
+  source_name?: string;
+  source_tier?: string;       // T1/T2/T3
+  published_at?: string;
+
+  // === 领域特定字段（用于聚合判断）===
+  vendor_name?: string;       // Vendor-Intelligence
+  tech_name?: string;         // Vendor-Intelligence, Emerging-Tech
+  threat_actor?: string;      // Threat-Landscape
+  threat_type?: string;       // Threat-Landscape
+  company?: string;           // Capital-Investment
+  investors?: string;         // Capital-Investment
+  policy_name?: string;       // Policy-Regulation
+}
+
 interface ScanResult {
   period: string;
   period_param: string;
@@ -453,6 +483,77 @@ async function scanCardsFull(
 }
 
 /**
+ * 扫描卡片（Agent 格式，轻量元数据，无正文摘要）
+ * 用于传递给 Agent，由 Agent 决定读取哪些卡片
+ */
+async function scanCardsAgent(
+  outputDir: string,
+  dateRange: { start: string; end: string }
+): Promise<CardMetadataAgent[]> {
+  const cards: CardMetadataAgent[] = [];
+
+  for (const domain of INTELLIGENCE_DOMAINS) {
+    const domainPath = join(outputDir, domain);
+
+    try {
+      const files = await glob('**/*.md', { cwd: domainPath, absolute: false });
+
+      for (const file of files) {
+        const filePath = join(domainPath, file);
+
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          // 只解析 frontmatter，不读取 body
+          const { data: frontmatter } = parseFrontmatter(content);
+
+          const createdDate = safeString(frontmatter.created_date);
+          if (!createdDate || !isValidDateFormat(createdDate)) {
+            continue;
+          }
+
+          if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
+            cards.push({
+              intelligence_id: safeString(frontmatter.intelligence_id),
+              card_path: `${domain}/${file}`,
+              title: safeString(frontmatter.title) || file.replace('.md', ''),
+              created_date: createdDate,
+              primary_domain: domain,
+              secondary_domains: safeStringArray(frontmatter.secondary_domains),
+              security_relevance: safeString(frontmatter.security_relevance) || 'medium',
+              tags: safeStringArray(frontmatter.tags),
+              source_name: safeOptionalString(frontmatter.source_name),
+              source_tier: safeOptionalString(frontmatter.source_tier),
+              published_at: safeOptionalString(frontmatter.published_at),
+              // Domain-specific fields for aggregation
+              vendor_name: safeOptionalString(frontmatter.vendor_name),
+              tech_name: safeOptionalString(frontmatter.tech_name),
+              threat_actor: safeOptionalString(frontmatter.threat_actor),
+              threat_type: safeOptionalString(frontmatter.threat_type),
+              company: safeOptionalString(frontmatter.company),
+              investors: safeOptionalString(frontmatter.investors),
+              policy_name: safeOptionalString(frontmatter.policy_name),
+            });
+          }
+        } catch (fileErr) {
+          const errMsg = fileErr instanceof Error ? fileErr.message : String(fileErr);
+          console.warn(`Warning: Failed to process file ${filePath}: ${errMsg}`);
+        }
+      }
+    } catch (error) {
+      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
+      if (isEnoent) {
+        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
+      } else {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
+      }
+    }
+  }
+
+  return cards;
+}
+
+/**
  * 格式化周期参数用于输出
  */
 function formatPeriodParam(period: string, param: string | undefined, dateRange: { start: string; end: string }): string {
@@ -488,7 +589,7 @@ async function main() {
     .option('--period <type>', 'Period type: weekly, monthly, or daily', 'weekly')
     .option('--param <value>', 'Period parameter: 2026-W10, 2026-03, or 2026-04-06 (for daily)')
     .option('--date <date>', 'Specific date for daily report (YYYY-MM-DD), takes priority over --param')
-    .option('--format <format>', 'Output format: list or json', 'list')
+    .option('--format <format>', 'Output format: list, json, or agent', 'list')
     .option('--output-dir <dir>', 'Intelligence cards output directory', '.')
     .parse(process.argv);
 
@@ -504,10 +605,10 @@ async function main() {
   }
 
   // 验证 format 参数
-  if (options.format !== 'list' && options.format !== 'json') {
+  if (!['list', 'json', 'agent'].includes(options.format)) {
     console.error(JSON.stringify({
       error: true,
-      message: `Invalid format: ${options.format}. Must be 'list' or 'json'`
+      message: `Invalid format: ${options.format}. Must be 'list', 'json', or 'agent'`
     }));
     process.exit(1);
   }
@@ -537,7 +638,41 @@ async function main() {
     // 计算时间范围，传入 dateParam
     const dateRange = calculateDateRange(period, periodParam, dateParam);
 
-    if (format === 'json') {
+    if (format === 'agent') {
+      // === Agent 输出格式（轻量级，无正文摘要）===
+      const agentCards = await scanCardsAgent(outputDir, dateRange);
+
+      // Build stats
+      const domainsDistribution: Record<string, number> = {};
+      const sourcesDistribution: Record<string, number> = {};
+
+      for (const card of agentCards) {
+        domainsDistribution[card.primary_domain] =
+          (domainsDistribution[card.primary_domain] || 0) + 1;
+        if (card.source_name) {
+          sourcesDistribution[card.source_name] =
+            (sourcesDistribution[card.source_name] || 0) + 1;
+        }
+      }
+
+      // Determine output date
+      let outputDate: string;
+      if (period === 'daily') {
+        outputDate = dateParam || periodParam || new Date().toISOString().split('T')[0];
+      } else {
+        outputDate = formatPeriodParam(period, periodParam, dateRange);
+      }
+
+      console.log(JSON.stringify({
+        date: outputDate,
+        cards: agentCards.sort((a, b) => b.created_date.localeCompare(a.created_date)),
+        stats: {
+          total_count: agentCards.length,
+          domains_distribution: domainsDistribution,
+          sources_distribution: sourcesDistribution
+        }
+      }, null, 2));
+    } else if (format === 'json') {
       // === JSON 输出格式（供 Agent 使用）===
       const fullCards = await scanCardsFull(outputDir, dateRange);
 

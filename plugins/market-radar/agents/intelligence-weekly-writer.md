@@ -46,23 +46,37 @@ skills:
 **daily_reports**: [
   {
     "path": "reports/daily/2026-04-07-daily.md",
-    "date": "2026-04-07",
-    "has_intelligence": true
+    "period": "2026-04-07",
+    "frontmatter": {...}
   },
   ...
 ]
 **intelligence_cards**: [
   {
     "intelligence_id": "...",
+    "card_path": "Vendor-Intelligence/2026/04/20260407-xxx.md",
     "title": "...",
     "created_date": "2026-04-07",
     "primary_domain": "Vendor-Intelligence",
-    "card_path": "..."
+    "secondary_domains": [],
+    "security_relevance": "medium",
+    "tags": [...]
   },
   ...
 ]
 **output_dir**: ./intelligence
 ```
+
+**输入字段说明**：
+
+| 字段 | 来源 | 说明 |
+|------|------|------|
+| `daily_reports` | scan-reports.ts | 日报路径列表，使用 `period` 字段作为日期 |
+| `intelligence_cards` | scan-cards.ts | 情报卡片列表，用于主题发现和关联分析 |
+
+**判断日报是否有情报**：
+- 检查 `frontmatter.intelligence_count` 是否 > 0
+- 或读取日报后检查内容
 
 ---
 
@@ -75,7 +89,11 @@ skills:
 - 不生成报告文件
 - 结束任务
 
-如果所有日报都 `has_intelligence == false`：
+**判断日报是否有情报**：
+- 方法 1: 检查 `frontmatter.intelligence_count` 是否 > 0
+- 方法 2: 读取日报后检查内容
+
+如果所有日报都无情报内容：
 - 输出："本周日报无情报内容"
 - 不生成报告文件
 - 结束任务
