@@ -127,6 +127,12 @@ skills:
 6. **态势索引**：本月所有态势汇总
 7. **工作统计**：数据汇总
 
+**Obsidian 链接规范**：
+- 周报链接：`[[intelligence/reports/weekly/{week}-weekly.md|{week}周报]]`
+- 日报链接：`[[intelligence/reports/daily/{date}-daily.md|{date}日报]]`
+- 情报卡片链接：`[[intelligence/{card_path}|{卡片标题}]]`
+- 必须包含 `intelligence/` 前缀，使用完整路径
+
 ### 步骤 6：写入报告文件
 
 使用 Write 工具写入：

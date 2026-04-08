@@ -163,11 +163,16 @@ Read {output_dir}/{card_path}
 
 {领域整体态势分析，包含：情报数量、关键趋势、核心发现}
 
-- [[{文件名}|{卡片标题}]] — {一句话简要说明}
-- [[{文件名}|{卡片标题}]] — {一句话简要说明}
+- [[intelligence/{card_path}|{卡片标题}]] — {一句话简要说明}
+- [[intelligence/{card_path}|{卡片标题}]] — {一句话简要说明}
 
 **商业模式影响**：{仅 Industry-Analysis、Vendor-Intelligence、Emerging-Tech 领域适用}
 ```
+
+**Obsidian 链接规范**：
+- 必须包含 `intelligence/` 前缀，使用完整路径
+- 格式：`[[intelligence/{card_path}|{显示标题}]]`
+- `card_path` 来自 cards_list（如 `Threat-Landscape/2026/04/xxx.md`）
 
 **跨领域关联**：
 - 分析 `secondary_domains` 字段，识别领域间关联

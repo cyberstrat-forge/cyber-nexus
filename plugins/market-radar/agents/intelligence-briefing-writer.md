@@ -144,8 +144,10 @@ skills:
 
 | 日期 | 标题 | 链接 |
 |------|------|------|
-| {intelligence_date} | {标题} | [[{primary_domain}/{filename}.md]] |
+| {intelligence_date} | {标题} | [[intelligence/{primary_domain}/{filename}.md]] |
 ```
+
+**注意**：链接必须包含 `intelligence/` 前缀，使用完整路径。
 
 **领域中文名称映射**：
 - Threat-Landscape → 威胁态势
