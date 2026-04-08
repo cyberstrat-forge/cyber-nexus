@@ -33,6 +33,11 @@ import {
   BatchResult,
   PreprocessErrorCode,
 } from './types';
+import {
+  ConvertedFileFrontmatter,
+  generateItemId,
+  toWikiLink,
+} from './types/frontmatter';
 import { convertToMarkdown, isSupportedFormat, isPandocAvailable, getAvailablePdfConverter } from './convert';
 import { cleanMarkdown } from './clean';
 import { calculateHash } from '../utils/hash';
@@ -193,23 +198,48 @@ function collectKnownFiles(sourceDir: string): Set<string> {
 }
 
 /**
- * Generate frontmatter for converted file
+ * Generate frontmatter for local files (unified structure)
+ *
+ * @param sourceHash - MD5 hash of the source file (for deduplication)
+ * @param contentHash - MD5 hash of the converted body content
+ * @param filename - Original filename (for item_title)
+ * @param archivedPath - Relative path to archived file
+ * @param fetchedAt - Processing timestamp
  */
-function generateFrontmatter(
+function generateLocalFileFrontmatter(
   sourceHash: string,
-  originalPath: string,
-  archivedAt: string,
-  archivedSource: string
+  contentHash: string,
+  filename: string,
+  archivedPath: string,
+  fetchedAt: string
 ): string {
+  const itemId = generateItemId(contentHash);
+  const itemTitle = path.basename(filename, path.extname(filename));
+  const archivedFile = toWikiLink(archivedPath);
+
   return `---
-sourceHash: "${sourceHash}"
-originalPath: "${originalPath}"
-archivedAt: "${archivedAt}"
-archivedSource: "${archivedSource}"
+item_id: "${itemId}"
+item_title: "${itemTitle}"
+author: null
+original_url: null
+published_at: null
+fetched_at: "${fetchedAt}"
+completeness_score: null
+
+source_id: null
+source_name: null
+source_url: null
+source_tier: null
+source_score: null
+
+archived_file: "${archivedFile}"
+content_hash: "${contentHash}"
+source_hash: "${sourceHash}"
+archivedAt: "${fetchedAt}"
+
 processed_status: "pending"
 processed_at: null
 ---
-
 `;
 }
 
@@ -389,8 +419,10 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
         try {
           const content = fs.readFileSync(mdPath, 'utf-8');
           const frontmatter = parseFrontmatter(content);
-          if (frontmatter && frontmatter.sourceHash) {
-            knownHashes.set(frontmatter.sourceHash, mdPath);
+          // Support both old (sourceHash) and new (source_hash) field names
+          const sourceHash = frontmatter?.source_hash || frontmatter?.sourceHash;
+          if (sourceHash) {
+            knownHashes.set(sourceHash, mdPath);
           }
         } catch (error) {
           // Log warning for files that can't be read or parsed
@@ -657,10 +689,12 @@ async function processFile(
   // Phase 3: Write converted file with frontmatter
   // (Write converted file BEFORE archiving source to ensure atomicity)
   const now = new Date().toISOString();
-  const relativeSourcePath = path.relative(sourceDir, sourcePath);
   const rawFilename = path.basename(sourcePath, path.extname(sourcePath));
   const filename = normalizeFilename(rawFilename);
   const convertedPath = path.join(convertedDir, `${filename}.md`);
+
+  // Calculate content_hash from cleaned content
+  const contentHash = createHash('md5').update(cleanedContent).digest('hex');
 
   try {
     // Ensure converted directory exists
@@ -671,11 +705,12 @@ async function processFile(
     // Generate frontmatter
     const relativeArchivePath = path.relative(sourceDir, archivePath);
 
-    const frontmatter = generateFrontmatter(
+    const frontmatter = generateLocalFileFrontmatter(
       sourceHash,
-      relativeSourcePath,
-      now,
-      relativeArchivePath
+      contentHash,
+      path.basename(sourcePath),
+      relativeArchivePath,
+      now
     );
 
     // Write converted file with frontmatter
@@ -925,11 +960,11 @@ Supported file types:
   - cyber-pulse files: .md with source_type: cyber-pulse (moved directly)
 
 Frontmatter fields in converted files:
-  - Local files: sourceHash, originalPath, archivedAt, archivedSource
+  - Local files: item_id, item_title, fetched_at, archived_file, content_hash, source_hash
   - cyber-pulse files: item_id, source_type, first_seen_at, title, content_hash
 
 Deduplication:
-  - Local files: by content hash (sourceHash)
+  - Local files: by content hash (source_hash)
   - cyber-pulse files: by filename (item_id)
 
 Options:
