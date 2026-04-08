@@ -151,7 +151,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 ---
 
-## 目录结构（v3.0）
+## 目录结构（v3.1）
 
 ### 推荐目录布局
 
@@ -1264,7 +1264,7 @@ Prompt 内容：
 
 ---
 
-## 状态管理（v3.0）
+## 状态管理（v3.1）
 
 ### 状态文件
 
