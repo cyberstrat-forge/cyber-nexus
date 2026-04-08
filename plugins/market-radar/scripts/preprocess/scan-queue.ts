@@ -150,10 +150,8 @@ function scanIntelligenceCards(sourceDir: string): Map<string, string> {
           const content = fs.readFileSync(fullPath, 'utf-8');
           const frontmatter = parseFrontmatter(content) as IntelligenceFrontmatter | null;
           if (frontmatter?.converted_file) {
-            // Extract converted_file from WikiLink format: [[path]]
-            const convertedFile = frontmatter.converted_file
-              .replace(/^\[\[/, '')
-              .replace(/\]\]$/, '');
+            // Extract converted_file from WikiLink format
+            const convertedFile = fromWikiLink(frontmatter.converted_file);
             convertedToHash.set(
               convertedFile,
               frontmatter.converted_content_hash || ''
