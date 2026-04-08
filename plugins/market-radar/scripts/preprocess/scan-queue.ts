@@ -22,6 +22,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { parseFrontmatter } from '../utils/frontmatter';
+import { fromWikiLink } from './types/frontmatter';
 import { PendingItem } from './types/pending';
 
 // Threshold for recommending script usage
@@ -41,7 +42,7 @@ export interface QueueItem {
   file: string;           // Relative path from source_dir
   content_hash: string;   // MD5 hash of file content
   source_hash?: string;   // MD5 hash of original source file (from frontmatter)
-  archived_source?: string; // Path to archived source file (from frontmatter)
+  archived_file?: string; // WikiLink path to archived/converted file (from frontmatter)
   status: QueueItemStatus;
 }
 
@@ -74,13 +75,19 @@ export interface ScanQueueResult {
 }
 
 /**
- * Converted file frontmatter (new fields)
+ * Converted file frontmatter (supports new unified fields and legacy fields)
  */
 interface ConvertedFrontmatter {
-  sourceHash?: string;
-  content_hash?: string; // Hash of converted file content
+  // New fields (unified format)
+  archived_file?: string;
+  content_hash?: string;
+  source_hash?: string;
+  archivedAt?: string;
   processed_status?: ProcessedStatus;
   processed_at?: string | null;
+
+  // Legacy fields (for backward compatibility)
+  sourceHash?: string;
   archivedSource?: string;
 }
 
@@ -253,8 +260,16 @@ function scanAndBuildQueue(
 
     // Parse frontmatter
     const frontmatter = parseFrontmatter(content) as ConvertedFrontmatter | null;
-    const sourceHash = frontmatter?.sourceHash;
-    const archivedSource = frontmatter?.archivedSource;
+
+    // Support both new and legacy field names for backward compatibility
+    const sourceHash = frontmatter?.source_hash || frontmatter?.sourceHash;
+
+    let archivedFile = frontmatter?.archived_file || frontmatter?.archivedSource;
+    // Extract path from WikiLink if present
+    if (archivedFile) {
+      archivedFile = fromWikiLink(archivedFile);
+    }
+
     const processedStatus = frontmatter?.processed_status;
 
     // Check if in pending review
@@ -263,7 +278,7 @@ function scanAndBuildQueue(
         file: relativePath,
         content_hash: contentHash,
         source_hash: sourceHash,
-        archived_source: archivedSource,
+        archived_file: archivedFile,
         status: 'pending_review',
       });
       pendingReview++;
@@ -306,7 +321,7 @@ function scanAndBuildQueue(
       file: relativePath,
       content_hash: contentHash,
       source_hash: sourceHash,
-      archived_source: archivedSource,
+      archived_file: archivedFile,
       status: 'needs_processing',
     });
     needsProcessing++;
