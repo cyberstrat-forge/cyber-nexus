@@ -571,3 +571,48 @@ Agent 完成分析 → 返回 JSON 结果
 - [ ] 文件已成功写入对应年月子目录（{domain}/{YYYY}/{MM}/）
 - [ ] 返回 JSON 包含 intelligence_ids 数组和 cards 数组
 - [ ] _index.base 文件已生成（如不存在）
+
+## 临时文件管理
+
+使用 Bash 工具时遵循以下原则：
+
+### 避免创建临时脚本
+
+优先使用管道和内联命令，而非创建临时文件：
+
+```bash
+# ✅ 推荐：使用管道，不创建文件
+cat data.json | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['count'])"
+
+# ❌ 避免：创建临时脚本
+echo 'import json; ...' > /tmp/analyze.py
+python3 /tmp/analyze.py
+```
+
+### 必须创建时的规范
+
+如确需创建临时文件，必须：
+
+1. **使用 `mktemp`** 创建临时文件（自动生成唯一名称）
+2. **任务完成后删除** 临时文件
+3. **使用 `trap`** 确保异常时也能清理
+
+```bash
+# 创建临时文件
+TEMP_FILE=$(mktemp /tmp/intel-analyzer-XXXXXX)
+
+# 确保退出时清理
+trap "rm -f '$TEMP_FILE'" EXIT
+
+# 使用文件
+python3 "$TEMP_FILE" < data.json
+
+# 显式清理（trap 会作为后备）
+rm -f "$TEMP_FILE"
+```
+
+### 为什么重要
+
+- 临时文件残留会导致 pyright/pylance 类型检查警告
+- 长期运行会累积无用文件
+- 影响用户开发体验

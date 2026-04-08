@@ -204,3 +204,35 @@ skills:
 - [ ] 关键发现至少 3 条
 - [ ] 战略建议可执行
 - [ ] 分析文件已写入
+
+## 临时文件管理
+
+使用 Bash 工具时遵循以下原则：
+
+### 避免创建临时脚本
+
+优先使用管道和内联命令，而非创建临时文件：
+
+```bash
+# ✅ 推荐：使用管道，不创建文件
+cat analysis.json | python3 -c "import sys, json; data = json.load(sys.stdin); print(len(data['findings']))"
+
+# ❌ 避免：创建临时脚本
+echo 'import json; ...' > /tmp/analyze.py
+python3 /tmp/analyze.py
+```
+
+### 必须创建时的规范
+
+如确需创建临时文件，必须：
+
+1. **使用 `mktemp`** 创建临时文件
+2. **任务完成后删除** 临时文件
+3. **使用 `trap`** 确保异常时也能清理
+
+```bash
+TEMP_FILE=$(mktemp /tmp/theme-analyzer-XXXXXX)
+trap "rm -f '$TEMP_FILE'" EXIT
+# ... 使用文件 ...
+rm -f "$TEMP_FILE"
+```
