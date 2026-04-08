@@ -20,6 +20,7 @@ export function isDependencyAvailable(name: string, versionFlag: string = '--ver
     const result = spawnSync(name, [versionFlag], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
+      timeout: 5000, // 5 seconds timeout for version checks
     });
     return result.status === 0;
   } catch (error) {
@@ -37,6 +38,7 @@ export function isPdfToTextAvailable(): boolean {
     const result = spawnSync('pdftotext', ['-v'], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
+      timeout: 5000, // 5 seconds timeout for version check
     });
     // pdftotext returns 1 for -v (it shows version but also an error about missing file)
     // So we check if the command runs at all, not the exit code

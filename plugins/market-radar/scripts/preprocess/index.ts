@@ -51,7 +51,10 @@ function isCyberPulseFile(filePath: string): boolean {
     const content = fs.readFileSync(filePath, 'utf-8');
     const frontmatter = parseFrontmatter(content);
     return frontmatter?.source_type === 'cyber-pulse';
-  } catch {
+  } catch (error) {
+    // Log warning for debugging - file may be unreadable or malformed
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot check cyber-pulse status for ${filePath}: ${errMsg}`);
     return false;
   }
 }
