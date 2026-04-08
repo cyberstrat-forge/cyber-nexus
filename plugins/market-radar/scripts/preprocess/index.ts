@@ -443,9 +443,12 @@ function processCyberPulseFile(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const errorMsg = `Failed to create converted directory: ${message}`;
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
     return {
       success: false,
-      error: { code: 'WRITE_FAILED', message: `Failed to create converted directory: ${message}` },
+      error: { code: 'WRITE_FAILED', message: errorMsg },
+      errorLogPath,
     };
   }
 
