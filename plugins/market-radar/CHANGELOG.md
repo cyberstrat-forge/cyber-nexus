@@ -2,6 +2,13 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.3] - 2026-04-08
+
+### 修复
+
+- **预处理脚本**：修复嵌套 inbox 目录问题，支持多层目录结构
+- **PDF 转换**：支持使用 uv 运行 marker_single 进行 PDF 转换
+
 ## [1.9.2] - 2026-04-08
 
 ### 优化
