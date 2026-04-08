@@ -51,7 +51,10 @@ function isCyberPulseFile(filePath: string): boolean {
     const content = fs.readFileSync(filePath, 'utf-8');
     const frontmatter = parseFrontmatter(content);
     return frontmatter?.source_type === 'cyber-pulse';
-  } catch {
+  } catch (error) {
+    // Log warning for debugging - file may be unreadable or malformed
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Cannot check cyber-pulse status for ${filePath}: ${errMsg}`);
     return false;
   }
 }
@@ -184,9 +187,9 @@ function generateErrorLog(
       '如为扫描版 PDF，请使用 OCR 工具处理',
     ],
     DEPENDENCY_MISSING: [
-      '安装缺失的依赖工具',
-      'macOS: brew install pandoc poppler',
-      'Python: pip install PyMuPDF',
+      '确保 uv 已安装并可用',
+      'PDF 转换将自动通过 uv run --with PyMuPDF 处理',
+      'DOCX 转换需要 pandoc: brew install pandoc',
     ],
     READ_FAILED: [
       '检查文件是否存在',
@@ -246,18 +249,13 @@ function writeErrorLog(
   errorCode: string,
   errorMessage: string
 ): string {
-  const inboxDir = path.join(sourceDir, 'inbox');
   const filename = path.basename(sourcePath);
-  const errorLogPath = path.join(inboxDir, `${filename}.error.md`);
+  const errorLogPath = path.join(sourceDir, `${filename}.error.md`);
 
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
   const content = generateErrorLog(filename, errorCode, errorMessage, timestamp);
 
   try {
-    // Ensure inbox directory exists
-    if (!fs.existsSync(inboxDir)) {
-      fs.mkdirSync(inboxDir, { recursive: true });
-    }
     fs.writeFileSync(errorLogPath, content, 'utf-8');
     return errorLogPath;
   } catch (writeError) {
@@ -374,7 +372,7 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
 function processCyberPulseFile(
   sourcePath: string,
   convertedDir: string,
-  _sourceDir: string,
+  sourceDir: string,  // 改为使用此参数
   knownFiles: Set<string>,
   _dateRef: Date
 ): PreprocessResult {
@@ -392,9 +390,11 @@ function processCyberPulseFile(
   // Validate required fields
   const validationError = validateCyberPulseFile(sourcePath);
   if (validationError) {
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', validationError);
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: validationError },
+      errorLogPath,
     };
   }
 
@@ -404,18 +404,22 @@ function processCyberPulseFile(
     content = fs.readFileSync(sourcePath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'READ_FAILED', message);
     return {
       success: false,
       error: { code: 'READ_FAILED', message },
+      errorLogPath,
     };
   }
 
   // Parse frontmatter
   const frontmatter = parseFrontmatter(content);
   if (!frontmatter) {
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', 'Missing frontmatter');
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: 'Missing frontmatter' },
+      errorLogPath,
     };
   }
 
@@ -442,9 +446,12 @@ function processCyberPulseFile(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const errorMsg = `Failed to create converted directory: ${message}`;
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
     return {
       success: false,
-      error: { code: 'WRITE_FAILED', message: `Failed to create converted directory: ${message}` },
+      error: { code: 'WRITE_FAILED', message: errorMsg },
+      errorLogPath,
     };
   }
 
@@ -454,9 +461,12 @@ function processCyberPulseFile(
     fs.writeFileSync(convertedPath, newContent, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const errorMsg = `Failed to write converted file: ${message}`;
+    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
     return {
       success: false,
-      error: { code: 'WRITE_FAILED', message: `Failed to write converted file: ${message}` },
+      error: { code: 'WRITE_FAILED', message: errorMsg },
+      errorLogPath,
     };
   }
 
@@ -489,13 +499,12 @@ function processCyberPulseFile(
 
 /**
  * Scan directory for files to process
- * Priority: inbox/ first, then root directory (excluding special dirs)
  */
 function scanDirectory(sourceDir: string): string[] {
   const files: string[] = [];
   const excludeDirs = new Set(['inbox', 'archive', 'converted', 'intelligence', '.intel']);
 
-  function scan(dir: string, _isRoot: boolean = false) {
+  function scan(dir: string) {
     if (!fs.existsSync(dir)) {
       return;
     }
@@ -525,25 +534,8 @@ function scanDirectory(sourceDir: string): string[] {
     }
   }
 
-  // Priority 1: Scan inbox/ directory
-  const inboxDir = path.join(sourceDir, 'inbox');
-  if (fs.existsSync(inboxDir)) {
-    try {
-      const inboxEntries = fs.readdirSync(inboxDir, { withFileTypes: true });
-      for (const entry of inboxEntries) {
-        const fullPath = path.join(inboxDir, entry.name);
-        if (entry.isFile() && isSupportedFormat(fullPath)) {
-          files.push(fullPath);
-        }
-      }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      console.warn(`Warning: Cannot read inbox directory ${inboxDir}: ${errMsg}`);
-    }
-  }
-
-  // Priority 2: Scan root directory (for backward compatibility)
-  scan(sourceDir, true);
+  // Scan source directory directly
+  scan(sourceDir);
 
   return files;
 }
@@ -953,15 +945,15 @@ Options:
   if (!pdfConverter) {
     console.log('Note: No PDF converter available. PDF files will be skipped.');
     console.log('Install one of the following to process PDF files:');
-    console.log('  PyMuPDF (recommended, better structure): pip install PyMuPDF');
-    console.log('  pdftotext (lighter): brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
+    console.log('  PyMuPDF: auto-installed via "uv run --with PyMuPDF" (recommended)');
+    console.log('  pdftotext: brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
     console.log('');
   } else if (pdfConverter === 'pymupdf') {
     console.log('PDF converter: PyMuPDF (recommended)');
     console.log('');
   } else {
     console.log('PDF converter: pdftotext (consider installing PyMuPDF for better structure)');
-    console.log('  Install: pip install PyMuPDF');
+    console.log('  Install: uv run --with PyMuPDF (auto-installed)');
     console.log('');
   }
 

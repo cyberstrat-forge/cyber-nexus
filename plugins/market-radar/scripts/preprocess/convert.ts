@@ -9,6 +9,9 @@ import * as path from 'path';
 import { execFileSync, spawnSync } from 'child_process';
 import { SupportedFormat, ConverterFn } from './types';
 
+// Cache for PyMuPDF availability check
+let _pyMuPdfAvailable: boolean | undefined;
+
 /**
  * Check if a dependency is available (using --version or -v)
  */
@@ -17,6 +20,7 @@ export function isDependencyAvailable(name: string, versionFlag: string = '--ver
     const result = spawnSync(name, [versionFlag], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
+      timeout: 5000, // 5 seconds timeout for version checks
     });
     return result.status === 0;
   } catch (error) {
@@ -34,6 +38,7 @@ export function isPdfToTextAvailable(): boolean {
     const result = spawnSync('pdftotext', ['-v'], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
+      timeout: 5000, // 5 seconds timeout for version check
     });
     // pdftotext returns 1 for -v (it shows version but also an error about missing file)
     // So we check if the command runs at all, not the exit code
@@ -46,17 +51,28 @@ export function isPdfToTextAvailable(): boolean {
 
 /**
  * Check if PyMuPDF (fitz) is available for PDF conversion
+ * Note: Only caches successful checks; failures are re-checked on next call
  */
 export function isPyMuPdfAvailable(): boolean {
+  // Return cached success result
+  if (_pyMuPdfAvailable === true) {
+    return true;
+  }
   try {
-    // Check if Python and PyMuPDF are available
-    const result = spawnSync('python3', ['-c', 'import fitz; print(fitz.__version__)'], {
+    const result = spawnSync('uv', ['run', '--with', 'PyMuPDF', 'python3', '-c', 'import fitz; print(fitz.__version__)'], {
       encoding: 'utf-8',
       stdio: ['ignore', 'ignore', 'ignore'],
+      timeout: 30000, // 30 seconds timeout
     });
-    return result.status === 0;
+    // Only cache successful checks, let failures be re-checked
+    if (result.status === 0) {
+      _pyMuPdfAvailable = true;
+      return true;
+    }
+    return false;
   } catch (error) {
     console.warn('PyMuPDF check failed:', error);
+    // Don't cache failures - transient issues may resolve
     return false;
   }
 }
@@ -89,7 +105,7 @@ async function convertPdfWithPdftotext(filePath: string): Promise<string> {
   const result = execFileSync(
     'pdftotext',
     [filePath, '-', '-layout'],
-    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
+    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 } // 50MB buffer, 2min timeout
   );
   return result;
 }
@@ -118,9 +134,9 @@ print("".join(text_parts))
 `;
 
   const result = execFileSync(
-    'python3',
-    ['-c', script, filePath],
-    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
+    'uv',
+    ['run', '--with', 'PyMuPDF', 'python3', '-c', script, filePath],
+    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 } // 50MB buffer, 2min timeout
   );
   return result;
 }
@@ -139,8 +155,8 @@ async function convertPdf(filePath: string): Promise<string> {
     return convertPdfWithPdftotext(filePath);
   }
 
-  throw new Error('No PDF converter available. Install one of the following:\n' +
-    '  - PyMuPDF: pip install PyMuPDF (recommended, better structure)\n' +
+  throw new Error('No PDF converter available. Ensure:\n' +
+    '  - PyMuPDF: auto-installed via "uv run --with PyMuPDF" (recommended)\n' +
     '  - pdftotext: brew install poppler (macOS) or apt-get install poppler-utils (Linux)');
 }
 
@@ -155,7 +171,7 @@ async function convertDocx(filePath: string): Promise<string> {
   const result = execFileSync(
     'pandoc',
     [filePath, '-t', 'markdown', '--wrap=none'],
-    { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
+    { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 60000 } // 10MB buffer, 1min timeout
   );
   return result;
 }
