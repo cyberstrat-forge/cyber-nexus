@@ -2,6 +2,25 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.5] - 2026-04-08
+
+### 变更
+
+- **WikiLink 别名格式**：所有 WikiLink 输出使用 `[[path|alias]]` 格式
+  - `toWikiLink` 函数支持可选别名参数，默认使用文件名
+  - Obsidian 显示更友好的别名而非完整路径
+  - `fromWikiLink` 支持解析带别名的 WikiLink 格式
+
+### 文档更新
+
+- 更新命令和 Agent 文档中的 WikiLink 示例
+- 更新 JSON Schema 描述
+
+### 测试
+
+- 新增 4 个 `toWikiLink` 测试用例（别名、嵌套路径）
+- 新增 3 个 `fromWikiLink` 测试用例（带别名解析）
+
 ## [1.9.4] - 2026-04-08
 
 ### 变更

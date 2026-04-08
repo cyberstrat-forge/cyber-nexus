@@ -230,7 +230,7 @@ source_url: null
 source_tier: null
 source_score: null
 
-archived_file: "[[archive/2026/04/report.pdf]]"
+archived_file: "[[archive/2026/04/report.pdf|report.pdf]]"
 content_hash: "def456abc123..."
 source_hash: "abc789def456..."
 archivedAt: "2026-04-08T10:00:00Z"
@@ -258,7 +258,7 @@ source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
 
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"
+archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
 content_hash: "def456abc123..."
 source_hash: "abc789def456..."
 archivedAt: "2026-04-01T10:30:00Z"
@@ -530,7 +530,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
       "source_hash": "def456...",
-      "archived_file": "[[archive/2026/03/report-2026.pdf]]",
+      "archived_file": "[[archive/2026/03/report-2026.pdf|report-2026.pdf]]",
       "status": "needs_processing"
     }
   ],
@@ -618,7 +618,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
       "source_hash": "def456...",
-      "archived_file": "[[archive/2026/03/report-2026.pdf]]",
+      "archived_file": "[[archive/2026/03/report-2026.pdf|report-2026.pdf]]",
       "status": "needs_processing"
     }
   ]
@@ -796,7 +796,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
     "output_files": [],
     "review_reason": "检测到高风险威胁指标，需人工确认",
     "domain": "Threat-Landscape",
-    "archived_file": "[[archive/2026/04/suspicious.pdf]]"
+    "archived_file": "[[archive/2026/04/suspicious.pdf|suspicious.pdf]]"
   }
 ]
 ```
@@ -1281,7 +1281,7 @@ Prompt 内容：
       {
         "pending_id": "pending-threat-20260406-001",
         "converted_file": "converted/2026/04/report.md",
-        "archived_file": "[[archive/2026/04/report.pdf]]",
+        "archived_file": "[[archive/2026/04/report.pdf|report.pdf]]",
         "added_at": "2026-04-06T10:00:00Z",
         "reason": "检测到高风险威胁指标，需人工确认"
       }

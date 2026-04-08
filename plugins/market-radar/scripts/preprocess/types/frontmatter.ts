@@ -67,14 +67,21 @@ export function generateItemId(contentHash: string): string {
 }
 
 /**
- * Convert path to WikiLink format
+ * Convert path to WikiLink format with optional alias
+ *
+ * @param path - File path
+ * @param alias - Optional display alias (if not provided, uses filename)
+ * @returns WikiLink string in format [[path|alias]]
  */
-export function toWikiLink(path: string): string {
-  return `[[${path}]]`;
+export function toWikiLink(path: string, alias?: string): string {
+  // Use provided alias, or extract filename as default alias
+  const displayAlias = alias || path.split('/').pop() || path;
+  return `[[${path}|${displayAlias}]]`;
 }
 
 /**
  * Extract path from WikiLink format
+ * Supports both [[path]] and [[path|alias]] formats
  * Returns null if input is not a valid WikiLink format
  */
 export function fromWikiLink(wikiLink: string): string | null {
@@ -82,10 +89,12 @@ export function fromWikiLink(wikiLink: string): string | null {
   if (!wikiLink.startsWith('[[') || !wikiLink.endsWith(']]')) {
     return null;
   }
-  // Extract and validate non-empty content
+  // Extract content between [[ and ]]
   const content = wikiLink.slice(2, -2);
   if (content.length === 0) {
     return null;
   }
-  return content;
+  // Handle alias format: [[path|alias]] -> extract path
+  const pipeIndex = content.indexOf('|');
+  return pipeIndex === -1 ? content : content.slice(0, pipeIndex);
 }
