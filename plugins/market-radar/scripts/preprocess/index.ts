@@ -487,6 +487,10 @@ function processCyberPulseFile(
     };
   }
 
+  // Calculate paths for archived_file WikiLink (points to converted/ directory)
+  const convertedPath = path.join(convertedDir, filename);
+  const convertedRelativePath = path.relative(sourceDir, convertedPath);
+
   // Parse frontmatter
   const frontmatter = parseFrontmatter(content);
   if (!frontmatter) {
@@ -504,10 +508,41 @@ function processCyberPulseFile(
   const markdownContent = frontmatterMatch ? content.slice(frontmatterMatch[0].length) : content;
   const contentHash = createHash('md5').update(markdownContent).digest('hex');
 
-  // Update frontmatter with content_hash
-  const updatedFrontmatter: Record<string, string> = {
-    ...frontmatter,
+  // Calculate source_hash from original file content (for deduplication)
+  const sourceHash = createHash('md5').update(content).digest('hex');
+
+  // Build unified frontmatter with field mapping
+  const updatedFrontmatter: Record<string, unknown> = {
+    // Group 1: Item source tracing (field mapping)
+    item_id: frontmatter.item_id,
+    item_title: frontmatter.title || '(无标题)',
+    author: frontmatter.author || null,
+    original_url: frontmatter.url || null,
+    published_at: frontmatter.published_at || null,
+    fetched_at: frontmatter.first_seen_at,
+    completeness_score: frontmatter.completeness_score || null,
+
+    // Group 2: Intelligence source tracing (inherit)
+    source_id: frontmatter.source_id || null,
+    source_name: frontmatter.source_name || null,
+    source_url: frontmatter.source_url || null,
+    source_tier: frontmatter.source_tier || null,
+    source_score: frontmatter.source_score || null,
+
+    // Group 3: File tracing (generate)
+    archived_file: toWikiLink(convertedRelativePath),  // Points to self in converted/
     content_hash: contentHash,
+    source_hash: sourceHash,
+    archivedAt: frontmatter.first_seen_at,
+
+    // Group 4: Processing status (add)
+    processed_status: 'pending',
+    processed_at: null,
+
+    // Preserve original fields for identification
+    source_type: frontmatter.source_type,
+    first_seen_at: frontmatter.first_seen_at,
+    tags: frontmatter.tags || [],
   };
 
   // Generate new frontmatter
@@ -530,8 +565,7 @@ function processCyberPulseFile(
     };
   }
 
-  // Write to converted directory
-  const convertedPath = path.join(convertedDir, filename);
+  // Write to converted directory (convertedPath already calculated above)
   try {
     fs.writeFileSync(convertedPath, newContent, 'utf-8');
   } catch (error) {
