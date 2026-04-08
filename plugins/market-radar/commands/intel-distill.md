@@ -1066,19 +1066,43 @@ Done in 262ms using pnpm v10.33.0
 ### 步骤 R3：扫描输入数据
 
 **日报模式**：
-- 使用 scan-cards.ts 扫描当日情报卡片
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
+  --period daily --date {date} --format agent --output-dir {output_dir}
+```
+
+**关键设计**：
+- 命令层不读取卡片内容，直接传递路径列表给 Agent
+- `--format agent` 输出轻量元数据（无正文摘要）
 
 **周报模式**：
-- 使用 scan-reports.ts 扫描本周日报
-- 如果日报缺失，回退到情报卡片
+```bash
+# 1. 扫描本周日报
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-reports.ts \
+  --type daily --start {week_start} --end {week_end} --output-dir {output_dir}
+
+# 2. 扫描本周情报卡片（用于主题提炼）
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-cards.ts \
+  --period weekly --param {week_param} --format agent --output-dir {output_dir}
+```
 
 **月报模式**：
-- 使用 scan-reports.ts 扫描本月周报
-- 加载态势索引（.intel/situations.json）
+```bash
+# 扫描本月周报
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-reports.ts \
+  --type weekly --start {month_start} --end {month_end} --output-dir {output_dir}
+```
+
+- 加载态势索引：读取 `.intel/situations.json`
 
 **年报模式**：
-- 使用 scan-reports.ts 扫描本年月报和周报
-- 加载态势索引
+```bash
+# 扫描本年月报和周报
+cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx reporting/scan-reports.ts \
+  --type monthly --start {year_start} --end {year_end} --output-dir {output_dir}
+```
+
+- 加载态势索引：读取 `.intel/situations.json`
 
 ### 步骤 R4：调用 Agent 生成报告
 
@@ -1087,25 +1111,69 @@ Done in 262ms using pnpm v10.33.0
 **日报模式**：
 ```
 使用 Agent 工具，subagent_type="intelligence-daily-writer"
-参数: cards_data（扫描结果 JSON）, output_dir, date
+
+Prompt 内容：
+生成情报日报：
+
+**cards_list**: {scan_script_output}
+**output_dir**: {output_dir}
+**date**: {date}
+
+提示：
+1. 根据 cards_list 中的 card_path 使用 Read 工具读取需要的卡片
+2. 重点关注候选使用 security_relevance 和 metadata 筛选
+3. 只读取必要的卡片，避免过度使用 Read
 ```
 
 **周报模式**：
 ```
 使用 Agent 工具，subagent_type="intelligence-weekly-writer"
-参数: reports_data（扫描结果）, output_dir, week_param
+
+Prompt 内容：
+生成情报周报：
+
+**period**: {week_param}
+**date_range**: {"start": "{week_start}", "end": "{week_end}"}
+**daily_reports**: {reports_scan_output.reports}（日报路径列表）
+**intelligence_cards**: {cards_scan_output.cards}（情报卡片列表）
+**output_dir**: {output_dir}
+
+提示：
+1. 使用 Read 工具读取日报全文，提炼主题
+2. intelligence_cards 用于辅助主题发现和跨日关联分析
+3. 每个主题标注变化类型
 ```
 
 **月报模式**：
 ```
 使用 Agent 工具，subagent_type="intelligence-monthly-writer"
-参数: reports_data（扫描结果）, situations_index, output_dir, month_param
+
+Prompt 内容：
+生成情报月报：
+
+**period**: {month_param}
+**date_range**: {"start": "{month_start}", "end": "{month_end}"}
+**weekly_reports**: {reports_scan_output.reports}（周报路径列表）
+**previous_situations**: {situations_index}（态势索引）
+**output_dir**: {output_dir}
+
+提示：
+1. 使用 Read 工具读取周报全文，识别态势变化
+2. 追踪态势状态（新态势/持续/减弱/消退）
 ```
 
 **年报模式**：
 ```
 使用 Agent 工具，subagent_type="intelligence-annual-writer"
-参数: reports_data（月报+周报扫描结果）, situations_index, output_dir, year_param
+
+Prompt 内容：
+生成年报：
+
+**period**: {year_param}
+**monthly_reports**: {monthly_reports_scan_output.reports}
+**weekly_reports**: {weekly_reports_scan_output.reports}
+**situations_index**: {situations_index}
+**output_dir**: {output_dir}
 ```
 
 ### 步骤 R5：显示报告

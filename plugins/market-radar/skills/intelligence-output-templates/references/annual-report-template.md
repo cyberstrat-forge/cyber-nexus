@@ -65,9 +65,9 @@ intelligence_count: N
 | Q3 | ➡️ 稳定 | {概述} |
 | Q4 | ⬇️ 回调 | {概述} |
 
-**相关态势**：[S-YYYY-MM-XX]（[[YYYY-MM-monthly|MM月月报]]）
+**相关态势**：[S-YYYY-MM-XX]（[[intelligence/reports/monthly/YYYY-MM-monthly.md|MM月月报]]）
 
-**支撑情报**：[[YYYY-MM-monthly|MM月月报]]、[[YYYY-WXX-weekly|WXX周报]]
+**支撑情报**：[[intelligence/reports/monthly/YYYY-MM-monthly.md|MM月月报]]、[[intelligence/reports/weekly/YYYY-WXX-weekly.md|WXX周报]]
 ```
 
 ---
@@ -108,7 +108,7 @@ intelligence_count: N
 
 | 月份 | 核心动向 | 涉及趋势 |
 |------|----------|----------|
-| [[YYYY-MM-monthly|MM月]] | ... | {趋势1}、{趋势2} |
+| [[intelligence/reports/monthly/YYYY-MM-monthly.md|MM月]] | ... | {趋势1}、{趋势2} |
 
 ### 态势全览
 

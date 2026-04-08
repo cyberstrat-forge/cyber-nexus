@@ -61,10 +61,10 @@ change_types_covered: [变化类型1, 变化类型2, ...]
 **涉及变化类型**：{变化类型1}、{变化类型2}
 
 **相关日报**：
-- [[YYYY-MM-DD-daily|MM-DD 日报]] — {一句话说明}
-- [[YYYY-MM-DD-daily|MM-DD 日报]] — {一句话说明}
+- [[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD 日报]] — {一句话说明}
+- [[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD 日报]] — {一句话说明}
 
-**相关情报**：[[{文件名}|{标题}]]、[[{文件名}|{标题}]]
+**相关情报**：[[intelligence/{card_path}|{标题}]]、[[intelligence/{card_path}|{标题}]]
 
 ### 主题二：{主题标题}
 {同上结构}
@@ -102,15 +102,15 @@ change_types_covered: [变化类型1, 变化类型2, ...]
 
 | 日期 | 标题 | 主题 |
 |------|------|------|
-| [[YYYY-MM-DD-daily|MM-DD]] | ... | {主题1}、{主题2} |
+| [[intelligence/reports/daily/YYYY-MM-DD-daily.md|MM-DD]] | ... | {主题1}、{主题2} |
 
 ### 高价值情报卡片
 
 **主题一**：
-- [[{文件名}|{标题}]] — {一句话说明}
+- [[intelligence/{card_path}|{标题}]] — {一句话说明}
 
 **主题二**：
-- [[{文件名}|{标题}]] — {一句话说明}
+- [[intelligence/{card_path}|{标题}]] — {一句话说明}
 ```
 
 ---

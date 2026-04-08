@@ -46,9 +46,12 @@ skills:
 **weekly_reports**: [
   {
     "path": "reports/weekly/2026-W14-weekly.md",
-    "week": "2026-W14",
-    "themes": ["AI安全", "供应链攻击"],
-    "change_types": ["技术突破与应用", "新威胁出现"]
+    "period": "2026-W14",
+    "frontmatter": {
+      "theme_count": 4,
+      "change_types_covered": ["技术突破与应用", "新威胁出现"],
+      ...
+    }
   },
   ...
 ]
@@ -63,6 +66,15 @@ skills:
 ]
 **output_dir**: ./intelligence
 ```
+
+**输入字段说明**：
+
+| 字段 | 来源 | 说明 |
+|------|------|------|
+| `weekly_reports` | scan-reports.ts | 周报路径列表，使用 `period` 字段作为周标识 |
+| `frontmatter.theme_count` | 周报元数据 | 主题数量 |
+| `frontmatter.change_types_covered` | 周报元数据 | 覆盖的变化类型 |
+| `previous_situations` | .intel/situations.json | 上月态势索引 |
 
 ---
 
@@ -114,6 +126,12 @@ skills:
 5. **下钻索引**：周报、日报链接
 6. **态势索引**：本月所有态势汇总
 7. **工作统计**：数据汇总
+
+**Obsidian 链接规范**：
+- 周报链接：`[[intelligence/reports/weekly/{week}-weekly.md|{week}周报]]`
+- 日报链接：`[[intelligence/reports/daily/{date}-daily.md|{date}日报]]`
+- 情报卡片链接：`[[intelligence/{card_path}|{卡片标题}]]`
+- 必须包含 `intelligence/` 前缀，使用完整路径
 
 ### 步骤 6：写入报告文件
 
