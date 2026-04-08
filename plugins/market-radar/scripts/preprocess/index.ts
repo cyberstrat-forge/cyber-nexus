@@ -1,11 +1,15 @@
 #!/usr/bin/env tsx
 /**
- * Preprocessing entry point (v2.2)
+ * Preprocessing entry point (v2.3)
  *
  * Supports inbox/archive/converted directory structure:
  * - inbox/ - User drops new files here
  * - archive/YYYY/MM/ - Archived source files
  * - converted/YYYY/MM/ - Converted markdown files with frontmatter metadata
+ *
+ * v2.3 Changes:
+ * - Add filename normalization to replace Unicode punctuation with ASCII equivalents
+ * - Fixes shell encoding issues with special characters (e.g., smart quotes)
  *
  * v2.2 Changes:
  * - Add cyber-pulse file handling (source_type: cyber-pulse in frontmatter)
@@ -35,7 +39,45 @@ import { calculateHash } from '../utils/hash';
 import { parseFrontmatter, generateFrontmatter as generateYamlFrontmatter } from '../utils/frontmatter';
 
 // Current preprocessor version - increment when cleaning rules change
-const PREPROCESSOR_VERSION = '2.2.0';
+const PREPROCESSOR_VERSION = '2.3.0';
+
+/**
+ * Normalize filename by replacing Unicode punctuation with ASCII equivalents
+ * This fixes shell encoding issues when passing filenames as arguments
+ */
+function normalizeFilename(filename: string): string {
+  // Map of Unicode punctuation to ASCII equivalents
+  const replacements: Record<string, string> = {
+    // Smart/curly quotes
+    '\u2018': "'", // LEFT SINGLE QUOTATION MARK
+    '\u2019': "'", // RIGHT SINGLE QUOTATION MARK
+    '\u201C': '"', // LEFT DOUBLE QUOTATION MARK
+    '\u201D': '"', // RIGHT DOUBLE QUOTATION MARK
+    // Other common Unicode punctuation
+    '\u2013': '-', // EN DASH
+    '\u2014': '--', // EM DASH
+    '\u2026': '...', // HORIZONTAL ELLIPSIS
+    '\u2022': '*', // BULLET
+    // Chinese/Japanese punctuation
+    '\u3000': ' ', // IDEOGRAPHIC SPACE
+    '\u3001': ',', // IDEOGRAPHIC COMMA
+    '\u3002': '.', // IDEOGRAPHIC FULL STOP
+    '\uFF01': '!', // FULLWIDTH EXCLAMATION MARK
+    '\uFF08': '(', // FULLWIDTH LEFT PARENTHESIS
+    '\uFF09': ')', // FULLWIDTH RIGHT PARENTHESIS
+    '\uFF0C': ',', // FULLWIDTH COMMA
+    '\uFF1A': ':', // FULLWIDTH COLON
+    '\uFF1B': ';', // FULLWIDTH SEMICOLON
+    '\uFF1F': '?', // FULLWIDTH QUESTION MARK
+  };
+
+  let normalized = filename;
+  for (const [unicode, ascii] of Object.entries(replacements)) {
+    normalized = normalized.split(unicode).join(ascii);
+  }
+
+  return normalized;
+}
 
 /**
  * Required fields for cyber-pulse files
@@ -376,7 +418,8 @@ function processCyberPulseFile(
   knownFiles: Set<string>,
   _dateRef: Date
 ): PreprocessResult {
-  const filename = path.basename(sourcePath);
+  const rawFilename = path.basename(sourcePath);
+  const filename = normalizeFilename(rawFilename);
 
   // Check for duplicate by filename (item_id)
   if (knownFiles.has(filename)) {
@@ -615,7 +658,8 @@ async function processFile(
   // (Write converted file BEFORE archiving source to ensure atomicity)
   const now = new Date().toISOString();
   const relativeSourcePath = path.relative(sourceDir, sourcePath);
-  const filename = path.basename(sourcePath, path.extname(sourcePath));
+  const rawFilename = path.basename(sourcePath, path.extname(sourcePath));
+  const filename = normalizeFilename(rawFilename);
   const convertedPath = path.join(convertedDir, `${filename}.md`);
 
   try {
