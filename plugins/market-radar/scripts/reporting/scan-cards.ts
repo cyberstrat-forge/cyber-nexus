@@ -325,81 +325,31 @@ function calculateDateRange(period: string, param?: string, dateParam?: string):
 }
 
 /**
- * 扫描卡片
+ * 扫描卡片基础函数（泛型实现）
+ *
+ * 提取公共的目录迭代、错误处理、日期验证逻辑，通过回调函数处理不同格式的卡片转换。
+ *
+ * @param outputDir - 输出目录
+ * @param dateRange - 日期范围
+ * @param transformCard - 卡片转换回调，返回 null 表示跳过该卡片
+ * @param options - 可选配置
  */
-async function scanCards(
+async function scanCardsBase<T>(
   outputDir: string,
-  dateRange: { start: string; end: string }
-): Promise<ScanResult['cards']> {
-  const cards: ScanResult['cards'] = [];
-
-  for (const domain of INTELLIGENCE_DOMAINS) {
-    const domainPath = join(outputDir, domain);
-
-    try {
-      // 使用 glob 递归查找所有 markdown 文件（支持年月子目录结构）
-      const files = await glob('**/*.md', { cwd: domainPath, absolute: false });
-
-      for (const file of files) {
-        const filePath = join(domainPath, file);
-
-        try {
-          const content = await fs.readFile(filePath, 'utf-8');
-          const { data: frontmatter } = parseFrontmatter(content);
-
-          const createdDate = safeString(frontmatter.created_date);
-          if (!createdDate) {
-            // 没有 created_date 字段，跳过并记录
-            console.warn(`Info: Skipping ${filePath} - missing or invalid created_date`);
-            continue;
-          }
-
-          // 验证日期格式
-          if (!isValidDateFormat(createdDate)) {
-            console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
-            continue;
-          }
-
-          // 检查是否在时间范围内
-          if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
-            cards.push({
-              path: `${domain}/${file}`,
-              metadata: {
-                title: safeString(frontmatter.title) || file.replace('.md', ''),
-                created_date: createdDate,
-                primary_domain: domain
-              }
-            });
-          }
-        } catch (fileErr) {
-          // 单个文件读取失败，记录警告但继续处理其他文件
-          const errMsg = fileErr instanceof Error ? fileErr.message : String(fileErr);
-          console.warn(`Warning: Failed to process file ${filePath}: ${errMsg}`);
-        }
-      }
-    } catch (error) {
-      // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
-      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
-      if (isEnoent) {
-        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
-      } else {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
-      }
-    }
+  dateRange: { start: string; end: string },
+  transformCard: (
+    frontmatter: Record<string, unknown>,
+    body: string,
+    domain: string,
+    file: string
+  ) => T | null,
+  options?: {
+    /** 是否需要读取 body 内容，默认 false */
+    includeBody?: boolean;
   }
-
-  return cards;
-}
-
-/**
- * 扫描卡片（现有实现，保持不变）
- */
-async function scanCardsFull(
-  outputDir: string,
-  dateRange: { start: string; end: string }
-): Promise<CardMetadataFull[]> {
-  const cards: CardMetadataFull[] = [];
+): Promise<T[]> {
+  const cards: T[] = [];
+  const includeBody = options?.includeBody ?? false;
 
   for (const domain of INTELLIGENCE_DOMAINS) {
     const domainPath = join(outputDir, domain);
@@ -416,51 +366,24 @@ async function scanCardsFull(
 
           const createdDate = safeString(frontmatter.created_date);
           if (!createdDate) {
-            // 没有 created_date 字段，跳过（与 scanCards 保持一致）
             continue;
           }
 
-          // 验证日期格式（与 scanCards 保持一致，添加警告日志）
           if (!isValidDateFormat(createdDate)) {
             console.warn(`Warning: Invalid date format "${createdDate}" in ${filePath}`);
             continue;
           }
 
           if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
-            // Extract body summary (first 500 chars, excluding frontmatter)
-            const bodySummary = body.slice(0, 500).trim();
-
-            cards.push({
-              intelligence_id: safeString(frontmatter.intelligence_id),
-              title: safeString(frontmatter.title) || file.replace('.md', ''),
-              created_date: createdDate,
-              primary_domain: domain,
-              secondary_domains: safeStringArray(frontmatter.secondary_domains),
-              security_relevance: safeString(frontmatter.security_relevance) || 'medium',
-              tags: safeStringArray(frontmatter.tags),
-              published_at: safeOptionalString(frontmatter.published_at),
-              source_name: safeOptionalString(frontmatter.source_name),
-              source_tier: safeOptionalString(frontmatter.source_tier),
-              item_id: safeOptionalString(frontmatter.item_id),
-              item_title: safeOptionalString(frontmatter.item_title),
-              original_url: safeOptionalString(frontmatter.original_url),
-              completeness_score: safeOptionalNumber(frontmatter.completeness_score),
-              archived_file: safeOptionalString(frontmatter.archived_file),
-              converted_file: safeOptionalString(frontmatter.converted_file),
-              card_path: `${domain}/${file}`,
-              body_summary: bodySummary,
-              // Domain-specific fields
-              threat_type: safeOptionalString(frontmatter.threat_type),
-              threat_actor: safeOptionalString(frontmatter.threat_actor),
-              target_sector: safeOptionalString(frontmatter.target_sector),
-              target_region: safeOptionalString(frontmatter.target_region),
-              vendor_name: safeOptionalString(frontmatter.vendor_name),
-              tech_name: safeOptionalString(frontmatter.tech_name),
-              policy_name: safeOptionalString(frontmatter.policy_name),
-              company: safeOptionalString(frontmatter.company),
-              investors: safeOptionalString(frontmatter.investors),
-              event_type: safeOptionalString(frontmatter.event_type),
-            });
+            const card = transformCard(
+              frontmatter,
+              includeBody ? body : '',
+              domain,
+              file
+            );
+            if (card !== null) {
+              cards.push(card);
+            }
           }
         } catch (fileErr) {
           const errMsg = fileErr instanceof Error ? fileErr.message : String(fileErr);
@@ -468,7 +391,6 @@ async function scanCardsFull(
         }
       }
     } catch (error) {
-      // 改进错误处理：不假设所有错误都是 NodeJS.ErrnoException
       const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
       if (isEnoent) {
         console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
@@ -483,74 +405,104 @@ async function scanCardsFull(
 }
 
 /**
+ * 扫描卡片（基础格式，用于 list 输出）
+ */
+async function scanCards(
+  outputDir: string,
+  dateRange: { start: string; end: string }
+): Promise<ScanResult['cards']> {
+  return scanCardsBase(outputDir, dateRange, (frontmatter, _body, domain, file) => ({
+    path: `${domain}/${file}`,
+    metadata: {
+      title: safeString(frontmatter.title) || file.replace('.md', ''),
+      created_date: safeString(frontmatter.created_date),
+      primary_domain: domain
+    }
+  }));
+}
+
+/**
+ * 扫描卡片（完整格式，用于 JSON 输出）
+ */
+async function scanCardsFull(
+  outputDir: string,
+  dateRange: { start: string; end: string }
+): Promise<CardMetadataFull[]> {
+  return scanCardsBase(
+    outputDir,
+    dateRange,
+    (frontmatter, body, domain, file) => {
+      const bodySummary = body.slice(0, 500).trim();
+
+      return {
+        intelligence_id: safeString(frontmatter.intelligence_id),
+        title: safeString(frontmatter.title) || file.replace('.md', ''),
+        created_date: safeString(frontmatter.created_date),
+        primary_domain: domain,
+        secondary_domains: safeStringArray(frontmatter.secondary_domains),
+        security_relevance: safeString(frontmatter.security_relevance) || 'medium',
+        tags: safeStringArray(frontmatter.tags),
+        published_at: safeOptionalString(frontmatter.published_at),
+        source_name: safeOptionalString(frontmatter.source_name),
+        source_tier: safeOptionalString(frontmatter.source_tier),
+        item_id: safeOptionalString(frontmatter.item_id),
+        item_title: safeOptionalString(frontmatter.item_title),
+        original_url: safeOptionalString(frontmatter.original_url),
+        completeness_score: safeOptionalNumber(frontmatter.completeness_score),
+        archived_file: safeOptionalString(frontmatter.archived_file),
+        converted_file: safeOptionalString(frontmatter.converted_file),
+        card_path: `${domain}/${file}`,
+        body_summary: bodySummary,
+        // Domain-specific fields
+        threat_type: safeOptionalString(frontmatter.threat_type),
+        threat_actor: safeOptionalString(frontmatter.threat_actor),
+        target_sector: safeOptionalString(frontmatter.target_sector),
+        target_region: safeOptionalString(frontmatter.target_region),
+        vendor_name: safeOptionalString(frontmatter.vendor_name),
+        tech_name: safeOptionalString(frontmatter.tech_name),
+        policy_name: safeOptionalString(frontmatter.policy_name),
+        company: safeOptionalString(frontmatter.company),
+        investors: safeOptionalString(frontmatter.investors),
+        event_type: safeOptionalString(frontmatter.event_type),
+      };
+    },
+    { includeBody: true }  // JSON 格式需要读取 body 用于生成摘要
+  );
+}
+
+/**
  * 扫描卡片（Agent 格式，轻量元数据，无正文摘要）
- * 用于传递给 Agent，由 Agent 决定读取哪些卡片
+ *
+ * 设计说明：
+ * - 不读取 body 内容，减少文件 I/O
+ * - 输出仅包含路径和元数据，由 Agent 按需读取卡片内容
+ * - 保护主会话上下文，避免被大量卡片摘要占满
  */
 async function scanCardsAgent(
   outputDir: string,
   dateRange: { start: string; end: string }
 ): Promise<CardMetadataAgent[]> {
-  const cards: CardMetadataAgent[] = [];
-
-  for (const domain of INTELLIGENCE_DOMAINS) {
-    const domainPath = join(outputDir, domain);
-
-    try {
-      const files = await glob('**/*.md', { cwd: domainPath, absolute: false });
-
-      for (const file of files) {
-        const filePath = join(domainPath, file);
-
-        try {
-          const content = await fs.readFile(filePath, 'utf-8');
-          // 只解析 frontmatter，不读取 body
-          const { data: frontmatter } = parseFrontmatter(content);
-
-          const createdDate = safeString(frontmatter.created_date);
-          if (!createdDate || !isValidDateFormat(createdDate)) {
-            continue;
-          }
-
-          if (createdDate >= dateRange.start && createdDate <= dateRange.end) {
-            cards.push({
-              intelligence_id: safeString(frontmatter.intelligence_id),
-              card_path: `${domain}/${file}`,
-              title: safeString(frontmatter.title) || file.replace('.md', ''),
-              created_date: createdDate,
-              primary_domain: domain,
-              secondary_domains: safeStringArray(frontmatter.secondary_domains),
-              security_relevance: safeString(frontmatter.security_relevance) || 'medium',
-              tags: safeStringArray(frontmatter.tags),
-              source_name: safeOptionalString(frontmatter.source_name),
-              source_tier: safeOptionalString(frontmatter.source_tier),
-              published_at: safeOptionalString(frontmatter.published_at),
-              // Domain-specific fields for aggregation
-              vendor_name: safeOptionalString(frontmatter.vendor_name),
-              tech_name: safeOptionalString(frontmatter.tech_name),
-              threat_actor: safeOptionalString(frontmatter.threat_actor),
-              threat_type: safeOptionalString(frontmatter.threat_type),
-              company: safeOptionalString(frontmatter.company),
-              investors: safeOptionalString(frontmatter.investors),
-              policy_name: safeOptionalString(frontmatter.policy_name),
-            });
-          }
-        } catch (fileErr) {
-          const errMsg = fileErr instanceof Error ? fileErr.message : String(fileErr);
-          console.warn(`Warning: Failed to process file ${filePath}: ${errMsg}`);
-        }
-      }
-    } catch (error) {
-      const isEnoent = error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT';
-      if (isEnoent) {
-        console.warn(`Info: Domain directory not found: ${domainPath} (skipping)`);
-      } else {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        console.warn(`Warning: Failed to scan domain ${domain} at ${domainPath}: ${errMsg}`);
-      }
-    }
-  }
-
-  return cards;
+  return scanCardsBase(outputDir, dateRange, (frontmatter, _body, domain, file) => ({
+    intelligence_id: safeString(frontmatter.intelligence_id),
+    card_path: `${domain}/${file}`,
+    title: safeString(frontmatter.title) || file.replace('.md', ''),
+    created_date: safeString(frontmatter.created_date),
+    primary_domain: domain,
+    secondary_domains: safeStringArray(frontmatter.secondary_domains),
+    security_relevance: safeString(frontmatter.security_relevance) || 'medium',
+    tags: safeStringArray(frontmatter.tags),
+    source_name: safeOptionalString(frontmatter.source_name),
+    source_tier: safeOptionalString(frontmatter.source_tier),
+    published_at: safeOptionalString(frontmatter.published_at),
+    // Domain-specific fields for aggregation
+    vendor_name: safeOptionalString(frontmatter.vendor_name),
+    tech_name: safeOptionalString(frontmatter.tech_name),
+    threat_actor: safeOptionalString(frontmatter.threat_actor),
+    threat_type: safeOptionalString(frontmatter.threat_type),
+    company: safeOptionalString(frontmatter.company),
+    investors: safeOptionalString(frontmatter.investors),
+    policy_name: safeOptionalString(frontmatter.policy_name),
+  }));
 }
 
 /**
