@@ -208,68 +208,94 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 | `intelligence/{domain}/YYYY/MM/` | 情报卡片（按领域和年月组织） | `{YYYYMMDD}-{subject}-{feature}.md` | ✅ 可见 |
 | `.intel/` | 管理目录 | - | ❌ 隐藏 |
 
-### 转换文件格式（v3.0）
+### 转换文件格式（v3.1）
 
-转换后的 Markdown 文件包含 frontmatter 元数据：
+转换后的 Markdown 文件包含统一 frontmatter 元数据：
+
+**本地文件示例**：
 
 ```markdown
 ---
-sourceHash: "abc123def456..."
-originalPath: "inbox/report-2026.pdf"
-archivedAt: "2026-03-15T10:00:00Z"
-archivedSource: "archive/2026/04/report-2026.pdf"
+item_id: "item_a1b2c3d4"
+item_title: "报告文档"
+author: null
+original_url: null
+published_at: null
+fetched_at: "2026-04-08T10:00:00Z"
+completeness_score: null
+
+source_id: null
+source_name: null
+source_url: null
+source_tier: null
+source_score: null
+
+archived_file: "[[archive/2026/04/report.pdf]]"
+content_hash: "def456abc123..."
+source_hash: "abc789def456..."
+archivedAt: "2026-04-08T10:00:00Z"
+
 processed_status: "pending"
 processed_at: null
 ---
+```
 
-# 文档内容...
+**cyber-pulse 文件示例**：
+
+```markdown
+---
+item_id: "item_a1b2c3d4"
+item_title: "Lazarus Group's New Malware Campaign"
+author: "Security Research Team"
+original_url: "https://example.com/article"
+published_at: "2026-04-01T08:00:00Z"
+fetched_at: "2026-04-01T10:30:00Z"
+completeness_score: 0.92
+
+source_id: "src_securityweekly"
+source_name: "Security Weekly"
+source_url: "https://securityweekly.com"
+source_tier: "T1"
+source_score: 85
+
+archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"
+content_hash: "def456abc123..."
+source_hash: "abc789def456..."
+archivedAt: "2026-04-01T10:30:00Z"
+
+processed_status: "pending"
+processed_at: null
+
+source_type: "cyber-pulse"
+first_seen_at: "2026-04-01T10:30:00Z"
+tags: ["APT", "ransomware"]
+---
 ```
 
 **转换文件 frontmatter 字段说明**：
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `sourceHash` | string | ✅ | 源文件 MD5 哈希（用于去重） |
-| `originalPath` | string | ✅ | 源文件原始路径 |
-| `archivedAt` | datetime | ✅ | 归档时间（ISO 8601） |
-| `archivedSource` | string | ✅ | 归档文件路径 |
+| `item_id` | string | ✅ | 唯一标识（格式：`item_{hash前8位}`） |
+| `item_title` | string | ✅ | 文档标题或文件名 |
+| `author` | string/null | ❌ | 作者 |
+| `original_url` | string/null | ❌ | 原文链接 |
+| `published_at` | string/null | ❌ | 原文发布时间（ISO 8601） |
+| `fetched_at` | string | ✅ | 采集/处理时间（ISO 8601） |
+| `completeness_score` | number/null | ❌ | 完整度 0-1 |
+| `source_id` | string/null | ❌ | 情报源 ID |
+| `source_name` | string/null | ❌ | 情报源名称 |
+| `source_url` | string/null | ❌ | 情报源 URL |
+| `source_tier` | string/null | ❌ | 情报源等级 T0-T3 |
+| `source_score` | number/null | ❌ | 情报源评分 0-100 |
+| `archived_file` | string | ✅ | 归档/转换文件链接（WikiLink 格式） |
+| `content_hash` | string | ✅ | 转换文件 body 内容哈希（用于变更检测） |
+| `source_hash` | string | ✅ | 源文件内容哈希（用于去重） |
+| `archivedAt` | string | ✅ | 归档时间（ISO 8601） |
 | `processed_status` | string | ❌ | 处理状态：pending/passed/rejected |
-| `processed_at` | datetime | ❌ | 处理时间（ISO 8601） |
-| `content_hash` | string | ❌ | 转换文件 body 内容哈希（预处理时写入，用于变更检测） |
+| `processed_at` | string/null | ❌ | 处理完成时间（ISO 8601） |
 
 **注意**：情报卡片的 frontmatter 格式参见 `intelligence-output-templates` skill。
-
-对于来自 cyber-pulse API 的采集文件，转换文件会继承采集阶段的元数据：
-
-```markdown
----
-# 第一组：基础追溯字段
-sourceHash: "abc123def456..."
-originalPath: "inbox/report-2026.pdf"
-archivedAt: "2026-03-15T10:00:00Z"
-archivedSource: "archive/2026/04/report-2026.pdf"
-processed_status: "pending"
-processed_at: null
-
-# 第二组：item 来源追溯（继承自采集阶段）
-item_id: "item_a1b2c3d4"
-item_title: "原始标题"
-author: "作者"
-original_url: "https://example.com/article"
-published_at: "2026-04-01T08:00:00Z"
-fetched_at: "2026-04-01T10:30:00Z"
-completeness_score: 0.92
-
-# 第三组：情报源追溯（继承自采集阶段）
-source_id: "src_securityweekly"
-source_name: "Security Weekly"
-source_url: "https://securityweekly.com"
-source_tier: "T1"
-source_score: 85
----
-
-# 文档内容...
-```
 
 **元数据继承流程**：
 
@@ -277,7 +303,7 @@ source_score: 85
 intel-pull 采集 → inbox/*.md frontmatter → 预处理转换 → converted/*.md frontmatter → Agent 分析 → 情报卡片
 ```
 
-对于本地文档（非 cyber-pulse 来源），第二组和第三组字段为空，这是预期行为。
+对于本地文档（非 cyber-pulse 来源），`author`、`original_url`、`published_at`、`completeness_score` 以及情报源相关字段为 null，这是预期行为。cyber-pulse 文件额外包含 `source_type`、`first_seen_at`、`tags` 等采集阶段字段。
 
 ---
 
@@ -478,7 +504,7 @@ inbox/
 glob pattern: {source_dir}/converted/**/*.md
 ```
 
-然后逐个读取文件、解析 frontmatter 提取 `sourceHash`、计算内容 Hash、对比情报卡片 frontmatter。
+然后逐个读取文件、解析 frontmatter 提取 `source_hash`、计算内容 Hash、对比情报卡片 frontmatter。
 
 #### 6.3 策略 B：脚本处理（>= 50 个文件）
 
@@ -504,7 +530,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
       "source_hash": "def456...",
-      "archived_source": "archive/2026/03/report-2026.pdf",
+      "archived_file": "[[archive/2026/03/report-2026.pdf]]",
       "status": "needs_processing"
     }
   ],
@@ -521,7 +547,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 | `already_processed` | 已处理文件数（跳过） |
 | `needs_processing` | 待处理文件数 |
 | `pending_review` | 已在审核队列的文件数 |
-| `queue` | 处理队列详情（含 source_hash、archived_source） |
+| `queue` | 处理队列详情（含 source_hash、archived_file） |
 | `recommendation` | 推荐策略（`glob` 或 `script`） |
 
 #### 6.4 判断逻辑
@@ -592,7 +618,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
       "source_hash": "def456...",
-      "archived_source": "archive/2026/03/report-2026.pdf",
+      "archived_file": "[[archive/2026/03/report-2026.pdf]]",
       "status": "needs_processing"
     }
   ]
@@ -606,7 +632,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 | 字段 | 用途 |
 |------|------|
 | `needs_processing` | 本次待处理文件数 |
-| `queue` | 处理队列详情（含 content_hash、source_hash、archived_source） |
+| `queue` | 处理队列详情（含 content_hash、source_hash、archived_file） |
 
 **注意**：`total` 和 `already_processed` 是历史统计数据，**不展示给用户**。用户只关心本次待处理文件。
 
@@ -732,7 +758,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 
 **命令层职责**：
 
-1. 从内存中保存的 scan-queue 结果获取 `archived_source`（如 Agent 未返回且需要）
+1. 从内存中保存的 scan-queue 结果获取 `archived_file`（如 Agent 未返回且需要）
 
 2. 合并 Agent 结果，构造 JSON 数组
 
@@ -770,7 +796,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
     "output_files": [],
     "review_reason": "检测到高风险威胁指标，需人工确认",
     "domain": "Threat-Landscape",
-    "archived_source": "archive/2026/04/suspicious.pdf"
+    "archived_file": "[[archive/2026/04/suspicious.pdf]]"
   }
 ]
 ```
@@ -786,7 +812,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 | `output_files` | ✅ | 情报卡片文件路径数组 |
 | `review_reason` | 条件 | 待审核原因（has_strategic_value=null 时必填） |
 | `domain` | 条件 | 领域（待审核时用于生成 pending_id） |
-| `archived_source` | 条件 | 归档文件路径（待审核时记录） |
+| `archived_file` | 条件 | 归档文件链接（WikiLink 格式，待审核时记录） |
 
 **update-state.ts 执行内容**：
 - 更新转换文件 frontmatter: `processed_status`（passed/rejected）、`processed_at`
@@ -925,7 +951,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
   --review list
 ```
 
-从输出中获取 `pending_id`、`converted_file`、`archived_source`。
+从输出中获取 `pending_id`、`converted_file`、`archived_file`。
 
 #### 步骤 A2.2：检查并恢复转换文件
 
@@ -941,7 +967,7 @@ ls -la {root_dir}/{converted_file}
 ```bash
 # 从归档重新转换
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/index.ts \
-  --source {archived_source 的父目录} \
+  --source {archived_file 的父目录} \
   --root {root_dir}
 ```
 
@@ -1226,7 +1252,7 @@ Prompt 内容：
 ### 源文件去重（预处理阶段）
 
 1. 计算新源文件的 MD5 哈希
-2. 扫描 `converted/**/*.md` 文件 frontmatter 中的 `sourceHash`
+2. 扫描 `converted/**/*.md` 文件 frontmatter 中的 `source_hash`
 3. 如果哈希已存在，标记为重复文件
 4. 重复文件仍然归档（保留用户操作），但不重复转换
 
@@ -1255,7 +1281,7 @@ Prompt 内容：
       {
         "pending_id": "pending-threat-20260406-001",
         "converted_file": "converted/2026/04/report.md",
-        "archived_source": "archive/2026/04/report.pdf",
+        "archived_file": "[[archive/2026/04/report.pdf]]",
         "added_at": "2026-04-06T10:00:00Z",
         "reason": "检测到高风险威胁指标，需人工确认"
       }
@@ -1283,7 +1309,7 @@ Prompt 内容：
 | `review.items` | array | 待审核队列 |
 | `review.items[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}-{random}`） |
 | `review.items[].converted_file` | string | 转换文件路径 |
-| `review.items[].archived_source` | string | 归档文件路径 |
+| `review.items[].archived_file` | string | 归档文件链接（WikiLink 格式） |
 | `review.items[].added_at` | string | 添加时间 |
 | `review.items[].reason` | string | 审核原因 |
 | `pulse.cursors` | object | cyber-pulse API 游标（用于增量拉取） |
@@ -1384,7 +1410,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx validate-json.ts pending ./.in
 - 命令层负责调用 update-state.ts 更新转换文件 frontmatter 和 pending.json
 - 状态通过文件系统追踪，pending.json 仅存储运行时数据
 - 删除源文件或转换文件后，情报卡片仍保留（frontmatter 包含追溯信息）
-- 重新加入历史文件时会检测重复（基于转换文件 frontmatter 的 sourceHash）
+- 重新加入历史文件时会检测重复（基于转换文件 frontmatter 的 source_hash）
 - 建议将 `.intel/` 添加到 `.gitignore`
 - 转换失败的文件保留在 `inbox/`，查看 `.error.md` 了解原因
 - 情报卡片数量不设上限，根据源文档实际内容和情报价值决定（详见 `intelligence-analysis-methodology` skill）
