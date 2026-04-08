@@ -2,6 +2,18 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.2] - 2026-04-08
+
+### 优化
+
+- **报告工作流上下文优化**：`scan-cards.ts` 新增 `--format agent` 输出格式，输出轻量元数据（无正文摘要），由 Agent 按需读取卡片内容，保护主会话上下文空间
+- **代码重构**：提取 `scanCardsBase<T>()` 泛型函数，消除 `scanCards`、`scanCardsFull`、`scanCardsAgent` 三个函数的重复代码
+
+### 修复
+
+- **Obsidian 链接格式**：修复报告模板和 Agent 文件中的 Obsidian 链接格式，统一使用 `[[intelligence/{完整路径}|标题]]` 格式，确保链接在 Obsidian 中可跳转
+- **Agent 临时文件管理**：为 `intelligence-analyzer`、`intelligence-cluster`、`theme-analyzer` 三个 Agent 添加临时文件管理指导，防止残留临时文件
+
 ## [1.9.1] - 2026-04-07
 
 ### Fixed
