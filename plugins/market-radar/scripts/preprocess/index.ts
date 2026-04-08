@@ -246,18 +246,13 @@ function writeErrorLog(
   errorCode: string,
   errorMessage: string
 ): string {
-  const inboxDir = path.join(sourceDir, 'inbox');
   const filename = path.basename(sourcePath);
-  const errorLogPath = path.join(inboxDir, `${filename}.error.md`);
+  const errorLogPath = path.join(sourceDir, `${filename}.error.md`);
 
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
   const content = generateErrorLog(filename, errorCode, errorMessage, timestamp);
 
   try {
-    // Ensure inbox directory exists
-    if (!fs.existsSync(inboxDir)) {
-      fs.mkdirSync(inboxDir, { recursive: true });
-    }
     fs.writeFileSync(errorLogPath, content, 'utf-8');
     return errorLogPath;
   } catch (writeError) {
