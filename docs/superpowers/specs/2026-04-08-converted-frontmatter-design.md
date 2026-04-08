@@ -87,6 +87,7 @@ source_score: number | null  # 可选，0-100
 # ============================================
 archived_file: string        # 必填，WikiLink 格式
 content_hash: string         # 必填，body MD5
+source_hash: string          # 必填，源文件 MD5（用于去重）
 archivedAt: string           # 必填，归档时间
 
 # ============================================
@@ -131,6 +132,7 @@ source_score: null
 
 archived_file: "[[archive/2026/04/report.pdf]]"
 content_hash: "def456abc123..."
+source_hash: "abc789def456..."
 archivedAt: "2026-04-08T10:00:00Z"
 
 processed_status: "pending"
@@ -158,6 +160,7 @@ source_score: 85
 
 archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"  # 指向自身，非 archive
 content_hash: "def456abc123..."
+source_hash: "abc789def456..."  # 原始采集文件内容的 hash
 archivedAt: "2026-04-01T10:30:00Z"
 
 processed_status: "pending"
@@ -178,23 +181,41 @@ tags: ["APT", "ransomware"]
 
 | Hash | 生成位置 | 存储位置 | 用途 |
 |------|---------|---------|------|
-| `sourceHash` | 预处理 | 转换文件（已移除） | 源文件去重（场景罕见） |
-| `content_hash` | 预处理 | 转换文件 | 变更检测（核心） |
+| `source_hash` | 预处理 | 转换文件 | 源文件去重（避免重复处理相同内容） |
+| `content_hash` | 预处理 | 转换文件 | 变更检测（核心机制） |
 | `converted_content_hash` | Agent | 情报卡片 | 关联转换文件 |
 
-### 移除 sourceHash 的原因
+### 保留 source_hash 的原因
 
-**sourceHash 唯一用途**：防止"相同内容不同文件名"的重复处理。
+**source_hash 用途**：防止"相同内容不同文件名"的重复处理。
+
+**去重机制**：
+```typescript
+// 预处理扫描阶段：收集已知 source_hash
+const knownHashes = new Map<string, string>();  // source_hash → archived_path
+for (const mdPath of existingConvertedFiles) {
+  if (frontmatter?.source_hash) {
+    knownHashes.set(frontmatter.source_hash, archivedPath);
+  }
+}
+
+// 处理阶段：检查是否已处理过
+const sourceHash = calculateHash(sourcePath);
+if (knownHashes.has(sourceHash)) {
+  // 已处理过相同内容的文件，跳过
+  return { success: true, isDuplicate: true };
+}
+```
 
 **场景分析**：
 
-| 场景 | sourceHash 能检测？ | 实际频率 |
-|------|-------------------|---------|
-| 同内容不同文件名 | ✅ 能检测 | 低 |
+| 场景 | source_hash 能检测？ | 实际频率 |
+|------|---------------------|---------|
+| 同内容不同文件名 | ✅ 能检测 | 中等（转发/复制场景） |
 | 同文件名不同内容 | ❌ 不能（归档路径覆盖） | 低 |
 | 文件归档后再放入 | ❌ 不能（已处理） | 低 |
 
-**结论**：维护成本 > 价值，移除。
+**结论**：保留 `source_hash`，去重机制稳定且改动成本低。
 
 ### 保留 content_hash 的原因
 
@@ -224,11 +245,19 @@ if (recordedHash && recordedHash === contentHash) {
 |--------|--------|---------|
 | `archivedSource` | `archived_file` | `"archive/..."` → `"[[archive/...]]"` |
 
+### Hash 字段命名
+
+| 字段 | 说明 |
+|------|------|
+| `source_hash` | 源文件内容哈希（原名 `sourceHash`，改为 snake_case 统一风格） |
+| `content_hash` | 转换后 body 内容哈希（保持不变） |
+
 ### 命名一致性
 
 与情报卡片字段名保持一致：
 - `archived_file` → 情报卡片也使用 `archived_file`
 - `content_hash` → 转换文件独有，用于变更检测
+- `source_hash` → 转换文件独有，用于去重
 - `converted_content_hash` → 情报卡片独有，记录来源
 
 ---
@@ -266,15 +295,15 @@ tags: ["geo/china", "business/MSSP", "APT", "ransomware"]
 
 | 文件 | 当前字段 | 修改为 | 修改内容 |
 |------|---------|--------|---------|
-| `scripts/preprocess/index.ts` | `archivedSource`, `sourceHash`, `originalPath` | `archived_file`, 移除 `sourceHash`, 移除 `originalPath` | 重构 `generateFrontmatter()` 函数，统一字段结构 |
-| `scripts/preprocess/scan-queue.ts` | `archived_source`, `source_hash` | `archived_file`, 移除 `source_hash` | 更新 `QueueItem` 接口和读取逻辑 |
+| `scripts/preprocess/index.ts` | `archivedSource`, `sourceHash`, `originalPath` | `archived_file`, `source_hash`, 移除 `originalPath` | 重构 `generateFrontmatter()` 函数，统一字段结构 |
+| `scripts/preprocess/scan-queue.ts` | `archived_source`, `source_hash` | `archived_file`, 保留 `source_hash` | 更新 `QueueItem` 接口和读取逻辑 |
 
 ### 命令文档
 
 | 文件 | 修改内容 |
 |------|---------|
 | `commands/intel-distill.md` | 更新转换文件 frontmatter 文档，字段名和格式 |
-| `commands/references/intel-pull-guide.md` | 更新 `archivedSource` → `archived_file` |
+| `commands/references/intel-pull-guide.md` | 更新 frontmatter 示例（严重过时，需全面修正） |
 
 ### 已正确文件（无需修改）
 
@@ -461,6 +490,12 @@ const updatedFrontmatter = {
 };
 
 // 设计方案：统一字段结构
+// 1. 计算转换后的文件路径（用于 archived_file）
+const convertedRelativePath = path.relative(sourceDir, convertedPath);
+
+// 2. 计算 source_hash（从原始文件内容）
+const sourceHash = createHash('md5').update(originalContent).digest('hex');
+
 const updatedFrontmatter = {
   // 第一组：item 来源追溯（字段名映射）
   item_id: frontmatter.item_id,
@@ -481,6 +516,7 @@ const updatedFrontmatter = {
   // 第三组：文件追溯
   archived_file: `[[${convertedRelativePath}]]`,  // WikiLink，指向自身
   content_hash: contentHash,
+  source_hash: sourceHash,
   archivedAt: frontmatter.first_seen_at,
 
   // 第四组：处理状态
@@ -500,7 +536,7 @@ const updatedFrontmatter = {
 
 ### 1. `scripts/preprocess/index.ts`
 
-#### 1.1 移除 `generateFrontmatter()` 函数
+#### 1.1 重构 `generateFrontmatter()` 函数
 
 当前函数生成：
 ```yaml
@@ -510,7 +546,7 @@ archivedAt: "..."
 archivedSource: "..."
 ```
 
-需要替换为统一结构函数。
+需要替换为统一结构函数，移除 `originalPath`（预处理后文件已移动，无需记录原路径）。
 
 #### 1.2 新增 `generateLocalFileFrontmatter()` 函数
 
@@ -535,6 +571,7 @@ interface LocalFileFrontmatter {
   // 第三组：文件追溯
   archived_file: string;  // WikiLink 格式
   content_hash: string;
+  source_hash: string;
   archivedAt: string;
 
   // 第四组：处理状态
@@ -543,10 +580,11 @@ interface LocalFileFrontmatter {
 }
 
 function generateLocalFileFrontmatter(
-  contentHash: string,     // body MD5
-  filename: string,        // 用于生成 item_title
-  archivedPath: string,    // 用于生成 archived_file
-  fetchedAt: string        // 处理时间
+  sourceHash: string,        // 源文件 MD5（用于去重）
+  contentHash: string,       // body MD5
+  filename: string,          // 用于生成 item_title
+  archivedPath: string,      // 用于生成 archived_file
+  fetchedAt: string          // 处理时间
 ): string {
   // item_id: item_ + contentHash 前 8 位
   const itemId = `item_${contentHash.slice(0, 8)}`;
@@ -574,6 +612,7 @@ source_score: null
 
 archived_file: "${archivedFile}"
 content_hash: "${contentHash}"
+source_hash: "${sourceHash}"
 archivedAt: "${fetchedAt}"
 
 processed_status: "pending"
@@ -583,16 +622,24 @@ processed_at: null
 }
 ```
 
-#### 1.3 修改去重逻辑
+#### 1.3 去重逻辑保持不变
 
-移除 `sourceHash` 后，改用文件路径去重：
+保留现有的 `knownHashes` 去重机制，只需将字段名从 `sourceHash` 改为 `source_hash`：
 
 ```typescript
-// 修改前：基于 sourceHash 去重
-if (knownHashes.has(sourceHash)) { ... }
+// 扫描阶段：收集已知 source_hash
+for (const mdPath of existingConvertedFiles) {
+  const frontmatter = parseFrontmatter(content);
+  if (frontmatter?.source_hash) {  // 改为 snake_case
+    knownHashes.set(frontmatter.source_hash, archivedPath);
+  }
+}
 
-// 修改后：基于归档路径去重（已存在的逻辑）
-// 文件归档后同名文件会被覆盖，天然去重
+// 处理阶段：检查是否已处理
+const sourceHash = calculateHash(sourcePath);
+if (knownHashes.has(sourceHash)) {
+  return { success: true, isDuplicate: true };
+}
 ```
 
 ### 2. `scripts/preprocess/scan-queue.ts`
@@ -604,7 +651,7 @@ if (knownHashes.has(sourceHash)) { ... }
 interface QueueItem {
   file: string;
   content_hash: string;
-  source_hash?: string;      // ← 移除
+  source_hash?: string;      // ← 保留，重命名自 sourceHash
   archived_source?: string;  // ← 改名
   status: QueueItemStatus;
 }
@@ -613,6 +660,7 @@ interface QueueItem {
 interface QueueItem {
   file: string;
   content_hash: string;
+  source_hash?: string;      // 保留
   archived_file?: string;    // ← 新名称
   status: QueueItemStatus;
 }
@@ -626,7 +674,8 @@ const sourceHash = frontmatter?.sourceHash;
 const archivedSource = frontmatter?.archivedSource;
 
 // 修改后
-const archivedFile = frontmatter?.archived_file;
+const sourceHash = frontmatter?.source_hash;  // snake_case
+let archivedFile = frontmatter?.archived_file;
 // 提取 WikiLink 中的路径
 if (archivedFile) {
   archivedFile = archivedFile.replace(/^\[\[/, '').replace(/\]\]$/, '');
@@ -678,8 +727,8 @@ const CYBER_PULSE_REQUIRED_FIELDS = ['item_id', 'source_type', 'first_seen_at', 
 3. 验证转换文件 frontmatter：
    - 包含所有字段（空值为 `null`）
    - `archived_file` 为 WikiLink 格式
-   - `content_hash` 存在
-   - 无 `sourceHash` 和 `originalPath`
+   - `content_hash` 和 `source_hash` 都存在
+   - 无 `originalPath`（已移除）
 
 ### 测试 2：cyber-pulse 文件预处理
 
@@ -687,8 +736,9 @@ const CYBER_PULSE_REQUIRED_FIELDS = ['item_id', 'source_type', 'first_seen_at', 
 2. 执行预处理
 3. 验证转换文件 frontmatter：
    - 继承采集阶段的元数据
-   - 添加 `content_hash`
+   - 添加 `content_hash` 和 `source_hash`
    - `archived_file` 为 WikiLink 格式
+   - `source_type` 字段保留
 
 ### 测试 3：Obsidian 兼容性
 
@@ -701,7 +751,13 @@ const CYBER_PULSE_REQUIRED_FIELDS = ['item_id', 'source_type', 'first_seen_at', 
 
 1. 执行 `scan-queue.ts` 脚本
 2. 验证输出包含 `archived_file` 字段
-3. 验证不含 `source_hash` 字段
+3. 验证包含 `source_hash` 字段
+
+### 测试 5：去重机制
+
+1. 预处理一个文件
+2. 再次放入同名文件（相同内容）
+3. 验证第二次处理时被正确识别为重复
 
 ---
 
@@ -709,7 +765,7 @@ const CYBER_PULSE_REQUIRED_FIELDS = ['item_id', 'source_type', 'first_seen_at', 
 
 | 修改 | 影响 |
 |------|------|
-| 移除 `sourceHash` | 预处理去重改用文件路径（已实现） |
+| 保留 `source_hash` | 去重机制无需改动，只需字段名改为 snake_case |
 | 移除 `originalPath` | 无影响（未被使用） |
 | `archivedSource` → `archived_file` | scan-queue.ts、intel-distill.md 需同步修改 |
 | WikiLink 格式 | Obsidian 中可直接跳转 |
