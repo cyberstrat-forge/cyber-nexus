@@ -103,7 +103,7 @@ async function convertPdfWithPdftotext(filePath: string): Promise<string> {
   const result = execFileSync(
     'pdftotext',
     [filePath, '-', '-layout'],
-    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 } // 50MB buffer
+    { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024, timeout: 120000 } // 50MB buffer, 2min timeout
   );
   return result;
 }
@@ -169,7 +169,7 @@ async function convertDocx(filePath: string): Promise<string> {
   const result = execFileSync(
     'pandoc',
     [filePath, '-t', 'markdown', '--wrap=none'],
-    { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
+    { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 60000 } // 10MB buffer, 1min timeout
   );
   return result;
 }
