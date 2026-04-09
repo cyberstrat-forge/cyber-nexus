@@ -12,8 +12,8 @@
   - cyber-pulse 文件现在正确识别并处理
 
 - **WikiLink 路径修复**：使用 `rootDir` 作为路径基准，消除 `../` 前缀
-  - `archived_file` 路径现在在 Obsidian 中可正确跳转
-  - cyber-pulse 文件的 `archived_file` 正确指向自身
+  - 本地文件 `archived_file` 在 Obsidian 中可正确跳转
+  - cyber-pulse 文件 `archived_file` 设为 null（无归档文件）
 
 - **文件名规范化**：archive 文件名应用 `normalizeFilename()`
   - 确保 archive 和 converted 文件名编码一致
