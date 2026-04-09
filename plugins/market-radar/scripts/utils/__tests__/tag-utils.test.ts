@@ -58,6 +58,56 @@ describe('tag-utils', () => {
     it('should preserve Japanese characters', () => {
       expect(normalizeObsidianTag('セキュリティ')).toBe('セキュリティ');
     });
+
+    // 边界用例测试
+    describe('edge cases', () => {
+      // 空值和空白测试
+      it('should return empty string for null', () => {
+        expect(normalizeObsidianTag(null as unknown as string)).toBe('');
+      });
+
+      it('should return empty string for undefined', () => {
+        expect(normalizeObsidianTag(undefined as unknown as string)).toBe('');
+      });
+
+      it('should return empty string for empty string', () => {
+        expect(normalizeObsidianTag('')).toBe('');
+      });
+
+      it('should return empty string for whitespace only', () => {
+        expect(normalizeObsidianTag('   ')).toBe('');
+      });
+
+      // 无效 tag 测试
+      it('should return empty string for all special chars', () => {
+        expect(normalizeObsidianTag('---')).toBe('');
+      });
+
+      it('should return empty string for multiple special chars', () => {
+        expect(normalizeObsidianTag(':::')).toBe('');
+      });
+
+      // 首尾字符处理测试
+      it('should remove leading/trailing hyphens', () => {
+        expect(normalizeObsidianTag('-tag-')).toBe('tag');
+      });
+
+      it('should collapse consecutive hyphens', () => {
+        expect(normalizeObsidianTag('tag--name')).toBe('tag-name');
+      });
+
+      it('should remove leading/trailing special chars', () => {
+        expect(normalizeObsidianTag('/geo:china/')).toBe('geo/china');
+      });
+
+      it('should trim whitespace before processing', () => {
+        expect(normalizeObsidianTag('  spaced  ')).toBe('spaced');
+      });
+
+      it('should handle multiple colons with edge chars', () => {
+        expect(normalizeObsidianTag('::nested::')).toBe('nested');
+      });
+    });
   });
 
   describe('normalizeObsidianTags', () => {
