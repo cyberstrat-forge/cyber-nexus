@@ -446,7 +446,7 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
 function processCyberPulseFile(
   sourcePath: string,
   convertedDir: string,
-  sourceDir: string,  // 改为使用此参数
+  rootDir: string,
   knownFiles: Set<string>,
   _dateRef: Date
 ): PreprocessResult {
@@ -465,7 +465,7 @@ function processCyberPulseFile(
   // Validate required fields
   const validationError = validateCyberPulseFile(sourcePath);
   if (validationError) {
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', validationError);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'INVALID_PULSE_FORMAT', validationError);
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: validationError },
@@ -479,7 +479,7 @@ function processCyberPulseFile(
     content = fs.readFileSync(sourcePath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'READ_FAILED', message);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'READ_FAILED', message);
     return {
       success: false,
       error: { code: 'READ_FAILED', message },
@@ -489,12 +489,12 @@ function processCyberPulseFile(
 
   // Calculate paths for archived_file WikiLink (points to converted/ directory)
   const convertedPath = path.join(convertedDir, filename);
-  const convertedRelativePath = path.relative(sourceDir, convertedPath);
+  const convertedRelativePath = path.relative(rootDir, convertedPath);
 
   // Parse frontmatter
   const frontmatter = parseFrontmatter(content);
   if (!frontmatter) {
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', 'Missing frontmatter');
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'INVALID_PULSE_FORMAT', 'Missing frontmatter');
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: 'Missing frontmatter' },
@@ -557,7 +557,7 @@ function processCyberPulseFile(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const errorMsg = `Failed to create converted directory: ${message}`;
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'WRITE_FAILED', errorMsg);
     return {
       success: false,
       error: { code: 'WRITE_FAILED', message: errorMsg },
@@ -571,7 +571,7 @@ function processCyberPulseFile(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const errorMsg = `Failed to write converted file: ${message}`;
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'WRITE_FAILED', errorMsg);
     return {
       success: false,
       error: { code: 'WRITE_FAILED', message: errorMsg },
