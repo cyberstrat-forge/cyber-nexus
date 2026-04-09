@@ -206,7 +206,7 @@ describe('tag-utils', () => {
 - [ ] **Step 4: 运行测试验证通过**
 
 Run: `cd plugins/market-radar/scripts && pnpm exec vitest run utils/__tests__/tag-utils.test.ts`
-Expected: 4 tests pass
+Expected: 5 tests pass
 
 - [ ] **Step 5: 编写特殊符号测试**
 
@@ -230,6 +230,10 @@ describe('tag-utils', () => {
 
     it('should handle multiple colons for deep nesting', () => {
       expect(normalizeObsidianTag('geo:asia:china')).toBe('geo/asia/china');
+    });
+
+    it('should handle colon with existing slash', () => {
+      expect(normalizeObsidianTag('geo:china/beijing')).toBe('geo/china/beijing');
     });
 
     it('should replace special symbols with hyphen', () => {
@@ -262,7 +266,7 @@ describe('tag-utils', () => {
 - [ ] **Step 6: 运行测试验证通过**
 
 Run: `cd plugins/market-radar/scripts && pnpm exec vitest run utils/__tests__/tag-utils.test.ts`
-Expected: 9 tests pass
+Expected: 10 tests pass
 
 - [ ] **Step 7: 编写 Unicode/中文保留测试**
 
@@ -296,7 +300,7 @@ describe('tag-utils', () => {
 - [ ] **Step 8: 运行测试验证通过**
 
 Run: `cd plugins/market-radar/scripts && pnpm exec vitest run utils/__tests__/tag-utils.test.ts`
-Expected: 12 tests pass
+Expected: 13 tests pass
 
 - [ ] **Step 9: 提交基本用例测试**
 
@@ -411,6 +415,10 @@ describe('tag-utils', () => {
 
       it('should remove leading/trailing hyphens', () => {
         expect(normalizeObsidianTag('-tag-')).toBe('tag');
+      });
+
+      it('should collapse consecutive hyphens', () => {
+        expect(normalizeObsidianTag('tag--name')).toBe('tag-name');
       });
 
       it('should remove leading/trailing special chars', () => {
@@ -691,7 +699,7 @@ EOF
 
 ### 测试
 
-- 新增 `tag-utils.test.ts`，覆盖基本用例和边界用例（21 个测试用例）
+- 新增 `tag-utils.test.ts`，覆盖基本用例和边界用例（23 个测试用例）
 ```
 
 - [ ] **Step 2: 提交 CHANGELOG 更新**
