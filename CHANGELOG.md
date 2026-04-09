@@ -6,6 +6,31 @@
 
 ---
 
+## [1.0.38] - 2026-04-09
+
+### 插件更新
+
+#### market-radar v1.9.6
+
+**新增**
+- `source_type` 字段：区分本地文件和 cyber-pulse 文件来源
+- 多行数组解析：`parseFrontmatter` 支持 YAML 多行数组格式
+
+**修复**
+- YAML 解析：支持无引号 YAML 值（null、boolean、number）
+- WikiLink 路径：使用 `rootDir` 作为基准，消除 `../` 前缀
+- 文件名规范化：archive 文件名应用 `normalizeFilename()`
+- scan-queue 简化：使用 `processed_status` 作为唯一状态来源
+- 错误处理：区分 ENOENT 和意外错误，改进日志输出
+
+**移除**
+- 移除无用的 `session_id` 参数和 `generated_session` 字段
+
+**测试**
+- 新增 59 个测试用例（frontmatter 解析、预处理路径）
+
+---
+
 ## [1.0.37] - 2026-04-08
 
 ### 插件更新
