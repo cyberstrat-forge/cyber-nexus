@@ -6,6 +6,11 @@
 
 ### 修复
 
+- **YAML 解析修复**：`parseFrontmatter` 支持无引号 YAML 值
+  - 修复 `source_type: cyber-pulse` 无法被解析的问题
+  - 支持 null、boolean、number 类型
+  - cyber-pulse 文件现在正确识别并处理
+
 - **WikiLink 路径修复**：使用 `rootDir` 作为路径基准，消除 `../` 前缀
   - `archived_file` 路径现在在 Obsidian 中可正确跳转
   - cyber-pulse 文件的 `archived_file` 正确指向自身
