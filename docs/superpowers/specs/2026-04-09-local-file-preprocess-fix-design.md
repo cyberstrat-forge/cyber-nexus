@@ -1,7 +1,7 @@
 # 本地文件预处理路径修复设计
 
 **日期**: 2026-04-09
-**版本**: 1.1
+**版本**: 1.2
 **状态**: 设计中
 
 ## 问题概述
@@ -176,7 +176,23 @@ async function processFile(
 |------|---------|--------|--------|
 | 665-678 | 删除 | hash 计算和去重检查 | 由 batchProcess() 统一处理 |
 | ~695 | 修改 | `writeErrorLog(sourcePath, sourceDir, ...)` | `writeErrorLog(sourcePath, path.dirname(sourcePath), ...)` |
+| ~726-728 | 修改 | `path.basename(sourcePath, ...)` 直接传给 `generateLocalFileFrontmatter` | 先规范化再传递 |
 | ~740 | 修改 | `path.relative(sourceDir, archivePath)` | `path.relative(rootDir, archivePath)` |
+
+**新增代码**（在调用 `generateLocalFileFrontmatter` 前）：
+```typescript
+// 规范化文件名，用于 item_title
+const rawFilename = path.basename(sourcePath);
+const normalizedFilename = normalizeFilename(rawFilename);
+
+const frontmatter = generateLocalFileFrontmatter(
+  sourceHash,
+  contentHash,
+  normalizedFilename,  // 使用规范化后的文件名
+  relativeArchivePath,
+  now
+);
+```
 
 **说明**：
 - 移除 `knownHashes` 参数，去重由 `batchProcess()` 统一处理
@@ -302,6 +318,8 @@ if (result.success && result.convertedPath) {
 | 场景 | 修改前 | 修改后 |
 |------|--------|--------|
 | archive 文件名 | 保留原始 Unicode（如 `报告：2024.pdf`） | 规范化为 ASCII（如 `报告:2024.pdf`） |
+| converted 文件名 | 已规范化 | 保持不变 |
+| `item_title` 字段 | 保留原始 Unicode | 规范化为 ASCII |
 | `archived_file` 路径 | `[[../archive/2026/04/report.pdf\|report.pdf]]` | `[[archive/2026/04/report.pdf\|report.pdf]]` |
 | cyber-pulse `archived_file` | `[[../converted/2026/04/item_xxx.md\|item_xxx.md]]` | `[[converted/2026/04/item_xxx.md\|item_xxx.md]]` |
 | 错误日志位置 | `sourceDir/`（通常是 `rootDir/inbox`） | `path.dirname(sourcePath)/`（源文件所在目录） |
@@ -313,17 +331,27 @@ if (result.success && result.convertedPath) {
 
 ## 测试验证
 
-### 测试用例 1：本地 PDF 文件预处理
+### 测试用例 1：本地 PDF 文件预处理（Unicode 文件名）
 
-1. 放置包含 Unicode 字符的 PDF 文件到 `inbox/`（如 `Buyers' Guide.pdf`）
+1. 放置包含 Unicode 字符的 PDF 文件到 `inbox/`（如 `Buyers' Guide: 2024.pdf`）
 2. 执行 `pnpm run preprocess`
 3. 验证：
-   - archive 文件名规范化为 `Buyers' Guide.pdf`
-   - converted 文件名为 `Buyers' Guide.md`
-   - frontmatter 中 `archived_file` 为 `[[archive/2026/04/Buyers' Guide.pdf|Buyers' Guide.pdf]]`
+   - archive 文件名规范化为 `Buyers' Guide: 2024.pdf`
+   - converted 文件名为 `Buyers' Guide: 2024.md`
+   - frontmatter 中 `item_title` 为 `Buyers' Guide: 2024`（规范化）
+   - frontmatter 中 `archived_file` 为 `[[archive/2026/04/Buyers' Guide: 2024.pdf|Buyers' Guide: 2024.pdf]]`
    - 在 Obsidian 中点击链接可跳转到 archive 文件
 
-### 测试用例 2：cyber-pulse 文件预处理
+### 测试用例 2：本地 DOCX 文件预处理
+
+1. 放置 DOCX 文件到 `inbox/`
+2. 执行 `pnpm run preprocess`
+3. 验证：
+   - 转换正常完成
+   - archive 和 converted 文件正确生成
+   - WikiLink 路径正确
+
+### 测试用例 3：cyber-pulse 文件预处理
 
 1. 使用 `/intel-pull` 拉取文件
 2. 执行 `pnpm run preprocess`
@@ -331,13 +359,49 @@ if (result.success && result.convertedPath) {
    - `archived_file` 为 `[[converted/2026/04/item_xxx.md|item_xxx.md]]`
    - 在 Obsidian 中点击链接可跳转到自身
 
-### 测试用例 3：自定义 sourceDir
+### 测试用例 4：嵌套目录文件处理
+
+1. 放置文件到 `inbox/subfolder/report.pdf`
+2. 执行 `pnpm run preprocess`
+3. 验证：
+   - archive 文件生成到 `archive/2026/04/report.pdf`（扁平化）
+   - converted 文件生成到 `converted/2026/04/report.md`
+   - WikiLink 路径正确（无 `../` 前缀）
+
+### 测试用例 5：同批次重复文件
+
+1. 放置两个内容相同的文件到 `inbox/`（如 `report.pdf` 和 `copy/report.pdf`）
+2. 执行 `pnpm run preprocess`
+3. 验证：
+   - 第一个文件正常处理
+   - 第二个文件被识别为重复，跳过处理
+   - 输出显示正确的重复计数
+
+### 测试用例 6：跨批次重复文件
+
+1. 处理 `inbox/report.pdf`
+2. 再次放入相同内容的文件 `inbox/new_report.pdf`
+3. 执行 `pnpm run preprocess`
+4. 验证：
+   - `new_report.pdf` 被识别为重复
+   - 返回正确的 converted 文件路径
+
+### 测试用例 7：自定义 sourceDir
 
 1. 执行 `pnpm run preprocess -- --source /custom/path`
 2. 验证：
    - 转换文件正常生成
    - 错误日志（如有）写在 `/custom/path/`
    - WikiLink 路径仍以 `rootDir` 为基准
+
+### 测试用例 8：转换失败场景
+
+1. 放置损坏的 PDF 文件到 `inbox/`
+2. 执行 `pnpm run preprocess`
+3. 验证：
+   - 错误日志生成到源文件所在目录
+   - 错误日志内容正确
+   - 其他文件正常处理
 
 ---
 
