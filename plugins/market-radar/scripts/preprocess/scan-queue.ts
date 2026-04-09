@@ -275,9 +275,18 @@ function scanAndBuildQueue(
     // Support both new and legacy field names for backward compatibility
     const sourceHash = frontmatter?.source_hash || frontmatter?.sourceHash;
 
-    let archivedFile = frontmatter?.archived_file || frontmatter?.archivedSource;
-    // Extract path from WikiLink if present
-    if (archivedFile) {
+    // archived_file can be: WikiLink string, null (cyber-pulse), or undefined
+    // Use 'in' operator to check if key exists, preserving null value
+    let archivedFile: string | null | undefined;
+    if (frontmatter && 'archived_file' in frontmatter) {
+      archivedFile = frontmatter.archived_file;
+    } else if (frontmatter?.archivedSource !== undefined) {
+      archivedFile = frontmatter.archivedSource;
+    } else {
+      archivedFile = undefined;
+    }
+    // Extract path from WikiLink if present (only for string values)
+    if (typeof archivedFile === 'string' && archivedFile) {
       const extractedPath = fromWikiLink(archivedFile);
       if (extractedPath !== null) {
         archivedFile = extractedPath;
