@@ -485,7 +485,7 @@ first_seen_at: "2026-04-01T09:00:00Z"
 title: "某APT组织近期攻击活动分析"
 url: "https://example.com/article"
 author: "安全研究员"
-tags: ["APT", "威胁情报"]
+tags: ["APT", "威胁情报", "geo/china"]
 published_at: "2026-04-01T08:00:00Z"
 
 # ============================================
@@ -525,7 +525,7 @@ archived_path: ""
 | `title` | string | ✅ | 文档标题 |
 | `url` | string | ❌ | 原文链接 |
 | `author` | string | ❌ | 作者 |
-| `tags` | array | ❌ | 标签列表 |
+| `tags` | array | ❌ | 标签列表（自动规范化为 Obsidian 格式） |
 | `published_at` | datetime | ❌ | 原文发布时间 |
 | `source_id` | string | ❌ | 情报源 ID（来自 `source.source_id`） |
 | `source_name` | string | ❌ | 情报源名称（来自 `source.source_name`） |
@@ -536,6 +536,22 @@ archived_path: ""
 | `word_count` | number | ❌ | 正文字数 |
 | `content_hash` | string | ✅ | 正文 MD5 哈希（预处理脚本填充） |
 | `archived_path` | string | ❌ | 归档路径（cyber-pulse 文件为空） |
+
+### Tag 规范化
+
+`tags` 字段会自动规范化以符合 Obsidian 标签规范：
+
+- 空格 → 连字符 `-`
+- 冒号 `:` → 正斜杠 `/`（保持嵌套语义）
+- 特殊符号 → 连字符 `-`
+- 保留中文/Unicode 字符
+- 无效 tag（如 `---`）会被过滤
+
+| 原始 tag | 规范化后 |
+|----------|---------|
+| `"threat intelligence"` | `"threat-intelligence"` |
+| `"geo:china"` | `"geo/china"` |
+| `"C++"` | `"C"` |
 
 **字段映射说明**（API v1 → frontmatter）：
 - `id` → `item_id`
