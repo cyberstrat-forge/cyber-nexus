@@ -13,42 +13,19 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { glob } from 'glob';
 import type { ReportType, ScannedReport, ScanReportsOptions } from './types/report';
+import { parseFrontmatter as parseFrontmatterBase } from '../utils/frontmatter';
 
 /**
- * 解析 frontmatter
+ * Parse frontmatter and return both data and body content
+ * Wraps the shared parseFrontmatter for compatibility with this script
  */
 function parseFrontmatter(content: string): { data: Record<string, unknown>; body: string } {
-  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
-  if (!match) {
-    return { data: {}, body: content };
-  }
+  // Extract body content first
+  const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n([\s\S]*)$/);
+  const body = match ? match[1] : content;
 
-  const frontmatterStr = match[1];
-  const body = match[2];
-  const data: Record<string, unknown> = {};
-
-  const lines = frontmatterStr.split('\n');
-  for (const line of lines) {
-    const colonIndex = line.indexOf(':');
-    if (colonIndex > 0) {
-      const key = line.slice(0, colonIndex).trim();
-      let value: string | string[] = line.slice(colonIndex + 1).trim();
-
-      if ((value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-
-      if (value.startsWith('[') && value.endsWith(']')) {
-        const inner = value.slice(1, -1).trim();
-        value = inner === '' ? [] : inner.split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
-      }
-
-      data[key] = value;
-    }
-  }
-
-  return { data, body };
+  const data = parseFrontmatterBase(content);
+  return { data: data || {}, body };
 }
 
 /**
