@@ -54,18 +54,15 @@ skills:
 
 **文件格式**：统一的 Markdown，已清洗噪声 token，包含 frontmatter 元数据
 
-**步骤 1.1：解析 frontmatter（v3.0 四组结构）**
+**步骤 1.1：解析 frontmatter**
 
-从转换文件的 frontmatter 中提取元数据，分为四组：
+转换文件 frontmatter 采用四组层次结构，详见 [templates.md](../skills/intelligence-output-templates/references/templates.md)。
 
-**第一组：核心标识（生成）**
-- 由 Agent 分析生成，详见后续步骤
-
-**第二组：item 来源追溯（继承 + 预处理）**
+从转换文件中提取的关键字段：
 
 | 字段 | 说明 | 必填 |
 |------|------|------|
-| `source_type` | 来源类型：`local` 或 `cyber-pulse` | ✅ |
+| `source_type` | 来源类型：`local` 或 `cyber-pulse` | ✅ (可推断) |
 | `item_id` | 采集阶段标识（格式：`item_{8位hex}`） | ✅ |
 | `item_title` | item 标题 | ✅ |
 | `author` | 作者 | ❌ |
@@ -76,25 +73,27 @@ skills:
 | `archived_file` | 归档文件链接（WikiLink，本地文件）/ null（cyber-pulse） | ✅ |
 | `converted_file` | 转换文件链接（WikiLink） | ✅ |
 | `converted_content_hash` | 转换文件的 content_hash | ✅ |
-
-**第三组：情报源追溯（继承）**
-
-| 字段 | 说明 | 必填 |
-|------|------|------|
 | `source_id` | 情报源 ID | ❌ |
 | `source_name` | 情报源名称 | ❌ |
 | `source_url` | 情报源 URL | ❌ |
 | `source_tier` | 情报源等级 T0-T3 | ❌ |
 | `source_score` | 情报源评分 0-100 | ❌ |
 
-**frontmatter 示例**：
+**`source_type` 推断逻辑（向后兼容）**：
+
+如果转换文件缺少 `source_type` 字段，按以下规则推断：
+
+| 条件 | source_type 值 |
+|------|----------------|
+| `archived_file` 为字符串（非 null） | `"local"` |
+| `archived_file` 为 `null` | `"cyber-pulse"` |
+| `archived_file` 不存在 | `"local"` (默认) |
+
+**转换文件 frontmatter 示例**：
 
 ```yaml
 ---
-# 第一组：来源标识
 source_type: "cyber-pulse"
-
-# 第二组：item 来源追溯
 item_id: "item_a1b2c3d4"
 item_title: "Lazarus Group's New Malware Campaign"
 author: "Security Research Team"
@@ -105,8 +104,6 @@ completeness_score: 0.92
 archived_file: null
 converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md|20260401-item_a1b2c3d4.md]]"
 converted_content_hash: "a1b2c3d4e5f6"
-
-# 第三组：情报源追溯
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
 source_url: "https://securityweekly.com"
@@ -310,16 +307,13 @@ tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 - 例如：文件 `20260406-lazarus-malware.md` → ID `threat-20260406-lazarus-malware`
 
 **内容生成**：
-- Frontmatter：四组层次结构（核心标识 + item追溯 + 情报源追溯 + 处理状态）
+- Frontmatter：四组层次结构（核心标识 + item追溯 + 情报源追溯 + 处理状态），详见 [templates.md](../skills/intelligence-output-templates/references/templates.md)
 - Body：按领域模板填充各章节
 
-**持久化元数据（v3.0 四组结构）**：
+**情报卡片 frontmatter 示例**：
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识（生成）
-# ============================================
 intelligence_id: "threat-20260406-lazarus-malware"
 title: "APT组织Lazarus利用新型恶意软件攻击金融机构"
 created_date: "2026-04-02"
@@ -327,10 +321,6 @@ primary_domain: "Threat-Landscape"
 secondary_domains: ["Vendor-Intelligence"]
 security_relevance: "high"
 tags: ["geo/china-primary", "APT", "Lazarus", "financial-sector", "malware"]
-
-# ============================================
-# 第二组：item 来源追溯（继承 + 预处理）
-# ============================================
 source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "Lazarus Group's New Malware Campaign Targets Financial Institutions"
@@ -342,19 +332,11 @@ completeness_score: 0.92
 archived_file: null
 converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md|20260401-item_a1b2c3d4.md]]"
 converted_content_hash: "a1b2c3d4e5f6"
-
-# ============================================
-# 第三组：情报源追溯（继承）
-# ============================================
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
 source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
-
-# ============================================
-# 第四组：处理状态（生成）
-# ============================================
 review_status: "passed"
 generated_by: "intelligence-analyzer"
 ---
