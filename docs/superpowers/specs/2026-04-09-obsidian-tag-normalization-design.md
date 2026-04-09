@@ -124,7 +124,7 @@ if (content.tags && content.tags.length > 0) {
 | `"threat intelligence"` | `"threat-intelligence"` | 空格替换为 `-` |
 | `"geo:china"` | `"geo/china"` | 嵌套分隔符 |
 | `"geo:china/beijing"` | `"geo/china/beijing"` | 多层嵌套 |
-| `"C++"` | `"C-"` | 特殊符号+合并 |
+| `"C++"` | `"C"` | 特殊符号+合并+尾随移除 |
 | `"#security"` | `"security"` | 移除 `#` 前缀 |
 | `"威胁情报"` | `"威胁情报"` | 中文保留 |
 | `"AI, ML"` | `"AI-ML"` | 多字符合并 |

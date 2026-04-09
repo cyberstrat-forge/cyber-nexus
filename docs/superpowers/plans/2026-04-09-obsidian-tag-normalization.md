@@ -237,7 +237,7 @@ describe('tag-utils', () => {
     });
 
     it('should replace special symbols with hyphen', () => {
-      expect(normalizeObsidianTag('C++')).toBe('C-');
+      expect(normalizeObsidianTag('C++')).toBe('C');
     });
 
     it('should remove hash prefix', () => {
