@@ -237,9 +237,8 @@
           "description": "Content completeness score 0-1 (optional, inherited from collection)"
         },
         "archived_file": {
-          "type": "string",
-          "pattern": "^\\[\\[.+\\]\\]$",
-          "description": "Archived file path (WikiLink format: [[archive/YYYY/MM/filename|alias]])"
+          "type": ["string", "null"],
+          "description": "Archived file path (WikiLink format for local files, null for cyber-pulse files which have no archive)"
         },
         "converted_file": {
           "type": "string",

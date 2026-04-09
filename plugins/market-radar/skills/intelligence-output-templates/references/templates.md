@@ -29,7 +29,7 @@
 │ published_at       - 原文发布时间                             │
 │ fetched_at         - 采集时间                                 │
 │ completeness_score - 完整度 0-1                               │
-│ archived_file      - 归档文件链接 WikiLink                    │
+│ archived_file      - 归档文件链接 WikiLink（本地文件）/ null（cyber-pulse）    │
 │ converted_file     - 转换文件链接 WikiLink                    │
 │ converted_content_hash - 转换文件内容哈希（变更检测）        │
 └─────────────────────────────────────────────────────────────┘

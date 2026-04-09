@@ -74,7 +74,7 @@ interface CardMetadataFull {
   item_title?: string;
   original_url?: string;
   completeness_score?: number;
-  archived_file?: string;
+  archived_file?: string | null;
   converted_file?: string;
   card_path: string;
   body_summary?: string;

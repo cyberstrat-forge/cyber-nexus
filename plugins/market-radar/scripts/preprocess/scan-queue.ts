@@ -42,7 +42,7 @@ export interface QueueItem {
   file: string;           // Relative path from source_dir
   content_hash: string;   // MD5 hash of file content
   source_hash?: string;   // MD5 hash of original source file (from frontmatter)
-  archived_file?: string; // WikiLink path to archived/converted file (from frontmatter)
+  archived_file?: string | null; // WikiLink path to archived file (from frontmatter), null for cyber-pulse
   status: QueueItemStatus;
 }
 
@@ -79,7 +79,7 @@ export interface ScanQueueResult {
  */
 interface ConvertedFrontmatter {
   // New fields (unified format)
-  archived_file?: string;
+  archived_file?: string | null;
   content_hash?: string;
   source_hash?: string;
   archived_at?: string;

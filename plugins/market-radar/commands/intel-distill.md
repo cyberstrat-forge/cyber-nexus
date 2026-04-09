@@ -288,7 +288,7 @@ tags: ["APT", "ransomware"]
 | `source_url` | string/null | ❌ | 情报源 URL |
 | `source_tier` | string/null | ❌ | 情报源等级 T0-T3 |
 | `source_score` | number/null | ❌ | 情报源评分 0-100 |
-| `archived_file` | string | ✅ | 归档/转换文件链接（WikiLink 格式） |
+| `archived_file` | string/null | ✅ | 归档文件链接（WikiLink 格式，cyber-pulse 文件为 null） |
 | `content_hash` | string | ✅ | 转换文件 body 内容哈希（用于变更检测） |
 | `source_hash` | string | ✅ | 源文件内容哈希（用于去重） |
 | `archivedAt` | string | ✅ | 归档时间（ISO 8601） |
@@ -547,7 +547,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 | `already_processed` | 已处理文件数（跳过） |
 | `needs_processing` | 待处理文件数 |
 | `pending_review` | 已在审核队列的文件数 |
-| `queue` | 处理队列详情（含 source_hash、archived_file） |
+| `queue` | 处理队列详情（含 source_hash、archived_file） | `archived_file` 可为 null（cyber-pulse 文件） |
 | `recommendation` | 推荐策略（`glob` 或 `script`） |
 
 #### 6.4 判断逻辑
@@ -632,7 +632,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 | 字段 | 用途 |
 |------|------|
 | `needs_processing` | 本次待处理文件数 |
-| `queue` | 处理队列详情（含 content_hash、source_hash、archived_file） |
+| `queue` | 处理队列详情（含 content_hash、source_hash、archived_file） | `archived_file` 可为 null（cyber-pulse 文件） |
 
 **注意**：`total` 和 `already_processed` 是历史统计数据，**不展示给用户**。用户只关心本次待处理文件。
 
@@ -796,7 +796,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
     "output_files": [],
     "review_reason": "检测到高风险威胁指标，需人工确认",
     "domain": "Threat-Landscape",
-    "archived_file": "[[archive/2026/04/suspicious.pdf|suspicious.pdf]]"
+    "archived_source": "archive/2026/04/suspicious.pdf"
   }
 ]
 ```
@@ -812,7 +812,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 | `output_files` | ✅ | 情报卡片文件路径数组 |
 | `review_reason` | 条件 | 待审核原因（has_strategic_value=null 时必填） |
 | `domain` | 条件 | 领域（待审核时用于生成 pending_id） |
-| `archived_file` | 条件 | 归档文件链接（WikiLink 格式，待审核时记录） |
+| `archived_source` | 条件 | 归档文件路径（待审核时用于 pending.json） |
 
 **update-state.ts 执行内容**：
 - 更新转换文件 frontmatter: `processed_status`（passed/rejected）、`processed_at`
@@ -1309,7 +1309,7 @@ Prompt 内容：
 | `review.items` | array | 待审核队列 |
 | `review.items[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}-{random}`） |
 | `review.items[].converted_file` | string | 转换文件路径 |
-| `review.items[].archived_file` | string | 归档文件链接（WikiLink 格式） |
+| `review.items[].archived_source` | string | 归档文件路径（待审核时记录） |
 | `review.items[].added_at` | string | 添加时间 |
 | `review.items[].reason` | string | 审核原因 |
 | `pulse.cursors` | object | cyber-pulse API 游标（用于增量拉取） |
