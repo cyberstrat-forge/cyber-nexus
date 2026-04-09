@@ -4,6 +4,13 @@
 
 ## [1.9.6] - 2026-04-09
 
+### 新增
+
+- **source_type 字段**：区分文件来源类型
+  - 本地文件：`source_type: "local"`
+  - cyber-pulse 文件：`source_type: "cyber-pulse"`
+  - Agent 支持向后兼容推断（根据 `archived_file` 推断）
+
 ### 修复
 
 - **YAML 解析修复**：`parseFrontmatter` 支持无引号 YAML 值
@@ -19,11 +26,19 @@
   - 确保 archive 和 converted 文件名编码一致
   - `item_title` 字段同步规范化
 
-- **去重机制优化**：移除冗余代码，统一语义
-  - hash 计算从 2 次/文件 减少到 1 次/文件
-  - 去重检查统一在 `batchProcess()` 中处理
-  - `knownHashes` 统一存储 converted 文件路径
-  - 去重返回值使用 `convertedPath` 属性
+- **scan-queue 简化**：移除情报卡片扫描逻辑
+  - 使用 `processed_status` 作为唯一状态来源
+  - 移除冗余的情报卡片存在性检查
+  - 支持旧字段名兼容（`sourceHash`、`archivedSource`）
+
+### 移除
+
+- 移除无用的 `session_id` 参数和 `generated_session` 字段
+
+### 文档优化
+
+- 移除 YAML 示例中的分组注释（与实际输出一致）
+- 添加对 `templates.md` 的引用，减少重复定义
 
 ### 技术改进
 
