@@ -33,7 +33,6 @@ skills:
 |------|------|
 | `source` | 转换后的 Markdown 文件路径（位于 `converted/YYYY/MM/` 目录下） |
 | `output` | 输出目录路径 |
-| `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
 
 **注意**：源文件已由命令层预处理为统一的 Markdown 格式，包含 frontmatter 元数据（sourceHash、archivedSource 等），无需处理格式转换和噪声清洗。
 
@@ -358,7 +357,6 @@ source_score: 85
 # ============================================
 review_status: "passed"
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 ---
 ```
 

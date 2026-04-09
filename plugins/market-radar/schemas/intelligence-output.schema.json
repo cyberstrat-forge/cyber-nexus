@@ -145,8 +145,7 @@
         "fetched_at",
         "archived_file",
         "converted_file",
-        "generated_by",
-        "generated_session"
+        "generated_by"
       ],
       "additionalProperties": true,
       "properties": {
@@ -289,11 +288,6 @@
           "type": "string",
           "const": "intelligence-analyzer",
           "description": "Generator identifier (fixed value)"
-        },
-        "generated_session": {
-          "type": "string",
-          "pattern": "^\\d{8}-\\d{6}$",
-          "description": "Session ID (YYYYMMDD-HHMMSS format)"
         }
       }
     },

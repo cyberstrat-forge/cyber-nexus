@@ -727,12 +727,6 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 **参数**:
 - `source`: 转换文件路径
 - `output`: 输出目录（情报卡片根目录，如 `./intelligence`）
-- `session_id`: 会话 ID（格式：`YYYYMMDD-HHMMSS`，用于情报卡片的 `generated_session` 字段）
-
-**生成 session_id**：
-```
-session_id = 当前时间格式化为 YYYYMMDD-HHMMSS
-```
 
 **Agent 职责**（只负责情报提取，不管理状态）：
 - ✅ 读取并分析转换文件
@@ -987,7 +981,6 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/index.ts \
 参数:
 - source: {converted_file}（转换文件路径）
 - output: {output_dir}（情报卡片输出目录）
-- session_id: {YYYYMMDD-HHMMSS}（会话 ID）
 ```
 
 **Agent 职责**（只负责情报提取，不更新状态）：
