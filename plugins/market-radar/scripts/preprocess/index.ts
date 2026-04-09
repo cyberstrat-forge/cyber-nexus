@@ -488,9 +488,8 @@ function processCyberPulseFile(
     };
   }
 
-  // Calculate paths for archived_file WikiLink (points to converted/ directory)
+  // Calculate converted path
   const convertedPath = path.join(convertedDir, filename);
-  const convertedRelativePath = path.relative(rootDir, convertedPath);
 
   // Parse frontmatter
   const frontmatter = parseFrontmatter(content);
@@ -531,7 +530,8 @@ function processCyberPulseFile(
     source_score: frontmatter.source_score || null,
 
     // Group 3: File tracing (generate)
-    archived_file: toWikiLink(convertedRelativePath),  // Points to self in converted/
+    // cyber-pulse files have no archive (already markdown, moved to converted/)
+    archived_file: null,
     content_hash: contentHash,
     source_hash: sourceHash,
     archived_at: frontmatter.first_seen_at,

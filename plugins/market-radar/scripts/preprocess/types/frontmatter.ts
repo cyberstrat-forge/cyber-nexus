@@ -34,7 +34,7 @@ export interface IntelligenceSourceFields {
  * File tracing fields (Group 3)
  */
 export interface FileTracingFields {
-  archived_file: string;  // WikiLink format: [[path]]
+  archived_file: string | null;  // WikiLink format for local files, null for cyber-pulse
   content_hash: string;   // MD5 of converted body
   source_hash: string;    // MD5 of source file (for deduplication)
   archived_at: string;    // snake_case, consistent with other fields
