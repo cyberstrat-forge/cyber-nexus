@@ -216,6 +216,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 ```markdown
 ---
+source_type: "local"
 item_id: "item_a1b2c3d4"
 item_title: "报告文档"
 author: null
@@ -276,6 +277,7 @@ tags: ["APT", "ransomware"]
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
+| `source_type` | string | ✅ | 来源类型：`local`（本地文件）或 `cyber-pulse`（API 拉取） |
 | `item_id` | string | ✅ | 唯一标识（格式：`item_{hash前8位}`） |
 | `item_title` | string | ✅ | 文档标题或文件名 |
 | `author` | string/null | ❌ | 作者 |

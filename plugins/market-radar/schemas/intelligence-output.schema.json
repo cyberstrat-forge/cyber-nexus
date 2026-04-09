@@ -139,6 +139,7 @@
         "secondary_domains",
         "security_relevance",
         "tags",
+        "source_type",
         "item_id",
         "item_title",
         "fetched_at",
@@ -203,6 +204,11 @@
             "type": "string"
           },
           "description": "Obsidian nested tags with slash separator (e.g., 'geo/china', 'business/MSSP', 'tech/ai-security')"
+        },
+        "source_type": {
+          "type": "string",
+          "enum": ["local", "cyber-pulse"],
+          "description": "Source type: local (uploaded files) or cyber-pulse (API fetched)"
         },
         "item_id": {
           "type": "string",

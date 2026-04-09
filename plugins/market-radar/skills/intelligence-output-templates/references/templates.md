@@ -22,6 +22,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │ 第二组：item 来源追溯（继承 + 预处理）                        │
 ├─────────────────────────────────────────────────────────────┤
+│ source_type        - 来源类型 local/cyber-pulse              │
 │ item_id            - 采集阶段标识                             │
 │ item_title         - item 标题                               │
 │ author             - 作者                                     │
@@ -83,6 +84,7 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -169,6 +171,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/china", "business/MSSP", "business/Subscription", "market-growth", "cybersecurity"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -259,6 +262,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/global", "CrowdStrike", "funding", "Series-B", "endpoint-security"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -346,6 +350,7 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo/global", "ai-security", "AISP", "LLM-protection", "emerging-tech"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -435,6 +440,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/china", "enterprise", "security-budget", "procurement", "market-demand"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -521,6 +527,7 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo/china", "compliance", "data-protection", "regulation", "PIPL"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -609,6 +616,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/global", "funding", "Series-B", "cybersecurity-unicorn", "venture-capital"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"

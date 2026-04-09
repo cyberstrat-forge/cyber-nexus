@@ -66,6 +66,7 @@ skills:
 
 | 字段 | 说明 | 必填 |
 |------|------|------|
+| `source_type` | 来源类型：`local` 或 `cyber-pulse` | ✅ |
 | `item_id` | 采集阶段标识（格式：`item_{8位hex}`） | ✅ |
 | `item_title` | item 标题 | ✅ |
 | `author` | 作者 | ❌ |
@@ -91,6 +92,9 @@ skills:
 
 ```yaml
 ---
+# 第一组：来源标识
+source_type: "cyber-pulse"
+
 # 第二组：item 来源追溯
 item_id: "item_a1b2c3d4"
 item_title: "Lazarus Group's New Malware Campaign"
@@ -328,6 +332,7 @@ tags: ["geo/china-primary", "APT", "Lazarus", "financial-sector", "malware"]
 # ============================================
 # 第二组：item 来源追溯（继承 + 预处理）
 # ============================================
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "Lazarus Group's New Malware Campaign Targets Financial Institutions"
 author: "Security Research Team"

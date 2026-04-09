@@ -218,6 +218,7 @@ function generateLocalFileFrontmatter(
   const archivedFile = toWikiLink(archivedPath);
 
   return `---
+source_type: "local"
 item_id: "${itemId}"
 item_title: "${itemTitle}"
 author: null

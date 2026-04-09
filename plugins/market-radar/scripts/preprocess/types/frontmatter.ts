@@ -53,8 +53,9 @@ export interface ProcessingStatusFields {
  */
 export interface ConvertedFileFrontmatter
   extends ItemSourceFields, IntelligenceSourceFields, FileTracingFields, ProcessingStatusFields {
-  // Reserved fields for cyber-pulse files (identification and compatibility)
-  source_type?: 'cyber-pulse';
+  // Source type identification (required for all files)
+  source_type: 'local' | 'cyber-pulse';
+  // Additional fields for cyber-pulse files
   first_seen_at?: string;
   tags?: string[];
 }
