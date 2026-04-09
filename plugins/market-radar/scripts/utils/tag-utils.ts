@@ -15,7 +15,7 @@
  * 1. `:` -> `/` (preserve nesting semantics)
  * 2. Replace disallowed chars with `-`
  * 3. Collapse multiple consecutive `-` to single `-`
- * 4. Remove leading/trailing `-`
+ * 4. Remove leading/trailing `-` and `/`
  * 5. Return empty string for invalid tags
  *
  * @param tag - Raw tag string (may be null or undefined)

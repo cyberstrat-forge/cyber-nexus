@@ -46,6 +46,16 @@ describe('tag-utils', () => {
       expect(normalizeObsidianTag('AI,,  ML')).toBe('AI-ML');
     });
 
+    // 允许字符保留测试
+    it('should preserve underscores', () => {
+      expect(normalizeObsidianTag('tag_name')).toBe('tag_name');
+    });
+
+    it('should preserve digits in tags', () => {
+      expect(normalizeObsidianTag('tag123')).toBe('tag123');
+      expect(normalizeObsidianTag('2024-report')).toBe('2024-report');
+    });
+
     // Unicode/中文保留测试
     it('should preserve Chinese characters', () => {
       expect(normalizeObsidianTag('威胁情报')).toBe('威胁情报');
@@ -85,6 +95,11 @@ describe('tag-utils', () => {
 
       it('should return empty string for multiple special chars', () => {
         expect(normalizeObsidianTag(':::')).toBe('');
+      });
+
+      it('should return empty string for slash-only input', () => {
+        expect(normalizeObsidianTag('/')).toBe('');
+        expect(normalizeObsidianTag('///')).toBe('');
       });
 
       // 首尾字符处理测试
