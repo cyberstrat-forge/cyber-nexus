@@ -562,39 +562,20 @@ if (needs_processing + pending_review >= 50) {
 }
 ```
 
-#### 6.5 中断恢复机制
+**状态判断原则（单一数据源）**：
 
-**自动检测**：scan-queue.ts 会自动检测中断导致的状态不一致：
+scan-queue.ts 只检查 `processed_status` 字段：
 
-| 场景 | 检测方式 | 处理 |
-|------|---------|------|
-| Agent 写入卡片后被中断 | 情报卡片存在但 processed_status ≠ passed | 自动跳过，记录修复建议 |
-| 批量处理中断 | 未处理的文件状态为 pending/null | 下次运行继续处理 |
+| processed_status | 处理 |
+|------------------|------|
+| `passed` | 已处理，跳过 |
+| `rejected` | 已处理，跳过 |
+| `pending` / `null` | 需要处理 |
+| 在 pending.json 中 | pending_review |
 
-**状态一致性保证**：
+**中断恢复**：
 
-scan-queue.ts 在扫描时会检查情报卡片是否存在，无论 `processed_status` 是什么：
-
-```
-如果情报卡片存在 && 内容哈希匹配:
-    视为已处理，跳过
-    如果 processed_status 不是 passed/rejected:
-        记录到 auto_fix 数组（状态不一致，建议修复）
-```
-
-**修复建议输出**（如果有状态不一致）：
-
-```
-⚠️ 检测到 5 个状态不一致的文件（有卡片但未标记）
-   这些文件将被跳过，建议运行修复命令更新状态
-```
-
-**中断恢复流程**：
-
-1. 用户执行 `/intel-distill`
-2. scan-queue.ts 自动检测已存在的情报卡片
-3. 中断的文件被自动跳过
-4. 只处理真正需要处理的文件
+如果 Agent 处理完成但 update-state.ts 未执行（中断），`processed_status` 仍为 `pending`，下次运行会重新处理。Agent 的去重逻辑（检查 intelligence_date + primary_domain + 标题）会防止重复生成。
 
 ### 步骤 7：构建处理队列
 

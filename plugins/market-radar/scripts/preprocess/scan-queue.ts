@@ -5,8 +5,13 @@
  * Scans converted directory for markdown files, calculates content hashes,
  * and checks processed_status to determine which files need processing.
  *
+ * Design principle: Single source of truth
+ * - processed_status is the only indicator of processing state
+ * - update-state.ts is the only component that updates this status
+ * - This script only reads the status, does not verify intelligence cards
+ *
  * Usage:
- *   pnpm exec tsx scan-queue.ts --source <dir> [--output json|text]
+ *   pnpm exec tsx scan-queue.ts --root <dir> [--output json|text]
  *
  * Output (JSON format):
  * {
@@ -63,15 +68,6 @@ export interface ScanQueueResult {
   queue: QueueItem[];
   threshold: number;
   recommendation: 'glob' | 'script';
-  /** Files with state inconsistency requiring automatic status fix */
-  auto_fix?: Array<{
-    /** Relative path from source_dir */
-    file: string;
-    /** Current processed_status in frontmatter (may be inconsistent) */
-    current_status: ProcessedStatus | null;
-    /** Suggested status based on intelligence card existence */
-    suggested_status: 'passed';
-  }>;
 }
 
 /**
@@ -90,14 +86,6 @@ interface ConvertedFrontmatter {
   sourceHash?: string;
   archivedSource?: string;
   archivedAt?: string;
-}
-
-/**
- * Intelligence card frontmatter (for converted_file lookup)
- */
-interface IntelligenceFrontmatter {
-  converted_file?: string;
-  converted_content_hash?: string;
 }
 
 /**
@@ -136,53 +124,6 @@ function loadPending(pendingPath: string): {
 }
 
 /**
- * Scan intelligence cards to build converted_file lookup
- */
-function scanIntelligenceCards(sourceDir: string): Map<string, string> {
-  const convertedToHash = new Map<string, string>();
-  const intelligenceDir = path.join(sourceDir, 'intelligence');
-
-  if (!fs.existsSync(intelligenceDir)) {
-    return convertedToHash;
-  }
-
-  // Recursively scan intelligence/**/*.md
-  const scanDir = (dir: string): void => {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        scanDir(fullPath);
-      } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        try {
-          const content = fs.readFileSync(fullPath, 'utf-8');
-          const frontmatter = parseFrontmatter(content) as IntelligenceFrontmatter | null;
-          if (frontmatter?.converted_file) {
-            // Extract converted_file from WikiLink format
-            const convertedFileRaw = frontmatter.converted_file;
-            if (convertedFileRaw) {
-              const convertedFile = fromWikiLink(convertedFileRaw);
-              if (convertedFile !== null) {
-                convertedToHash.set(
-                  convertedFile,
-                  frontmatter.converted_content_hash || ''
-                );
-              } // else: malformed WikiLink, skip this entry
-            }
-          }
-        } catch (error) {
-          const errMsg = error instanceof Error ? error.message : String(error);
-          console.warn(`Warning: Cannot read intelligence card ${fullPath}: ${errMsg}`);
-        }
-      }
-    }
-  };
-
-  scanDir(intelligenceDir);
-  return convertedToHash;
-}
-
-/**
  * Recursively scan directory for markdown files
  */
 function scanMarkdownFiles(dir: string, baseDir: string): string[] {
@@ -218,6 +159,11 @@ function scanMarkdownFiles(dir: string, baseDir: string): string[] {
 
 /**
  * Scan converted files and build processing queue
+ *
+ * Simplified design: Only check processed_status, no intelligence card scanning
+ * - passed/rejected → already processed
+ * - pending/null → needs processing
+ * - in pending.json → pending_review
  */
 function scanAndBuildQueue(
   sourceDir: string,
@@ -236,9 +182,6 @@ function scanAndBuildQueue(
     }
   }
 
-  // Scan intelligence cards for converted_file lookup
-  const convertedToHash = scanIntelligenceCards(resolvedSourceDir);
-
   // Scan converted files
   const convertedDir = path.join(resolvedSourceDir, 'converted');
   const relativeFiles = scanMarkdownFiles(convertedDir, resolvedSourceDir);
@@ -248,7 +191,6 @@ function scanAndBuildQueue(
   let alreadyProcessed = 0;
   let needsProcessing = 0;
   let pendingReview = 0;
-  const autoFixItems: ScanQueueResult['auto_fix'] = [];
 
   for (const relativePath of relativeFiles) {
     const filePath = path.join(resolvedSourceDir, relativePath);
@@ -295,7 +237,7 @@ function scanAndBuildQueue(
 
     const processedStatus = frontmatter?.processed_status;
 
-    // Check if in pending review
+    // Check if in pending review (from pending.json)
     if (pendingReviewSet.has(relativePath)) {
       queue.push({
         file: relativePath,
@@ -308,38 +250,13 @@ function scanAndBuildQueue(
       continue;
     }
 
-    // Check if intelligence card exists (regardless of processed_status)
-    // This is key for interruption recovery: if card exists and content matches, treat as processed
-    const recordedHash = convertedToHash.get(relativePath);
-    if (recordedHash && recordedHash === contentHash) {
-      // Intelligence card exists and content matches
-      // recordedHash is the converted_content_hash recorded in the intelligence card
-      // contentHash is the real-time calculated hash of the converted file content
-      if (processedStatus !== 'passed' && processedStatus !== 'rejected') {
-        // State inconsistency due to interruption, record fix suggestion
-        autoFixItems.push({
-          file: relativePath,
-          current_status: processedStatus ?? null,
-          suggested_status: 'passed'
-        });
-      }
+    // Check processed_status (single source of truth)
+    if (processedStatus === 'passed' || processedStatus === 'rejected') {
       alreadyProcessed++;
       continue;
     }
 
-    // Check processed_status
-    if (processedStatus === 'rejected') {
-      // Skip rejected files
-      alreadyProcessed++;
-      continue;
-    }
-
-    if (processedStatus === 'passed') {
-      // Card existence already verified above; reaching here means card missing or content changed.
-      // File needs reprocessing despite 'passed' status.
-    }
-
-    // pending, missing status, or needs reprocessing
+    // pending, null, or undefined → needs processing
     queue.push({
       file: relativePath,
       content_hash: contentHash,
@@ -365,7 +282,6 @@ function scanAndBuildQueue(
     queue,
     threshold: RECOMMENDED_SCRIPT_THRESHOLD,
     recommendation,
-    auto_fix: autoFixItems.length > 0 ? autoFixItems : undefined,
   };
 }
 
@@ -410,17 +326,6 @@ function formatAsText(result: ScanQueueResult): string {
     lines.push('💡 使用 /intel-distill --review list 查看详情');
   }
 
-  // Show auto-fix suggestions for state inconsistency
-  if (result.auto_fix && result.auto_fix.length > 0) {
-    lines.push('');
-    lines.push('【状态修复建议】');
-    lines.push(`⚠️ 检测到 ${result.auto_fix.length} 个状态不一致的文件（有卡片但未标记）`);
-    lines.push('   这些文件已被跳过，建议运行修复命令更新状态');
-    for (const item of result.auto_fix) {
-      lines.push(`  - ${item.file} (当前状态: ${item.current_status ?? '无'})`);
-    }
-  }
-
   return lines.join('\n');
 }
 
@@ -433,7 +338,6 @@ function main(): void {
   let outputFormat: 'json' | 'text' = 'json';
 
   // Parse arguments
-  // Note: pending.json path is derived from rootDir automatically
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--root' && i + 1 < args.length) {
       rootDir = args[i + 1];
