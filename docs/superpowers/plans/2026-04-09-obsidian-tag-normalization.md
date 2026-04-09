@@ -545,7 +545,13 @@ EOF
 
 - [ ] **Step 1: 添加导入语句**
 
-在 `output.ts` 顶部添加导入（约第 14 行后）：
+在 `output.ts` 第 14 行后添加一行：
+
+```typescript
+import { normalizeObsidianTags } from '../utils/tag-utils.js';
+```
+
+修改后导入部分应为：
 
 ```typescript
 import { promises as fs } from 'fs';
