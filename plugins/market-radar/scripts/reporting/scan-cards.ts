@@ -9,47 +9,19 @@ import { Command } from 'commander';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { glob } from 'glob';
+import { parseFrontmatter as parseFrontmatterBase } from '../utils/frontmatter';
 
-// 前端解析库（简化实现，避免额外依赖）
+/**
+ * Parse frontmatter and return both data and body content
+ * Wraps the shared parseFrontmatter for compatibility with this script
+ */
 function parseFrontmatter(content: string): { data: Record<string, unknown>; content: string } {
-  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
-  if (!match) {
-    return { data: {}, content };
-  }
+  // Extract body content first
+  const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n([\s\S]*)$/);
+  const body = match ? match[1] : content;
 
-  const frontmatterStr = match[1];
-  const body = match[2];
-  const data: Record<string, unknown> = {};
-
-  // 简单的 YAML 解析（支持 key: value 格式）
-  const lines = frontmatterStr.split('\n');
-  for (const line of lines) {
-    const colonIndex = line.indexOf(':');
-    if (colonIndex > 0) {
-      const key = line.slice(0, colonIndex).trim();
-      let value: string | string[] = line.slice(colonIndex + 1).trim();
-
-      // 移除引号
-      if ((value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-
-      // 处理数组格式 [item1, item2]
-      if (value.startsWith('[') && value.endsWith(']')) {
-        const inner = value.slice(1, -1).trim();
-        if (inner === '') {
-          value = [];
-        } else {
-          value = inner.split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
-        }
-      }
-
-      data[key] = value;
-    }
-  }
-
-  return { data, content: body };
+  const data = parseFrontmatterBase(content);
+  return { data: data || {}, content: body };
 }
 
 interface CardMetadata {
@@ -74,7 +46,7 @@ interface CardMetadataFull {
   item_title?: string;
   original_url?: string;
   completeness_score?: number;
-  archived_file?: string;
+  archived_file?: string | null;
   converted_file?: string;
   card_path: string;
   body_summary?: string;

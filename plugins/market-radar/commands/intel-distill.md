@@ -216,6 +216,7 @@ ${CLAUDE_PLUGIN_ROOT}/commands/references/intel-distill-guide.md
 
 ```markdown
 ---
+source_type: "local"
 item_id: "item_a1b2c3d4"
 item_title: "报告文档"
 author: null
@@ -258,7 +259,7 @@ source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
 
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
+archived_file: null
 content_hash: "def456abc123..."
 source_hash: "abc789def456..."
 archivedAt: "2026-04-01T10:30:00Z"
@@ -276,6 +277,7 @@ tags: ["APT", "ransomware"]
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
+| `source_type` | string | ✅ | 来源类型：`local`（本地文件）或 `cyber-pulse`（API 拉取） |
 | `item_id` | string | ✅ | 唯一标识（格式：`item_{hash前8位}`） |
 | `item_title` | string | ✅ | 文档标题或文件名 |
 | `author` | string/null | ❌ | 作者 |
@@ -288,7 +290,7 @@ tags: ["APT", "ransomware"]
 | `source_url` | string/null | ❌ | 情报源 URL |
 | `source_tier` | string/null | ❌ | 情报源等级 T0-T3 |
 | `source_score` | number/null | ❌ | 情报源评分 0-100 |
-| `archived_file` | string | ✅ | 归档/转换文件链接（WikiLink 格式） |
+| `archived_file` | string/null | ✅ | 归档文件链接（WikiLink 格式，cyber-pulse 文件为 null） |
 | `content_hash` | string | ✅ | 转换文件 body 内容哈希（用于变更检测） |
 | `source_hash` | string | ✅ | 源文件内容哈希（用于去重） |
 | `archivedAt` | string | ✅ | 归档时间（ISO 8601） |
@@ -530,7 +532,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
       "source_hash": "def456...",
-      "archived_file": "[[archive/2026/03/report-2026.pdf|report-2026.pdf]]",
+      "archived_file": "archive/2026/03/report-2026.pdf",
       "status": "needs_processing"
     }
   ],
@@ -547,7 +549,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 | `already_processed` | 已处理文件数（跳过） |
 | `needs_processing` | 待处理文件数 |
 | `pending_review` | 已在审核队列的文件数 |
-| `queue` | 处理队列详情（含 source_hash、archived_file） |
+| `queue` | 处理队列详情（含 source_hash、archived_file） | `archived_file` 可为 null（cyber-pulse 文件） |
 | `recommendation` | 推荐策略（`glob` 或 `script`） |
 
 #### 6.4 判断逻辑
@@ -560,39 +562,20 @@ if (needs_processing + pending_review >= 50) {
 }
 ```
 
-#### 6.5 中断恢复机制
+**状态判断原则（单一数据源）**：
 
-**自动检测**：scan-queue.ts 会自动检测中断导致的状态不一致：
+scan-queue.ts 只检查 `processed_status` 字段：
 
-| 场景 | 检测方式 | 处理 |
-|------|---------|------|
-| Agent 写入卡片后被中断 | 情报卡片存在但 processed_status ≠ passed | 自动跳过，记录修复建议 |
-| 批量处理中断 | 未处理的文件状态为 pending/null | 下次运行继续处理 |
+| processed_status | 处理 |
+|------------------|------|
+| `passed` | 已处理，跳过 |
+| `rejected` | 已处理，跳过 |
+| `pending` / `null` | 需要处理 |
+| 在 pending.json 中 | pending_review |
 
-**状态一致性保证**：
+**中断恢复**：
 
-scan-queue.ts 在扫描时会检查情报卡片是否存在，无论 `processed_status` 是什么：
-
-```
-如果情报卡片存在 && 内容哈希匹配:
-    视为已处理，跳过
-    如果 processed_status 不是 passed/rejected:
-        记录到 auto_fix 数组（状态不一致，建议修复）
-```
-
-**修复建议输出**（如果有状态不一致）：
-
-```
-⚠️ 检测到 5 个状态不一致的文件（有卡片但未标记）
-   这些文件将被跳过，建议运行修复命令更新状态
-```
-
-**中断恢复流程**：
-
-1. 用户执行 `/intel-distill`
-2. scan-queue.ts 自动检测已存在的情报卡片
-3. 中断的文件被自动跳过
-4. 只处理真正需要处理的文件
+如果 Agent 处理完成但 update-state.ts 未执行（中断），`processed_status` 仍为 `pending`，下次运行会重新处理。Agent 的去重逻辑（检查 intelligence_date + primary_domain + 标题）会防止重复生成。
 
 ### 步骤 7：构建处理队列
 
@@ -618,7 +601,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
       "file": "converted/2026/03/report-2026.md",
       "content_hash": "abc123...",
       "source_hash": "def456...",
-      "archived_file": "[[archive/2026/03/report-2026.pdf|report-2026.pdf]]",
+      "archived_file": "archive/2026/03/report-2026.pdf",
       "status": "needs_processing"
     }
   ]
@@ -632,7 +615,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/scan-queue.ts \
 | 字段 | 用途 |
 |------|------|
 | `needs_processing` | 本次待处理文件数 |
-| `queue` | 处理队列详情（含 content_hash、source_hash、archived_file） |
+| `queue` | 处理队列详情（含 content_hash、source_hash、archived_file） | `archived_file` 可为 null（cyber-pulse 文件） |
 
 **注意**：`total` 和 `already_processed` 是历史统计数据，**不展示给用户**。用户只关心本次待处理文件。
 
@@ -796,7 +779,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
     "output_files": [],
     "review_reason": "检测到高风险威胁指标，需人工确认",
     "domain": "Threat-Landscape",
-    "archived_file": "[[archive/2026/04/suspicious.pdf|suspicious.pdf]]"
+    "archived_source": "archive/2026/04/suspicious.pdf"
   }
 ]
 ```
@@ -812,7 +795,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
 | `output_files` | ✅ | 情报卡片文件路径数组 |
 | `review_reason` | 条件 | 待审核原因（has_strategic_value=null 时必填） |
 | `domain` | 条件 | 领域（待审核时用于生成 pending_id） |
-| `archived_file` | 条件 | 归档文件链接（WikiLink 格式，待审核时记录） |
+| `archived_source` | 条件 | 归档文件路径（待审核时用于 pending.json） |
 
 **update-state.ts 执行内容**：
 - 更新转换文件 frontmatter: `processed_status`（passed/rejected）、`processed_at`
@@ -951,7 +934,7 @@ cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/update-state.ts \
   --review list
 ```
 
-从输出中获取 `pending_id`、`converted_file`、`archived_file`。
+从输出中获取 `pending_id`、`converted_file`、`archived_source`。
 
 #### 步骤 A2.2：检查并恢复转换文件
 
@@ -967,7 +950,7 @@ ls -la {root_dir}/{converted_file}
 ```bash
 # 从归档重新转换
 cd ${CLAUDE_PLUGIN_ROOT}/scripts && pnpm exec tsx preprocess/index.ts \
-  --source {archived_file 的父目录} \
+  --source {archived_source 的父目录} \
   --root {root_dir}
 ```
 
@@ -1309,7 +1292,7 @@ Prompt 内容：
 | `review.items` | array | 待审核队列 |
 | `review.items[].pending_id` | string | 临时 ID（格式：`pending-{domain}-{timestamp}-{random}`） |
 | `review.items[].converted_file` | string | 转换文件路径 |
-| `review.items[].archived_file` | string | 归档文件链接（WikiLink 格式） |
+| `review.items[].archived_source` | string | 归档文件路径（待审核时记录） |
 | `review.items[].added_at` | string | 添加时间 |
 | `review.items[].reason` | string | 审核原因 |
 | `pulse.cursors` | object | cyber-pulse API 游标（用于增量拉取） |

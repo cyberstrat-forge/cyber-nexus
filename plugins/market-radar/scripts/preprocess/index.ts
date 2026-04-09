@@ -138,9 +138,9 @@ function validateCyberPulseFile(filePath: string): string | null {
  * Collect known filenames from converted directory for cyber-pulse deduplication
  * cyber-pulse files use filename (item_id) for dedup, not hash
  */
-function collectKnownFiles(sourceDir: string): Set<string> {
+function collectKnownFiles(rootDir: string): Set<string> {
   const knownFiles = new Set<string>();
-  const convertedBase = path.join(sourceDir, 'converted');
+  const convertedBase = path.join(rootDir, 'converted');
 
   if (!fs.existsSync(convertedBase)) {
     return knownFiles;
@@ -218,6 +218,7 @@ function generateLocalFileFrontmatter(
   const archivedFile = toWikiLink(archivedPath);
 
   return `---
+source_type: "local"
 item_id: "${itemId}"
 item_title: "${itemTitle}"
 author: null
@@ -362,16 +363,17 @@ function getConvertedDir(sourceDir: string, dateRef: Date): string {
  * Get archive path for a source file
  */
 function getArchivePath(sourcePath: string, archiveDir: string): string {
-  const filename = path.basename(sourcePath);
+  const rawFilename = path.basename(sourcePath);
+  const filename = normalizeFilename(rawFilename);  // Apply normalization
   return path.join(archiveDir, filename);
 }
 
 /**
  * Collect known source hashes from converted files' frontmatter
  */
-function collectKnownHashes(sourceDir: string): Map<string, string> {
+function collectKnownHashes(rootDir: string): Map<string, string> {
   const knownHashes = new Map<string, string>(); // hash -> converted path
-  const convertedBase = path.join(sourceDir, 'converted');
+  const convertedBase = path.join(rootDir, 'converted');
 
   if (!fs.existsSync(convertedBase)) {
     return knownHashes;
@@ -421,7 +423,7 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
           const frontmatter = parseFrontmatter(content);
           // Support both old (sourceHash) and new (source_hash) field names
           const sourceHash = frontmatter?.source_hash || frontmatter?.sourceHash;
-          if (sourceHash) {
+          if (typeof sourceHash === 'string' && sourceHash) {
             knownHashes.set(sourceHash, mdPath);
           }
         } catch (error) {
@@ -446,7 +448,7 @@ function collectKnownHashes(sourceDir: string): Map<string, string> {
 function processCyberPulseFile(
   sourcePath: string,
   convertedDir: string,
-  sourceDir: string,  // 改为使用此参数
+  rootDir: string,
   knownFiles: Set<string>,
   _dateRef: Date
 ): PreprocessResult {
@@ -465,7 +467,7 @@ function processCyberPulseFile(
   // Validate required fields
   const validationError = validateCyberPulseFile(sourcePath);
   if (validationError) {
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', validationError);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'INVALID_PULSE_FORMAT', validationError);
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: validationError },
@@ -479,7 +481,7 @@ function processCyberPulseFile(
     content = fs.readFileSync(sourcePath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'READ_FAILED', message);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'READ_FAILED', message);
     return {
       success: false,
       error: { code: 'READ_FAILED', message },
@@ -487,14 +489,13 @@ function processCyberPulseFile(
     };
   }
 
-  // Calculate paths for archived_file WikiLink (points to converted/ directory)
+  // Calculate converted path
   const convertedPath = path.join(convertedDir, filename);
-  const convertedRelativePath = path.relative(sourceDir, convertedPath);
 
   // Parse frontmatter
   const frontmatter = parseFrontmatter(content);
   if (!frontmatter) {
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'INVALID_PULSE_FORMAT', 'Missing frontmatter');
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'INVALID_PULSE_FORMAT', 'Missing frontmatter');
     return {
       success: false,
       error: { code: 'INVALID_PULSE_FORMAT', message: 'Missing frontmatter' },
@@ -530,7 +531,8 @@ function processCyberPulseFile(
     source_score: frontmatter.source_score || null,
 
     // Group 3: File tracing (generate)
-    archived_file: toWikiLink(convertedRelativePath),  // Points to self in converted/
+    // cyber-pulse files have no archive (already markdown, moved to converted/)
+    archived_file: null,
     content_hash: contentHash,
     source_hash: sourceHash,
     archived_at: frontmatter.first_seen_at,
@@ -557,7 +559,7 @@ function processCyberPulseFile(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const errorMsg = `Failed to create converted directory: ${message}`;
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'WRITE_FAILED', errorMsg);
     return {
       success: false,
       error: { code: 'WRITE_FAILED', message: errorMsg },
@@ -571,7 +573,7 @@ function processCyberPulseFile(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const errorMsg = `Failed to write converted file: ${message}`;
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'WRITE_FAILED', errorMsg);
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'WRITE_FAILED', errorMsg);
     return {
       success: false,
       error: { code: 'WRITE_FAILED', message: errorMsg },
@@ -656,26 +658,13 @@ async function processFile(
   sourcePath: string,
   archiveDir: string,
   convertedDir: string,
-  sourceDir: string,
-  _currentVersion: string,
-  knownHashes: Map<string, string>,
-  _dateRef: Date
+  rootDir: string
 ): Promise<PreprocessResult> {
-  // Calculate source hash for deduplication
-  const sourceHash = calculateHash(sourcePath);
-
-  // Get archive path
+  // Get archive path (with normalized filename)
   const archivePath = getArchivePath(sourcePath, archiveDir);
 
-  // Check for duplicate based on existing converted files with frontmatter
-  // (knownHashes now collects from converted files, not .meta files)
-  if (knownHashes.has(sourceHash)) {
-    return {
-      success: true,
-      isDuplicate: true,
-      archivedPath: knownHashes.get(sourceHash),
-    };
-  }
+  // Calculate source hash for frontmatter (deduplication is done by caller)
+  const sourceHash = calculateHash(sourcePath);
 
   // Phase 1: Conversion (before archiving)
   let rawContent: string;
@@ -691,8 +680,8 @@ async function processFile(
       code = 'READ_FAILED';
     }
 
-    // Write error log to inbox
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, code, message);
+    // Write error log to source file's directory
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), code, message);
 
     return {
       success: false,
@@ -708,8 +697,8 @@ async function processFile(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
-    // Write error log to inbox
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'CLEAN_FAILED', message);
+    // Write error log to source file's directory
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'CLEAN_FAILED', message);
 
     return {
       success: false,
@@ -737,12 +726,16 @@ async function processFile(
     }
 
     // Generate frontmatter
-    const relativeArchivePath = path.relative(sourceDir, archivePath);
+    const relativeArchivePath = path.relative(rootDir, archivePath);
+
+    // Normalize filename for item_title
+    const rawItemFilename = path.basename(sourcePath);
+    const normalizedItemFilename = normalizeFilename(rawItemFilename);
 
     const frontmatter = generateLocalFileFrontmatter(
       sourceHash,
       contentHash,
-      path.basename(sourcePath),
+      normalizedItemFilename,  // Use normalized filename
       relativeArchivePath,
       now
     );
@@ -753,8 +746,8 @@ async function processFile(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
-    // Write error log to inbox
-    const errorLogPath = writeErrorLog(sourcePath, sourceDir, 'ARCHIVE_FAILED', `Failed to write converted file: ${message}`);
+    // Write error log to source file's directory
+    const errorLogPath = writeErrorLog(sourcePath, path.dirname(sourcePath), 'ARCHIVE_FAILED', `Failed to write converted file: ${message}`);
 
     return {
       success: false,
@@ -889,7 +882,7 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
       const result = processCyberPulseFile(
         sourcePath,
         convertedDir,
-        sourceDir,
+        rootDir,
         knownFiles,
         dateRef
       );
@@ -916,7 +909,7 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
         results.set(sourcePath, {
           success: true,
           isDuplicate: true,
-          archivedPath: knownHashes.get(sourceHash),
+          convertedPath: knownHashes.get(sourceHash),
         });
         continue;
       }
@@ -926,10 +919,7 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
         sourcePath,
         archiveDir,
         convertedDir,
-        sourceDir,
-        preprocessorVersion,
-        knownHashes,
-        dateRef
+        rootDir
       );
 
       results.set(sourcePath, result);
@@ -939,7 +929,7 @@ async function batchProcess(options: PreprocessOptions): Promise<BatchResult> {
       } else if (result.success) {
         processed++;
         // Add to known hashes to avoid re-processing in same batch
-        knownHashes.set(sourceHash, result.archivedPath || '');
+        knownHashes.set(sourceHash, result.convertedPath || '');
       } else {
         failed++;
         console.error(`Failed: ${sourcePath} - ${result.error?.message}`);

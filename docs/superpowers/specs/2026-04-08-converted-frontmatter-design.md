@@ -88,7 +88,7 @@ source_score: number | null  # 可选，0-100
 archived_file: string        # 必填，WikiLink 格式
 content_hash: string         # 必填，body MD5
 source_hash: string          # 必填，源文件 MD5（用于去重）
-archivedAt: string           # 必填，归档时间
+archived_at: string          # 必填，归档时间
 
 # ============================================
 # 第四组：处理状态
@@ -133,7 +133,7 @@ source_score: null
 archived_file: "[[archive/2026/04/report.pdf]]"
 content_hash: "def456abc123..."
 source_hash: "abc789def456..."
-archivedAt: "2026-04-08T10:00:00Z"
+archived_at: "2026-04-08T10:00:00Z"
 
 processed_status: "pending"
 processed_at: null
@@ -161,7 +161,7 @@ source_score: 85
 archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"  # 指向自身，非 archive
 content_hash: "def456abc123..."
 source_hash: "abc789def456..."  # 原始采集文件内容的 hash
-archivedAt: "2026-04-01T10:30:00Z"
+archived_at: "2026-04-01T10:30:00Z"
 
 processed_status: "pending"
 processed_at: null
@@ -404,7 +404,7 @@ source_score: 85
 # 第三组：文件追溯（预处理生成）
 archived_file: "[[converted/2026/04/item_a1b2c3d4.md]]"  # 指向自身
 content_hash: "def456abc123..."
-archivedAt: "2026-04-01T10:00:00Z"
+archived_at: "2026-04-01T10:00:00Z"
 
 # 第四组：处理状态（预处理添加）
 processed_status: "pending"
@@ -517,7 +517,7 @@ const updatedFrontmatter = {
   archived_file: `[[${convertedRelativePath}]]`,  // WikiLink，指向自身
   content_hash: contentHash,
   source_hash: sourceHash,
-  archivedAt: frontmatter.first_seen_at,
+  archived_at: frontmatter.first_seen_at,
 
   // 第四组：处理状态
   processed_status: 'pending',
@@ -542,7 +542,7 @@ const updatedFrontmatter = {
 ```yaml
 sourceHash: "..."
 originalPath: "..."
-archivedAt: "..."
+archived_at: "..."
 archivedSource: "..."
 ```
 
@@ -572,7 +572,7 @@ interface LocalFileFrontmatter {
   archived_file: string;  // WikiLink 格式
   content_hash: string;
   source_hash: string;
-  archivedAt: string;
+  archived_at: string;
 
   // 第四组：处理状态
   processed_status: 'pending';
@@ -613,7 +613,7 @@ source_score: null
 archived_file: "${archivedFile}"
 content_hash: "${contentHash}"
 source_hash: "${sourceHash}"
-archivedAt: "${fetchedAt}"
+archived_at: "${fetchedAt}"
 
 processed_status: "pending"
 processed_at: null

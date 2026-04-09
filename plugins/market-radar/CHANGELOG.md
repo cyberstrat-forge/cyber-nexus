@@ -2,6 +2,55 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.6] - 2026-04-09
+
+### 新增
+
+- **source_type 字段**：区分文件来源类型
+  - 本地文件：`source_type: "local"`
+  - cyber-pulse 文件：`source_type: "cyber-pulse"`
+  - Agent 支持向后兼容推断（根据 `archived_file` 推断）
+
+- **多行数组解析**：`parseFrontmatter` 支持 YAML 多行数组格式
+  - 支持 `key:` 后跟 `- "item"` 列表格式
+  - 统一 `scan-cards.ts` 和 `scan-reports.ts` 使用共享解析器
+
+### 修复
+
+- **YAML 解析修复**：`parseFrontmatter` 支持无引号 YAML 值
+  - 修复 `source_type: cyber-pulse` 无法被解析的问题
+  - 支持 null、boolean、number 类型
+  - cyber-pulse 文件现在正确识别并处理
+
+- **WikiLink 路径修复**：使用 `rootDir` 作为路径基准，消除 `../` 前缀
+  - 本地文件 `archived_file` 在 Obsidian 中可正确跳转
+  - cyber-pulse 文件 `archived_file` 设为 null（无归档文件）
+
+- **文件名规范化**：archive 文件名应用 `normalizeFilename()`
+  - 确保 archive 和 converted 文件名编码一致
+  - `item_title` 字段同步规范化
+
+- **scan-queue 简化**：移除情报卡片扫描逻辑
+  - 使用 `processed_status` 作为唯一状态来源
+  - 移除冗余的情报卡片存在性检查
+  - 支持旧字段名兼容（`sourceHash`、`archivedSource`）
+
+### 移除
+
+- 移除无用的 `session_id` 参数和 `generated_session` 字段
+
+### 文档优化
+
+- 移除 YAML 示例中的分组注释（与实际输出一致）
+- 添加对 `templates.md` 的引用，减少重复定义
+
+### 技术改进
+
+- 简化 `processFile()` 函数签名（7 参数 → 4 参数）
+- 重命名 `processCyberPulseFile()` 参数 `sourceDir` → `rootDir`
+- 重命名 `collectKnownHashes()` 和 `collectKnownFiles()` 参数 `sourceDir` → `rootDir`
+- 错误日志写入源文件所在目录（而非固定 sourceDir）
+
 ## [1.9.5] - 2026-04-08
 
 ### 变更

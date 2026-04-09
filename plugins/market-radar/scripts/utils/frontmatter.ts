@@ -52,25 +52,138 @@ function formatYamlValue(value: unknown): string {
  * Parse frontmatter from markdown content
  * Returns key-value pairs from the frontmatter section
  *
+ * Supports:
+ * - Single-line values: key: value, key: "value", key: 'value'
+ * - Multi-line arrays:
+ *   ```yaml
+ *   tags:
+ *     - "item1"
+ *     - "item2"
+ *   ```
+ * - Inline arrays: key: [item1, item2]
+ * - Comments (skipped)
+ * - null, boolean, number types
+ *
  * @param content - Markdown content with optional frontmatter
  * @returns Parsed frontmatter key-value pairs, or null if no frontmatter found
  */
-export function parseFrontmatter(content: string): Record<string, string> | null {
+export function parseFrontmatter(content: string): Record<string, unknown> | null {
   // Support both LF and CRLF line endings
   const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!frontmatterMatch) {
     return null;
   }
 
-  const frontmatter: Record<string, string> = {};
+  const frontmatter: Record<string, unknown> = {};
   const lines = frontmatterMatch[1].split(/\r?\n/);
 
-  for (const line of lines) {
-    const match = line.match(/^(\w+):\s*"(.*)"$/);
-    if (match) {
-      // Unescape YAML string: \" -> ", \\ -> \
-      frontmatter[match[1]] = match[2].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  let currentKey: string | null = null;
+  let currentArray: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    // Skip empty lines and comments
+    if (!trimmedLine || trimmedLine.startsWith('#')) {
+      continue;
     }
+
+    // Check for list item (multi-line array)
+    if (trimmedLine.startsWith('- ')) {
+      if (currentKey !== null) {
+        // Extract value after "- "
+        let value = trimmedLine.slice(2).trim();
+
+        // Remove quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1)
+            .replace(/\\"/g, '"')
+            .replace(/\\'/g, "'")
+            .replace(/\\\\/g, '\\');
+        }
+
+        currentArray.push(value);
+      }
+      continue;
+    }
+
+    // If we were building an array and hit a new key, save the array
+    if (currentKey !== null && currentArray.length > 0) {
+      frontmatter[currentKey] = currentArray;
+      currentArray = [];
+    }
+
+    // Check for indentation (continuation of multi-line array)
+    if (line.startsWith('  ') || line.startsWith('\t')) {
+      // This is an indented line, might be part of multi-line array
+      // but doesn't start with '-', skip it
+      continue;
+    }
+
+    // Match key: value patterns
+    const match = trimmedLine.match(/^(\w+):\s*(.*)$/);
+    if (match) {
+      const key = match[1];
+      let value: unknown = match[2].trim();
+      const strValue = value as string;
+
+      // Empty value after colon - might be start of multi-line array
+      if (strValue === '') {
+        currentKey = key;
+        currentArray = [];
+        continue;
+      }
+
+      // Reset current key tracking
+      currentKey = null;
+
+      // Handle quoted strings (double or single quotes)
+      if ((strValue.startsWith('"') && strValue.endsWith('"')) ||
+          (strValue.startsWith("'") && strValue.endsWith("'"))) {
+        // Remove quotes and unescape
+        value = strValue.slice(1, -1)
+          .replace(/\\"/g, '"')
+          .replace(/\\'/g, "'")
+          .replace(/\\\\/g, '\\');
+      } else if (strValue === 'null') {
+        // Handle null
+        value = null;
+      } else if (strValue === 'true') {
+        // Handle boolean true
+        value = true;
+      } else if (strValue === 'false') {
+        // Handle boolean false
+        value = false;
+      } else if (/^-?\d+(\.\d+)?$/.test(strValue)) {
+        // Handle numbers (integer or float)
+        value = parseFloat(strValue);
+      } else if (strValue.startsWith('[') && strValue.endsWith(']')) {
+        // Handle inline arrays [item1, item2]
+        const inner = strValue.slice(1, -1).trim();
+        if (inner === '') {
+          value = [];
+        } else {
+          value = inner.split(',').map(s => {
+            const item = s.trim();
+            // Remove quotes if present
+            if ((item.startsWith('"') && item.endsWith('"')) ||
+                (item.startsWith("'") && item.endsWith("'"))) {
+              return item.slice(1, -1);
+            }
+            return item;
+          });
+        }
+      }
+
+      frontmatter[key] = value;
+    }
+  }
+
+  // Save any remaining multi-line array
+  if (currentKey !== null && currentArray.length > 0) {
+    frontmatter[currentKey] = currentArray;
   }
 
   return frontmatter;

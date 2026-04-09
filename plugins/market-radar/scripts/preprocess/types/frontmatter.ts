@@ -34,7 +34,7 @@ export interface IntelligenceSourceFields {
  * File tracing fields (Group 3)
  */
 export interface FileTracingFields {
-  archived_file: string;  // WikiLink format: [[path]]
+  archived_file: string | null;  // WikiLink format for local files, null for cyber-pulse
   content_hash: string;   // MD5 of converted body
   source_hash: string;    // MD5 of source file (for deduplication)
   archived_at: string;    // snake_case, consistent with other fields
@@ -53,8 +53,9 @@ export interface ProcessingStatusFields {
  */
 export interface ConvertedFileFrontmatter
   extends ItemSourceFields, IntelligenceSourceFields, FileTracingFields, ProcessingStatusFields {
-  // Reserved fields for cyber-pulse files (identification and compatibility)
-  source_type?: 'cyber-pulse';
+  // Source type identification (required for all files)
+  source_type: 'local' | 'cyber-pulse';
+  // Additional fields for cyber-pulse files
   first_seen_at?: string;
   tags?: string[];
 }

@@ -33,7 +33,6 @@ skills:
 |------|------|
 | `source` | 转换后的 Markdown 文件路径（位于 `converted/YYYY/MM/` 目录下） |
 | `output` | 输出目录路径 |
-| `session_id` | 会话 ID（YYYYMMDD-HHMMSS 格式） |
 
 **注意**：源文件已由命令层预处理为统一的 Markdown 格式，包含 frontmatter 元数据（sourceHash、archivedSource 等），无需处理格式转换和噪声清洗。
 
@@ -55,17 +54,15 @@ skills:
 
 **文件格式**：统一的 Markdown，已清洗噪声 token，包含 frontmatter 元数据
 
-**步骤 1.1：解析 frontmatter（v3.0 四组结构）**
+**步骤 1.1：解析 frontmatter**
 
-从转换文件的 frontmatter 中提取元数据，分为四组：
+转换文件 frontmatter 采用四组层次结构，详见 [templates.md](../skills/intelligence-output-templates/references/templates.md)。
 
-**第一组：核心标识（生成）**
-- 由 Agent 分析生成，详见后续步骤
-
-**第二组：item 来源追溯（继承 + 预处理）**
+从转换文件中提取的关键字段：
 
 | 字段 | 说明 | 必填 |
 |------|------|------|
+| `source_type` | 来源类型：`local` 或 `cyber-pulse` | ✅ (可推断) |
 | `item_id` | 采集阶段标识（格式：`item_{8位hex}`） | ✅ |
 | `item_title` | item 标题 | ✅ |
 | `author` | 作者 | ❌ |
@@ -73,25 +70,30 @@ skills:
 | `published_at` | 原文发布时间（ISO 8601） | ❌ |
 | `fetched_at` | 采集时间（ISO 8601） | ✅ |
 | `completeness_score` | 完整度 0-1 | ❌ |
-| `archived_file` | 归档文件链接（WikiLink） | ✅ |
+| `archived_file` | 归档文件链接（WikiLink，本地文件）/ null（cyber-pulse） | ✅ |
 | `converted_file` | 转换文件链接（WikiLink） | ✅ |
 | `converted_content_hash` | 转换文件的 content_hash | ✅ |
-
-**第三组：情报源追溯（继承）**
-
-| 字段 | 说明 | 必填 |
-|------|------|------|
 | `source_id` | 情报源 ID | ❌ |
 | `source_name` | 情报源名称 | ❌ |
 | `source_url` | 情报源 URL | ❌ |
 | `source_tier` | 情报源等级 T0-T3 | ❌ |
 | `source_score` | 情报源评分 0-100 | ❌ |
 
-**frontmatter 示例**：
+**`source_type` 推断逻辑（向后兼容）**：
+
+如果转换文件缺少 `source_type` 字段，按以下规则推断：
+
+| 条件 | source_type 值 |
+|------|----------------|
+| `archived_file` 为字符串（非 null） | `"local"` |
+| `archived_file` 为 `null` | `"cyber-pulse"` |
+| `archived_file` 不存在 | `"local"` (默认) |
+
+**转换文件 frontmatter 示例**：
 
 ```yaml
 ---
-# 第二组：item 来源追溯
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "Lazarus Group's New Malware Campaign"
 author: "Security Research Team"
@@ -99,11 +101,9 @@ original_url: "https://example.com/security/lazarus-malware-2026"
 published_at: "2026-04-01T08:00:00Z"
 fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
+archived_file: null
 converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md|20260401-item_a1b2c3d4.md]]"
 converted_content_hash: "a1b2c3d4e5f6"
-
-# 第三组：情报源追溯
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
 source_url: "https://securityweekly.com"
@@ -126,10 +126,10 @@ source_score: 85
 
 **archived_file 字段的差异**：
 
-| 文件类型 | archived_file 指向 |
+| 文件类型 | archived_file 值 |
 |---------|-------------------|
 | 本地文件 | `[[archive/YYYY/MM/...|filename]]` - 归档的源文件 |
-| cyber-pulse 文件 | `[[converted/YYYY/MM/...|filename]]` - 自身（无源文件归档） |
+| cyber-pulse 文件 | `null` - 无归档文件（已是 Markdown，直接移动到 converted/） |
 
 **步骤 1.3：提取 content_hash**
 
@@ -307,16 +307,13 @@ tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 - 例如：文件 `20260406-lazarus-malware.md` → ID `threat-20260406-lazarus-malware`
 
 **内容生成**：
-- Frontmatter：四组层次结构（核心标识 + item追溯 + 情报源追溯 + 处理状态）
+- Frontmatter：四组层次结构（核心标识 + item追溯 + 情报源追溯 + 处理状态），详见 [templates.md](../skills/intelligence-output-templates/references/templates.md)
 - Body：按领域模板填充各章节
 
-**持久化元数据（v3.0 四组结构）**：
+**情报卡片 frontmatter 示例**：
 
 ```yaml
 ---
-# ============================================
-# 第一组：核心标识（生成）
-# ============================================
 intelligence_id: "threat-20260406-lazarus-malware"
 title: "APT组织Lazarus利用新型恶意软件攻击金融机构"
 created_date: "2026-04-02"
@@ -324,10 +321,7 @@ primary_domain: "Threat-Landscape"
 secondary_domains: ["Vendor-Intelligence"]
 security_relevance: "high"
 tags: ["geo/china-primary", "APT", "Lazarus", "financial-sector", "malware"]
-
-# ============================================
-# 第二组：item 来源追溯（继承 + 预处理）
-# ============================================
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "Lazarus Group's New Malware Campaign Targets Financial Institutions"
 author: "Security Research Team"
@@ -335,25 +329,16 @@ original_url: "https://example.com/security/lazarus-malware-2026"
 published_at: "2026-04-01T08:00:00Z"
 fetched_at: "2026-04-01T10:30:00Z"
 completeness_score: 0.92
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
+archived_file: null
 converted_file: "[[converted/2026/04/20260401-item_a1b2c3d4.md|20260401-item_a1b2c3d4.md]]"
 converted_content_hash: "a1b2c3d4e5f6"
-
-# ============================================
-# 第三组：情报源追溯（继承）
-# ============================================
 source_id: "src_securityweekly"
 source_name: "Security Weekly"
 source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
-
-# ============================================
-# 第四组：处理状态（生成）
-# ============================================
 review_status: "passed"
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 ---
 ```
 
@@ -520,6 +505,7 @@ Agent 完成分析 → 返回 JSON 结果
   "has_strategic_value": null,
   "review_reason": "检测到高风险威胁指标，需人工确认",
   "domain": "Threat-Landscape",
+  "archived_source": "archive/2026/03/suspicious-report.pdf",
   "source_meta": {
     "title": "可疑报告",
     "published": "2026-03-10"
@@ -557,6 +543,7 @@ Agent 完成分析 → 返回 JSON 结果
 | `output_files` | string[] | 输出文件路径列表（命令层需要） |
 | `domain` | string/null | 主领域（命令层需要，用于生成 pending_id） |
 | `review_reason` | string | 审核原因（has_strategic_value 为 null 时必填） |
+| `archived_source` | string | 归档文件路径（可选，用于 pending.json 待审核记录） |
 | `cards` | array | 卡片详情（可选） |
 | `source_meta` | object | 源文件元数据（可选） |
 

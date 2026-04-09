@@ -22,6 +22,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │ 第二组：item 来源追溯（继承 + 预处理）                        │
 ├─────────────────────────────────────────────────────────────┤
+│ source_type        - 来源类型 local/cyber-pulse              │
 │ item_id            - 采集阶段标识                             │
 │ item_title         - item 标题                               │
 │ author             - 作者                                     │
@@ -29,7 +30,7 @@
 │ published_at       - 原文发布时间                             │
 │ fetched_at         - 采集时间                                 │
 │ completeness_score - 完整度 0-1                               │
-│ archived_file      - 归档文件链接 WikiLink                    │
+│ archived_file      - 归档文件链接 WikiLink（本地文件）/ null（cyber-pulse）    │
 │ converted_file     - 转换文件链接 WikiLink                    │
 │ converted_content_hash - 转换文件内容哈希（变更检测）        │
 └─────────────────────────────────────────────────────────────┘
@@ -49,7 +50,6 @@
 ├─────────────────────────────────────────────────────────────┤
 │ review_status      - 审核状态 pending/approved/rejected/null │
 │ generated_by       - 生成者标识                               │
-│ generated_session  - 会话 ID                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -83,6 +83,7 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo/global", "APT", "Lazarus", "financial-sector", "malware"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -102,7 +103,6 @@ source_score: 85
 
 review_status: "passed"
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 threat_type:                    # 勒索软件/APT/供应链攻击等
 threat_actor:                   # 威胁组织名称
@@ -169,6 +169,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/china", "business/MSSP", "business/Subscription", "market-growth", "cybersecurity"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -188,7 +189,6 @@ source_score: 95
 
 review_status: null
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 market_scope:                   # 全球/中国/区域
 segment:                        # 细分领域
@@ -259,6 +259,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/global", "CrowdStrike", "funding", "Series-B", "endpoint-security"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -278,7 +279,6 @@ source_score: 75
 
 review_status: null
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 vendor_name:
 vendor_type:                    # 创业公司/上市企业/大厂安全部门
@@ -346,6 +346,7 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo/global", "ai-security", "AISP", "LLM-protection", "emerging-tech"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -365,7 +366,6 @@ source_score: 95
 
 review_status: null
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 tech_name:                      # 技术名称
 maturity:                       # 概念/早期/成长/成熟
@@ -435,6 +435,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/china", "enterprise", "security-budget", "procurement", "market-demand"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -454,7 +455,6 @@ source_score: 88
 
 review_status: null
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 customer_segment:               # 客户细分
 region:                         # 地区
@@ -521,6 +521,7 @@ secondary_domains: []
 security_relevance: "high"
 tags: ["geo/china", "compliance", "data-protection", "regulation", "PIPL"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -540,7 +541,6 @@ source_score: 100
 
 review_status: null
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 policy_name:                    # 政策名称
 issuing_body:                   # 发布机构
@@ -609,6 +609,7 @@ secondary_domains: []
 security_relevance: "medium"
 tags: ["geo/global", "funding", "Series-B", "cybersecurity-unicorn", "venture-capital"]
 
+source_type: "cyber-pulse"
 item_id: "item_a1b2c3d4"
 item_title: "原始标题"
 author: "作者"
@@ -628,7 +629,6 @@ source_score: 85
 
 review_status: null
 generated_by: "intelligence-analyzer"
-generated_session: "20260402-151800"
 
 event_type:                    # 融资/并购/IPO
 company:                       # 涉及公司
