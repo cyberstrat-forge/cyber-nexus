@@ -55,21 +55,55 @@ function formatYamlValue(value: unknown): string {
  * @param content - Markdown content with optional frontmatter
  * @returns Parsed frontmatter key-value pairs, or null if no frontmatter found
  */
-export function parseFrontmatter(content: string): Record<string, string> | null {
+export function parseFrontmatter(content: string): Record<string, unknown> | null {
   // Support both LF and CRLF line endings
   const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!frontmatterMatch) {
     return null;
   }
 
-  const frontmatter: Record<string, string> = {};
+  const frontmatter: Record<string, unknown> = {};
   const lines = frontmatterMatch[1].split(/\r?\n/);
 
   for (const line of lines) {
-    const match = line.match(/^(\w+):\s*"(.*)"$/);
+    // Skip empty lines and comments
+    if (!line.trim() || line.trim().startsWith('#')) {
+      continue;
+    }
+
+    // Match key: value patterns (with or without quotes)
+    // Supports: key: "value", key: 'value', key: value
+    const match = line.match(/^(\w+):\s*(.+)$/);
     if (match) {
-      // Unescape YAML string: \" -> ", \\ -> \
-      frontmatter[match[1]] = match[2].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      const key = match[1];
+      let value: unknown = match[2].trim();
+      const strValue = value as string;
+
+      // Handle quoted strings (double or single quotes)
+      if ((strValue.startsWith('"') && strValue.endsWith('"')) ||
+          (strValue.startsWith("'") && strValue.endsWith("'"))) {
+        // Remove quotes and unescape
+        value = strValue.slice(1, -1)
+          .replace(/\\"/g, '"')
+          .replace(/\\'/g, "'")
+          .replace(/\\\\/g, '\\');
+      } else if (strValue === 'null') {
+        // Handle null
+        value = null;
+      } else if (strValue === 'true') {
+        // Handle boolean true
+        value = true;
+      } else if (strValue === 'false') {
+        // Handle boolean false
+        value = false;
+      } else if (/^-?\d+(\.\d+)?$/.test(strValue)) {
+        // Handle numbers (integer or float)
+        value = parseFloat(strValue);
+      }
+      // Arrays like [item1, item2] are kept as strings for now
+      // More complex YAML structures would need a proper YAML parser
+
+      frontmatter[key] = value;
     }
   }
 

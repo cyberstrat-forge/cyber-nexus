@@ -422,7 +422,7 @@ function collectKnownHashes(rootDir: string): Map<string, string> {
           const frontmatter = parseFrontmatter(content);
           // Support both old (sourceHash) and new (source_hash) field names
           const sourceHash = frontmatter?.source_hash || frontmatter?.sourceHash;
-          if (sourceHash) {
+          if (typeof sourceHash === 'string' && sourceHash) {
             knownHashes.set(sourceHash, mdPath);
           }
         } catch (error) {
