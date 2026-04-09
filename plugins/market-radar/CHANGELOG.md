@@ -2,6 +2,31 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.6] - 2026-04-09
+
+### 修复
+
+- **WikiLink 路径修复**：使用 `rootDir` 作为路径基准，消除 `../` 前缀
+  - `archived_file` 路径现在在 Obsidian 中可正确跳转
+  - cyber-pulse 文件的 `archived_file` 正确指向自身
+
+- **文件名规范化**：archive 文件名应用 `normalizeFilename()`
+  - 确保 archive 和 converted 文件名编码一致
+  - `item_title` 字段同步规范化
+
+- **去重机制优化**：移除冗余代码，统一语义
+  - hash 计算从 2 次/文件 减少到 1 次/文件
+  - 去重检查统一在 `batchProcess()` 中处理
+  - `knownHashes` 统一存储 converted 文件路径
+  - 去重返回值使用 `convertedPath` 属性
+
+### 技术改进
+
+- 简化 `processFile()` 函数签名（7 参数 → 4 参数）
+- 重命名 `processCyberPulseFile()` 参数 `sourceDir` → `rootDir`
+- 重命名 `collectKnownHashes()` 和 `collectKnownFiles()` 参数 `sourceDir` → `rootDir`
+- 错误日志写入源文件所在目录（而非固定 sourceDir）
+
 ## [1.9.5] - 2026-04-08
 
 ### 变更
