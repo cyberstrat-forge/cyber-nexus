@@ -362,7 +362,8 @@ function getConvertedDir(sourceDir: string, dateRef: Date): string {
  * Get archive path for a source file
  */
 function getArchivePath(sourcePath: string, archiveDir: string): string {
-  const filename = path.basename(sourcePath);
+  const rawFilename = path.basename(sourcePath);
+  const filename = normalizeFilename(rawFilename);  // Apply normalization
   return path.join(archiveDir, filename);
 }
 
