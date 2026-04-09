@@ -111,10 +111,41 @@ describe('tag-utils', () => {
   });
 
   describe('normalizeObsidianTags', () => {
-    // Tests will be added in subsequent tasks
-    it('placeholder', () => {
-      // Placeholder test to avoid empty suite error
-      expect(true).toBe(true);
+    it('should normalize array of tags', () => {
+      expect(normalizeObsidianTags(['threat intelligence', 'geo:china'])).toEqual(['threat-intelligence', 'geo/china']);
+    });
+
+    it('should return empty array for empty input', () => {
+      expect(normalizeObsidianTags([])).toEqual([]);
+    });
+
+    it('should filter out empty strings', () => {
+      expect(normalizeObsidianTags(['valid', ''])).toEqual(['valid']);
+    });
+
+    it('should filter out null values', () => {
+      expect(normalizeObsidianTags(['valid', null])).toEqual(['valid']);
+    });
+
+    it('should filter out undefined values', () => {
+      expect(normalizeObsidianTags(['valid', undefined])).toEqual(['valid']);
+    });
+
+    it('should filter out invalid tags', () => {
+      expect(normalizeObsidianTags(['valid', '---'])).toEqual(['valid']);
+    });
+
+    it('should handle mixed valid/invalid tags', () => {
+      expect(normalizeObsidianTags(['', null, 'valid', '---', 'geo:china'])).toEqual(['valid', 'geo/china']);
+    });
+
+    it('should return empty array when all tags are invalid', () => {
+      expect(normalizeObsidianTags(['---', '', null])).toEqual([]);
+    });
+
+    it('should handle non-array input', () => {
+      expect(normalizeObsidianTags(null as unknown as string[])).toEqual([]);
+      expect(normalizeObsidianTags(undefined as unknown as string[])).toEqual([]);
     });
   });
 });
