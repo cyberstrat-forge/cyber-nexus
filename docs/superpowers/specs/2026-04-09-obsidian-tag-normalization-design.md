@@ -36,7 +36,7 @@
 |------|------|------|
 | 空格 | 替换为 `-` | `"threat intelligence"` → `"threat-intelligence"` |
 | `:` 分隔符 | 替换为 `/` | `"geo:china"` → `"geo/china"` |
-| 特殊符号 | 替换为 `-` | `"C++"` → `"C-"` |
+| 特殊符号 | 替换为 `-` + 移除尾随 | `"C++"` → `"C"` |
 | 多个连续 `-` | 合并为单个 | `"AI,,  ML"` → `"AI-ML"` |
 | 中文/Unicode | 保留 | `"威胁情报"` → `"威胁情报"` |
 | 空/无效 tag | 过滤 | `"---"` → 丢弃 |
@@ -197,7 +197,7 @@ if (content.tags && content.tags.length > 0) {
    |----------|---------|
    | `"threat intelligence"` | `"threat-intelligence"` |
    | `"geo:china"` | `"geo/china"` |
-   | `"C++"` | `"C-"` |
+   | `"C++"` | `"C"` |
    ```
 
 ## 边界情况处理

@@ -651,7 +651,7 @@ tags: ["APT", "威胁情报", "geo/china"]
 |----------|---------|
 | `"threat intelligence"` | `"threat-intelligence"` |
 | `"geo:china"` | `"geo/china"` |
-| `"C++"` | `"C-"` |
+| `"C++"` | `"C"` |
 ```
 
 - [ ] **Step 4: 提交文档更新**
