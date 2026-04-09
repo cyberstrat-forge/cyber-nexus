@@ -9,12 +9,12 @@
  *
  * Usage:
  *   Normal mode:
- *     pnpm exec tsx update-state.ts --output <output_dir> --results <results_json>
+ *     pnpm exec tsx update-state.ts --root <root_dir> --results <results_json>
  *
  *   Review mode:
- *     pnpm exec tsx update-state.ts --output <output_dir> --review list
- *     pnpm exec tsx update-state.ts --output <output_dir> --review approve --pending-id <id> --reason <reason>
- *     pnpm exec tsx update-state.ts --output <output_dir> --review reject --pending-id <id> --reason <reason>
+ *     pnpm exec tsx update-state.ts --root <root_dir> --review list
+ *     pnpm exec tsx update-state.ts --root <root_dir> --review approve --pending-id <id> --reason <reason>
+ *     pnpm exec tsx update-state.ts --root <root_dir> --review reject --pending-id <id> --reason <reason>
  *
  * Input JSON format (agent results array):
  * [

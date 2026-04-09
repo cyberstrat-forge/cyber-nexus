@@ -258,7 +258,7 @@ source_url: "https://securityweekly.com"
 source_tier: "T1"
 source_score: 85
 
-archived_file: "[[converted/2026/04/item_a1b2c3d4.md|item_a1b2c3d4.md]]"
+archived_file: null
 content_hash: "def456abc123..."
 source_hash: "abc789def456..."
 archivedAt: "2026-04-01T10:30:00Z"
