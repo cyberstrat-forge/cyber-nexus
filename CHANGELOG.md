@@ -6,6 +6,25 @@
 
 ---
 
+## [1.0.39] - 2026-04-09
+
+### 插件更新
+
+#### market-radar v1.9.7
+
+**新增**
+- Obsidian tag 规范化：intel-pull 生成的 tags 自动规范化
+  - 空格 → 连字符 `-`
+  - 冒号 `:` → 正斜杠 `/`（保持嵌套语义）
+  - 特殊符号 → 连字符 `-`
+  - 保留中文/Unicode 字符
+  - 无效 tag 自动过滤
+
+**测试**
+- 新增 33 个 tag 规范化测试用例
+
+---
+
 ## [1.0.38] - 2026-04-09
 
 ### 插件更新
@@ -602,6 +621,16 @@
 
 ---
 
+[1.0.39]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.38...v1.0.39
+[1.0.38]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.37...v1.0.38
+[1.0.37]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.36...v1.0.37
+[1.0.36]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.35...v1.0.36
+[1.0.35]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.34...v1.0.35
+[1.0.34]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.31...v1.0.34
+[1.0.31]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.30...v1.0.31
+[1.0.30]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.29...v1.0.30
+[1.0.29]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.28...v1.0.29
+[1.0.28]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.27...v1.0.28
 [1.0.27]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.26...v1.0.27
 [1.0.26]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.25...v1.0.26
 [1.0.25]: https://github.com/cyberstrat-forge/cyber-nexus/compare/v1.0.24...v1.0.25
