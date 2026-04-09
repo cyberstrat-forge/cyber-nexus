@@ -2,6 +2,25 @@
 
 本文件记录 market-radar 插件的所有重要变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [1.9.7] - 2026-04-09
+
+### 新增
+
+- **Obsidian tag 规范化**：intel-pull 生成的 tags 自动规范化
+  - 空格 → 连字符 `-`
+  - 冒号 `:` → 正斜杠 `/`（保持嵌套语义）
+  - 特殊符号 → 连字符 `-`
+  - 保留中文/Unicode 字符
+  - 无效 tag 自动过滤
+
+### 变更
+
+- `tags` 字段写入前调用 `normalizeObsidianTags()` 处理
+
+### 测试
+
+- 新增 `tag-utils.test.ts`，覆盖基本用例和边界用例（23 个测试用例）
+
 ## [1.9.6] - 2026-04-09
 
 ### 新增
