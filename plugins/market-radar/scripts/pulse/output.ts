@@ -12,6 +12,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { PulseContent } from './types.js';
+import { normalizeObsidianTags } from '../utils/tag-utils.js';
 
 // ==================== YAML Utilities ====================
 
@@ -113,8 +114,11 @@ function generateFrontmatter(content: PulseContent, sourceName: string): string 
     lines.push(`author: "${escapeYamlString(content.author)}"`);
   }
   if (content.tags && content.tags.length > 0) {
-    const escapedTags = content.tags.map(t => `"${escapeYamlString(t)}"`).join(', ');
-    lines.push(`tags: [${escapedTags}]`);
+    const normalizedTags = normalizeObsidianTags(content.tags);
+    if (normalizedTags.length > 0) {
+      const escapedTags = normalizedTags.map(t => `"${escapeYamlString(t)}"`).join(', ');
+      lines.push(`tags: [${escapedTags}]`);
+    }
   }
   if (content.published_at) {
     lines.push(`published_at: "${escapeYamlString(content.published_at)}"`);
