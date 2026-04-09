@@ -11,6 +11,10 @@
   - cyber-pulse 文件：`source_type: "cyber-pulse"`
   - Agent 支持向后兼容推断（根据 `archived_file` 推断）
 
+- **多行数组解析**：`parseFrontmatter` 支持 YAML 多行数组格式
+  - 支持 `key:` 后跟 `- "item"` 列表格式
+  - 统一 `scan-cards.ts` 和 `scan-reports.ts` 使用共享解析器
+
 ### 修复
 
 - **YAML 解析修复**：`parseFrontmatter` 支持无引号 YAML 值
