@@ -109,7 +109,7 @@ git commit -m "fix(preprocess): apply normalizeFilename to archive filenames"
 ## Task 2: 重构 `processFile()` 函数签名
 
 **Files:**
-- Modify: `scripts/preprocess/index.ts:655-170`
+- Modify: `scripts/preprocess/index.ts:655-663`
 
 - [ ] **Step 1: 修改 `processFile()` 函数签名**
 
@@ -154,7 +154,7 @@ git commit -m "refactor(preprocess): simplify processFile signature"
 ## Task 3: 简化 `processFile()` 内部的去重逻辑
 
 **Files:**
-- Modify: `scripts/preprocess/index.ts:655-680`
+- Modify: `scripts/preprocess/index.ts:664-678`
 
 - [ ] **Step 1: 修改 `processFile()` 函数内部逻辑**
 
@@ -211,27 +211,24 @@ git commit -m "refactor(preprocess): remove redundant dedup check from processFi
 ## Task 4: 修改 `processFile()` 内部路径计算和错误日志
 
 **Files:**
-- Modify: `scripts/preprocess/index.ts:695, 726-750`
+- Modify: `scripts/preprocess/index.ts:695, 712, 757, 740-748`
 
 - [ ] **Step 1: 修改所有 `writeErrorLog` 调用**
 
 在 `processFile()` 函数内找到所有 `writeErrorLog` 调用，将第二个参数从 `sourceDir` 改为 `path.dirname(sourcePath)`：
 
+需要修改的位置：
+- **第 695 行**：转换失败错误处理
+- **第 712 行**：清理失败错误处理
+- **第 757 行**：写入失败错误处理
+
 ```typescript
-// 修改前
-writeErrorLog(sourcePath, sourceDir, code, message);
+// 修改前（每处）
+writeErrorLog(sourcePath, sourceDir, errorCode, message);
 
 // 修改后
-writeErrorLog(sourcePath, path.dirname(sourcePath), code, message);
+writeErrorLog(sourcePath, path.dirname(sourcePath), errorCode, message);
 ```
-
-使用 grep 查找所有位置：
-
-```bash
-cd plugins/market-radar && grep -n "writeErrorLog(sourcePath, sourceDir" scripts/preprocess/index.ts
-```
-
-逐个修改。
 
 - [ ] **Step 2: 修改 `relativeArchivePath` 计算**
 
@@ -334,20 +331,25 @@ git commit -m "refactor(preprocess): rename sourceDir to rootDir in processCyber
 ## Task 6: 修改 `processCyberPulseFile()` 内部路径计算
 
 **Files:**
-- Modify: `scripts/preprocess/index.ts:468-492`
+- Modify: `scripts/preprocess/index.ts:468, 482, 497, 560, 574, 492`
 
 - [ ] **Step 1: 修改所有 `writeErrorLog` 调用**
 
-在 `processCyberPulseFile` 函数内找到所有：
+在 `processCyberPulseFile` 函数内找到所有 `writeErrorLog` 调用，将第二个参数从 `sourceDir` 改为 `path.dirname(sourcePath)`：
+
+需要修改的位置：
+- **第 468 行**：验证失败错误处理
+- **第 482 行**：读取失败错误处理
+- **第 497 行**：frontmatter 缺失错误处理
+- **第 560 行**：创建目录失败错误处理
+- **第 574 行**：写入失败错误处理
 
 ```typescript
-writeErrorLog(sourcePath, sourceDir, ...)
-```
+// 修改前（每处）
+writeErrorLog(sourcePath, sourceDir, errorCode, message);
 
-修改为：
-
-```typescript
-writeErrorLog(sourcePath, path.dirname(sourcePath), ...)
+// 修改后
+writeErrorLog(sourcePath, path.dirname(sourcePath), errorCode, message);
 ```
 
 - [ ] **Step 2: 修改 `convertedRelativePath` 计算**
@@ -380,14 +382,14 @@ git commit -m "fix(preprocess): use rootDir for path calculation in processCyber
 ## Task 7: 修改 `batchProcess()` 调用
 
 **Files:**
-- Modify: `scripts/preprocess/index.ts:869-945`
+- Modify: `scripts/preprocess/index.ts:889-933`
 
 - [ ] **Step 1: 修改 cyber-pulse 文件处理调用**
 
-找到 cyber-pulse 文件处理部分（约第 869-908 行），修改调用：
+找到 cyber-pulse 文件处理部分（第 889-895 行），修改调用：
 
 ```typescript
-// 修改前
+// 修改前（第 889-895 行）
 const result = processCyberPulseFile(
   sourcePath,
   convertedDir,
@@ -408,7 +410,7 @@ const result = processCyberPulseFile(
 
 - [ ] **Step 2: 修改本地文件处理调用**
 
-找到本地文件处理部分（约第 909-945 行），修改调用：
+找到本地文件处理部分（第 925-933 行），修改调用：
 
 ```typescript
 // 修改前
@@ -431,13 +433,43 @@ const result = await processFile(
 );
 ```
 
-- [ ] **Step 3: 验证 TypeScript 编译**
+- [ ] **Step 3: 修改去重返回值属性名**
+
+找到 batchProcess 中本地文件去重检查部分（第 914-922 行），修改返回值：
+
+```typescript
+// 修改前（第 914-922 行）
+if (!force && knownHashes.has(sourceHash)) {
+  duplicates++;
+  results.set(sourcePath, {
+    success: true,
+    isDuplicate: true,
+    archivedPath: knownHashes.get(sourceHash),
+  });
+  continue;
+}
+
+// 修改后
+if (!force && knownHashes.has(sourceHash)) {
+  duplicates++;
+  results.set(sourcePath, {
+    success: true,
+    isDuplicate: true,
+    convertedPath: knownHashes.get(sourceHash),  // 改为 convertedPath
+  });
+  continue;
+}
+```
+
+**说明**：`knownHashes` 存储的是 converted 文件路径（由 `collectKnownHashes` 从 `converted/` 目录收集），所以返回值应使用 `convertedPath` 属性。
+
+- [ ] **Step 4: 验证 TypeScript 编译**
 
 Run: `cd plugins/market-radar && pnpm exec tsc --noEmit`
 
 Expected: 无错误
 
-- [ ] **Step 4: 提交**
+- [ ] **Step 5: 提交**
 
 ```bash
 git add plugins/market-radar/scripts/preprocess/index.ts
@@ -449,22 +481,18 @@ git commit -m "fix(preprocess): pass rootDir to processFile and processCyberPuls
 ## Task 8: 修复 `knownHashes` 值类型
 
 **Files:**
-- Modify: `scripts/preprocess/index.ts:940-942`
+- Modify: `scripts/preprocess/index.ts:942`
 
 - [ ] **Step 1: 修改 `knownHashes.set` 调用**
 
-找到处理成功后的 `knownHashes.set` 调用：
+找到第 942 行，处理成功后的 `knownHashes.set` 调用：
 
 ```typescript
 // 修改前
-if (result.success) {
-  knownHashes.set(sourceHash, result.archivedPath || '');
-}
+knownHashes.set(sourceHash, result.archivedPath || '');
 
 // 修改后
-if (result.success && result.convertedPath) {
-  knownHashes.set(sourceHash, result.convertedPath);
-}
+knownHashes.set(sourceHash, result.convertedPath || '');
 ```
 
 - [ ] **Step 2: 验证 TypeScript 编译**
@@ -482,7 +510,61 @@ git commit -m "fix(preprocess): store convertedPath in knownHashes"
 
 ---
 
-## Task 9: 创建单元测试
+## Task 9: 修复 `collectKnownHashes` 和 `collectKnownFiles` 参数命名
+
+**Files:**
+- Modify: `scripts/preprocess/index.ts:141, 372`
+
+- [ ] **Step 1: 重命名 `collectKnownFiles` 参数**
+
+修改第 141 行：
+
+```typescript
+// 修改前
+function collectKnownFiles(sourceDir: string): Set<string> {
+  const knownFiles = new Set<string>();
+  const convertedBase = path.join(sourceDir, 'converted');
+
+// 修改后
+function collectKnownFiles(rootDir: string): Set<string> {
+  const knownFiles = new Set<string>();
+  const convertedBase = path.join(rootDir, 'converted');
+```
+
+- [ ] **Step 2: 重命名 `collectKnownHashes` 参数**
+
+修改第 372-374 行：
+
+```typescript
+// 修改前
+function collectKnownHashes(sourceDir: string): Map<string, string> {
+  const knownHashes = new Map<string, string>(); // hash -> converted path
+  const convertedBase = path.join(sourceDir, 'converted');
+
+// 修改后
+function collectKnownHashes(rootDir: string): Map<string, string> {
+  const knownHashes = new Map<string, string>(); // hash -> converted path
+  const convertedBase = path.join(rootDir, 'converted');
+```
+
+**说明**：这两个函数扫描 `rootDir/converted` 目录，参数名应反映其实际用途。调用方 `batchProcess()` 已正确传入 `rootDir`，此修改仅统一命名。
+
+- [ ] **Step 3: 验证 TypeScript 编译**
+
+Run: `cd plugins/market-radar && pnpm exec tsc --noEmit`
+
+Expected: 无错误
+
+- [ ] **Step 4: 提交**
+
+```bash
+git add plugins/market-radar/scripts/preprocess/index.ts
+git commit -m "refactor(preprocess): rename sourceDir to rootDir in collect functions"
+```
+
+---
+
+## Task 10: 创建单元测试
 
 **Files:**
 - Create: `scripts/preprocess/__tests__/preprocess-path.test.ts`
@@ -571,7 +653,7 @@ git commit -m "test(preprocess): add WikiLink path format tests"
 
 ---
 
-## Task 10: 手动测试验证
+## Task 11: 手动测试验证
 
 **Files:**
 - 无文件修改
@@ -618,7 +700,7 @@ rm -rf /tmp/test-preprocess
 
 ---
 
-## Task 11: 更新版本号
+## Task 12: 更新版本号
 
 **Files:**
 - Modify: `plugins/market-radar/.claude-plugin/plugin.json`
@@ -643,7 +725,7 @@ git commit -m "chore(market-radar): bump version to 1.9.6"
 
 ---
 
-## Task 12: 更新 CHANGELOG
+## Task 13: 更新 CHANGELOG
 
 **Files:**
 - Modify: `plugins/market-radar/CHANGELOG.md`
@@ -665,15 +747,17 @@ git commit -m "chore(market-radar): bump version to 1.9.6"
   - 确保 archive 和 converted 文件名编码一致
   - `item_title` 字段同步规范化
 
-- **去重机制优化**：移除冗余代码
+- **去重机制优化**：移除冗余代码，统一语义
   - hash 计算从 2 次/文件 减少到 1 次/文件
   - 去重检查统一在 `batchProcess()` 中处理
   - `knownHashes` 统一存储 converted 文件路径
+  - 去重返回值使用 `convertedPath` 属性
 
 ### 技术改进
 
 - 简化 `processFile()` 函数签名，移除未使用参数
 - 重命名 `processCyberPulseFile()` 参数 `sourceDir` → `rootDir`
+- 重命名 `collectKnownHashes()` 和 `collectKnownFiles()` 参数 `sourceDir` → `rootDir`
 - 错误日志写入源文件所在目录（而非固定 sourceDir）
 ```
 
