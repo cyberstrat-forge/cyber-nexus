@@ -87,8 +87,8 @@ function normalizeObsidianTag(tag: string): string {
   // Step 3: Collapse multiple consecutive `-` to single `-`
   result = result.replace(/-+/g, '-');
 
-  // Step 4: Remove leading/trailing `-`
-  result = result.replace(/^-+|-+$/g, '');
+  // Step 4: Remove leading/trailing `-` and `/`
+  result = result.replace(/^[-/]+|[-/]+$/g, '');
 
   return result;
 }
